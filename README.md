@@ -18,6 +18,14 @@ The current release is a macOS productization preview. The plugin packages insta
 
 `Time` is optional. Untagged sessions remain visible as uncategorized sessions.
 
+## Documentation
+
+- [Local development and debugging](docs/development.md)
+- [Distribution and user installation](docs/distribution.md)
+- [Architecture](docs/architecture.md)
+- [Runtime protocol](docs/protocol.md)
+- [Compatibility policy](docs/compatibility.md)
+
 ## Local development
 
 ```bash
@@ -33,4 +41,4 @@ node scripts/manage.mjs restore
 
 The injected UI is authored in TypeScript and Preact, then bundled into a single browser IIFE. `install` writes that checked-in build artifact into the user Application Support directory and creates the launcher. `enable` applies it to an already debuggable Codex process; if Codex needs to be relaunched with CDP, the command performs a graceful quit and relaunch.
 
-See [Architecture](docs/architecture.md), [Runtime protocol](docs/protocol.md), and [Compatibility policy](docs/compatibility.md).
+For the complete edit-and-preview loop and real-app QA, follow [Local development and debugging](docs/development.md). For current and future installation channels, follow [Distribution and user installation](docs/distribution.md).
