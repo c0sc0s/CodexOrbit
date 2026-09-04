@@ -4,6 +4,7 @@ All notable changes to Codex Tags are documented here. Versions follow Semantic 
 
 ## 0.3.0 — 2026-09-04
 
+- Added locally bundled Motion animations for dashboard entry and exit, menu and tab transitions, search feedback, and interaction states with reduced-motion support.
 - Replaced full conversation transfer to the renderer with asynchronous local search requests.
 - Added a persistent, incremental SQLite FTS5 index with Chinese substring search support.
 - Added a persistent CDP binding for search requests and bounded result delivery.

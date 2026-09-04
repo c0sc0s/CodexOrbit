@@ -369,6 +369,691 @@ var CodexTagsInjected = (() => {
     return node.matches(selector) || Boolean(node.querySelector(selector));
   }
 
+  // node_modules/motion-utils/dist/es/format-error-message.mjs
+  function formatErrorMessage(message, errorCode) {
+    return errorCode ? `${message}. For more information and steps for solving, visit https://motion.dev/troubleshooting/${errorCode}` : message;
+  }
+
+  // node_modules/motion-utils/dist/es/errors.mjs
+  var warning = () => {
+  };
+  var invariant = () => {
+  };
+  if (typeof process !== "undefined" && true) {
+    warning = (check, message, errorCode) => {
+      if (!check && typeof console !== "undefined") {
+        console.warn(formatErrorMessage(message, errorCode));
+      }
+    };
+    invariant = (check, message, errorCode) => {
+      if (!check) {
+        throw new Error(formatErrorMessage(message, errorCode));
+      }
+    };
+  }
+
+  // node_modules/motion-utils/dist/es/memo.mjs
+  // @__NO_SIDE_EFFECTS__
+  function memo(callback) {
+    let result;
+    return () => {
+      if (result === void 0)
+        result = callback();
+      return result;
+    };
+  }
+
+  // node_modules/motion-utils/dist/es/noop.mjs
+  var noop = /* @__NO_SIDE_EFFECTS__ */ (any) => any;
+
+  // node_modules/motion-utils/dist/es/time-conversion.mjs
+  var secondsToMilliseconds = /* @__NO_SIDE_EFFECTS__ */ (seconds) => seconds * 1e3;
+  var millisecondsToSeconds = /* @__NO_SIDE_EFFECTS__ */ (milliseconds) => milliseconds / 1e3;
+
+  // node_modules/motion-utils/dist/es/easing/utils/is-bezier-definition.mjs
+  var isBezierDefinition = /* @__NO_SIDE_EFFECTS__ */ (easing) => Array.isArray(easing) && typeof easing[0] === "number";
+
+  // node_modules/motion-dom/dist/es/animation/waapi/utils/linear.mjs
+  var generateLinearEasing = (easing, duration, resolution = 10) => {
+    let points = "";
+    const numPoints = Math.max(Math.round(duration / resolution), 2);
+    for (let i2 = 0; i2 < numPoints; i2++) {
+      points += Math.round(easing(i2 / (numPoints - 1)) * 1e4) / 1e4 + ", ";
+    }
+    return `linear(${points.substring(0, points.length - 2)})`;
+  };
+
+  // node_modules/motion-dom/dist/es/animation/keyframes/get-final.mjs
+  var isNotNull = (value) => value !== null;
+  function getFinalKeyframe(keyframes, { repeat, repeatType = "loop" }, finalKeyframe, speed = 1) {
+    const resolvedKeyframes = keyframes.filter(isNotNull);
+    const useFirstKeyframe = speed < 0 || repeat && repeatType !== "loop" && repeat % 2 === 1;
+    const index = useFirstKeyframe ? 0 : resolvedKeyframes.length - 1;
+    return !index || finalKeyframe === void 0 ? resolvedKeyframes[index] : finalKeyframe;
+  }
+
+  // node_modules/motion-dom/dist/es/animation/utils/WithPromise.mjs
+  var WithPromise = class {
+    constructor() {
+      this.updateFinished();
+    }
+    get finished() {
+      return this._finished;
+    }
+    updateFinished() {
+      this._finished = new Promise((resolve) => {
+        this.resolve = resolve;
+      });
+    }
+    notifyFinished() {
+      this.resolve();
+    }
+    /**
+     * Allows the animation to be awaited.
+     *
+     * @deprecated Use `finished` instead.
+     */
+    then(onResolve, onReject) {
+      return this.finished.then(onResolve, onReject);
+    }
+  };
+
+  // node_modules/motion-dom/dist/es/animation/keyframes/utils/fill-wildcards.mjs
+  function fillWildcards(keyframes) {
+    for (let i2 = 1; i2 < keyframes.length; i2++) {
+      keyframes[i2] ?? (keyframes[i2] = keyframes[i2 - 1]);
+    }
+  }
+
+  // node_modules/motion-dom/dist/es/render/dom/is-css-var.mjs
+  var isCSSVar = (name) => name.startsWith("--");
+
+  // node_modules/motion-dom/dist/es/render/dom/style-set.mjs
+  function setStyle(element, name, value) {
+    isCSSVar(name) ? element.style.setProperty(name, value) : element.style[name] = value;
+  }
+
+  // node_modules/motion-dom/dist/es/utils/supports/flags.mjs
+  var supportsFlags = {};
+
+  // node_modules/motion-dom/dist/es/utils/supports/memo.mjs
+  function memoSupports(callback, supportsFlag) {
+    const memoized = memo(callback);
+    return () => supportsFlags[supportsFlag] ?? memoized();
+  }
+
+  // node_modules/motion-dom/dist/es/utils/supports/scroll-timeline.mjs
+  var supportsScrollTimeline = /* @__PURE__ */ memoSupports(() => window.ScrollTimeline !== void 0, "scrollTimeline");
+
+  // node_modules/motion-dom/dist/es/utils/supports/linear-easing.mjs
+  var supportsLinearEasing = /* @__PURE__ */ memoSupports(() => {
+    try {
+      document.createElement("div").animate({ opacity: 0 }, { easing: "linear(0, 1)" });
+    } catch (e2) {
+      return false;
+    }
+    return true;
+  }, "linearEasing");
+
+  // node_modules/motion-dom/dist/es/animation/waapi/easing/cubic-bezier.mjs
+  var cubicBezierAsString = ([a2, b2, c2, d2]) => `cubic-bezier(${a2}, ${b2}, ${c2}, ${d2})`;
+
+  // node_modules/motion-dom/dist/es/animation/waapi/easing/supported.mjs
+  var supportedWaapiEasing = {
+    linear: "linear",
+    ease: "ease",
+    easeIn: "ease-in",
+    easeOut: "ease-out",
+    easeInOut: "ease-in-out",
+    circIn: /* @__PURE__ */ cubicBezierAsString([0, 0.65, 0.55, 1]),
+    circOut: /* @__PURE__ */ cubicBezierAsString([0.55, 0, 1, 0.45]),
+    backIn: /* @__PURE__ */ cubicBezierAsString([0.31, 0.01, 0.66, -0.59]),
+    backOut: /* @__PURE__ */ cubicBezierAsString([0.33, 1.53, 0.69, 0.99])
+  };
+
+  // node_modules/motion-dom/dist/es/animation/waapi/easing/map-easing.mjs
+  function mapEasingToNativeEasing(easing, duration) {
+    if (!easing) {
+      return void 0;
+    } else if (typeof easing === "function") {
+      return supportsLinearEasing() ? generateLinearEasing(easing, duration) : "ease-out";
+    } else if (isBezierDefinition(easing)) {
+      return cubicBezierAsString(easing);
+    } else if (Array.isArray(easing)) {
+      return easing.map((segmentEasing) => mapEasingToNativeEasing(segmentEasing, duration) || supportedWaapiEasing.easeOut);
+    } else {
+      return supportedWaapiEasing[easing];
+    }
+  }
+
+  // node_modules/motion-dom/dist/es/animation/waapi/start-waapi-animation.mjs
+  function startWaapiAnimation(element, valueName, keyframes, { delay = 0, duration = 300, repeat = 0, repeatType = "loop", ease = "easeOut", times } = {}, pseudoElement = void 0) {
+    const keyframeOptions = {
+      [valueName]: keyframes
+    };
+    if (times)
+      keyframeOptions.offset = times;
+    const easing = mapEasingToNativeEasing(ease, duration);
+    if (Array.isArray(easing))
+      keyframeOptions.easing = easing;
+    const options = {
+      delay,
+      duration,
+      easing: !Array.isArray(easing) ? easing : "linear",
+      fill: "both",
+      iterations: repeat + 1,
+      direction: repeatType === "reverse" ? "alternate" : "normal"
+    };
+    if (pseudoElement)
+      options.pseudoElement = pseudoElement;
+    return element.animate(keyframeOptions, options);
+  }
+
+  // node_modules/motion-dom/dist/es/animation/generators/utils/is-generator.mjs
+  function isGenerator(type) {
+    return typeof type === "function" && "applyToOptions" in type;
+  }
+
+  // node_modules/motion-dom/dist/es/animation/waapi/utils/apply-generator.mjs
+  function applyGeneratorOptions({ type, ...options }) {
+    if (isGenerator(type) && supportsLinearEasing()) {
+      return type.applyToOptions(options);
+    } else {
+      options.duration ?? (options.duration = 300);
+      options.ease ?? (options.ease = "easeOut");
+    }
+    return options;
+  }
+
+  // node_modules/motion-dom/dist/es/animation/NativeAnimation.mjs
+  var NativeAnimation = class extends WithPromise {
+    constructor(options) {
+      super();
+      this.finishedTime = null;
+      this.isStopped = false;
+      this.manualStartTime = null;
+      if (!options)
+        return;
+      const { element, name, keyframes, pseudoElement, allowFlatten = false, finalKeyframe, onComplete } = options;
+      this.isPseudoElement = Boolean(pseudoElement);
+      this.allowFlatten = allowFlatten;
+      this.options = options;
+      invariant(typeof options.type !== "string", `Mini animate() doesn't support "type" as a string.`, "mini-spring");
+      const transition = applyGeneratorOptions(options);
+      this.animation = startWaapiAnimation(element, name, keyframes, transition, pseudoElement);
+      if (transition.autoplay === false) {
+        this.animation.pause();
+      }
+      this.animation.onfinish = () => {
+        this.finishedTime = this.time;
+        if (!pseudoElement) {
+          const keyframe = getFinalKeyframe(keyframes, this.options, finalKeyframe, this.speed);
+          if (this.updateMotionValue) {
+            this.updateMotionValue(keyframe);
+          }
+          setStyle(element, name, keyframe);
+          this.animation.cancel();
+        }
+        onComplete?.();
+        this.notifyFinished();
+      };
+    }
+    play() {
+      if (this.isStopped)
+        return;
+      this.manualStartTime = null;
+      this.animation.play();
+      if (this.state === "finished") {
+        this.updateFinished();
+      }
+    }
+    pause() {
+      this.animation.pause();
+    }
+    complete() {
+      this.animation.finish?.();
+    }
+    cancel() {
+      try {
+        this.animation.cancel();
+      } catch (e2) {
+      }
+    }
+    stop() {
+      if (this.isStopped)
+        return;
+      this.isStopped = true;
+      const { state } = this;
+      if (state === "idle" || state === "finished") {
+        return;
+      }
+      if (this.updateMotionValue) {
+        this.updateMotionValue();
+      } else {
+        this.commitStyles();
+      }
+      if (!this.isPseudoElement)
+        this.cancel();
+    }
+    /**
+     * WAAPI doesn't natively have any interruption capabilities.
+     *
+     * In this method, we commit styles back to the DOM before cancelling
+     * the animation.
+     *
+     * This is designed to be overridden by NativeAnimationExtended, which
+     * will create a renderless JS animation and sample it twice to calculate
+     * its current value, "previous" value, and therefore allow
+     * Motion to also correctly calculate velocity for any subsequent animation
+     * while deferring the commit until the next animation frame.
+     */
+    commitStyles() {
+      const element = this.options?.element;
+      if (!this.isPseudoElement && element?.isConnected) {
+        this.animation.commitStyles?.();
+      }
+    }
+    get duration() {
+      const duration = this.animation.effect?.getComputedTiming?.().duration || 0;
+      return millisecondsToSeconds(Number(duration));
+    }
+    get iterationDuration() {
+      const { delay = 0 } = this.options || {};
+      return this.duration + millisecondsToSeconds(delay);
+    }
+    get time() {
+      return millisecondsToSeconds(Number(this.animation.currentTime) || 0);
+    }
+    set time(newTime) {
+      const wasFinished = this.finishedTime !== null;
+      this.manualStartTime = null;
+      this.finishedTime = null;
+      this.animation.currentTime = secondsToMilliseconds(newTime);
+      if (wasFinished) {
+        this.animation.pause();
+      }
+    }
+    /**
+     * The playback speed of the animation.
+     * 1 = normal speed, 2 = double speed, 0.5 = half speed.
+     */
+    get speed() {
+      return this.animation.playbackRate;
+    }
+    set speed(newSpeed) {
+      if (newSpeed < 0)
+        this.finishedTime = null;
+      this.animation.playbackRate = newSpeed;
+    }
+    get state() {
+      return this.finishedTime !== null ? "finished" : this.animation.playState;
+    }
+    get startTime() {
+      return this.manualStartTime ?? Number(this.animation.startTime);
+    }
+    set startTime(newStartTime) {
+      this.manualStartTime = this.animation.startTime = newStartTime;
+    }
+    /**
+     * Attaches a timeline to the animation, for instance the `ScrollTimeline`.
+     */
+    attachTimeline({ timeline, rangeStart, rangeEnd, observe }) {
+      if (this.allowFlatten) {
+        this.animation.effect?.updateTiming({ easing: "linear" });
+      }
+      this.animation.onfinish = null;
+      if (timeline && supportsScrollTimeline()) {
+        this.animation.timeline = timeline;
+        if (rangeStart)
+          this.animation.rangeStart = rangeStart;
+        if (rangeEnd)
+          this.animation.rangeEnd = rangeEnd;
+        return noop;
+      } else {
+        return observe(this);
+      }
+    }
+  };
+
+  // node_modules/motion-dom/dist/es/animation/GroupAnimation.mjs
+  var GroupAnimation = class {
+    constructor(animations) {
+      this.stop = () => this.runAll("stop");
+      this.animations = animations.filter(Boolean);
+    }
+    get finished() {
+      return Promise.all(this.animations.map((animation) => animation.finished));
+    }
+    /**
+     * TODO: Filter out cancelled or stopped animations before returning
+     */
+    getAll(propName) {
+      return this.animations[0][propName];
+    }
+    setAll(propName, newValue) {
+      for (let i2 = 0; i2 < this.animations.length; i2++) {
+        this.animations[i2][propName] = newValue;
+      }
+    }
+    attachTimeline(timeline) {
+      const subscriptions = this.animations.map((animation) => animation.attachTimeline(timeline));
+      return () => {
+        subscriptions.forEach((cancel, i2) => {
+          cancel && cancel();
+          this.animations[i2].stop();
+        });
+      };
+    }
+    get time() {
+      return this.getAll("time");
+    }
+    set time(time) {
+      this.setAll("time", time);
+    }
+    get speed() {
+      return this.getAll("speed");
+    }
+    set speed(speed) {
+      this.setAll("speed", speed);
+    }
+    get state() {
+      return this.getAll("state");
+    }
+    get startTime() {
+      return this.getAll("startTime");
+    }
+    get duration() {
+      return getMax(this.animations, "duration");
+    }
+    get iterationDuration() {
+      return getMax(this.animations, "iterationDuration");
+    }
+    runAll(methodName) {
+      this.animations.forEach((controls) => controls[methodName]());
+    }
+    play() {
+      this.runAll("play");
+    }
+    pause() {
+      this.runAll("pause");
+    }
+    cancel() {
+      this.runAll("cancel");
+    }
+    complete() {
+      this.runAll("complete");
+    }
+  };
+  function getMax(animations, propName) {
+    let max = 0;
+    for (let i2 = 0; i2 < animations.length; i2++) {
+      const value = animations[i2][propName];
+      if (value !== null && value > max) {
+        max = value;
+      }
+    }
+    return max;
+  }
+
+  // node_modules/motion-dom/dist/es/animation/GroupAnimationWithThen.mjs
+  var GroupAnimationWithThen = class extends GroupAnimation {
+    then(onResolve, _onReject) {
+      return this.finished.finally(onResolve).then(() => {
+      });
+    }
+  };
+
+  // node_modules/motion-dom/dist/es/animation/utils/active-animations.mjs
+  var animationMaps = /* @__PURE__ */ new WeakMap();
+  var animationMapKey = (name, pseudoElement = "") => `${name}:${pseudoElement}`;
+  function getAnimationMap(element) {
+    let map = animationMaps.get(element);
+    if (!map) {
+      map = /* @__PURE__ */ new Map();
+      animationMaps.set(element, map);
+    }
+    return map;
+  }
+
+  // node_modules/motion-dom/dist/es/animation/utils/resolve-transition.mjs
+  function resolveTransition(transition, parentTransition) {
+    if (transition?.inherit && parentTransition) {
+      const { inherit: _2, ...rest } = transition;
+      return { ...parentTransition, ...rest };
+    }
+    return transition;
+  }
+
+  // node_modules/motion-dom/dist/es/animation/utils/get-value-transition.mjs
+  function getValueTransition(transition, key) {
+    const valueTransition = transition?.[key] ?? transition?.["default"] ?? transition;
+    if (valueTransition !== transition) {
+      return resolveTransition(valueTransition, transition);
+    }
+    return valueTransition;
+  }
+
+  // node_modules/motion-dom/dist/es/utils/border-radius.mjs
+  var cornerRadiusProps = [
+    "borderTopLeftRadius",
+    "borderTopRightRadius",
+    "borderBottomRightRadius",
+    "borderBottomLeftRadius"
+  ];
+
+  // node_modules/motion-dom/dist/es/animation/waapi/utils/px-values.mjs
+  var pxValues = /* @__PURE__ */ new Set([
+    // Border props
+    "borderWidth",
+    "borderTopWidth",
+    "borderRightWidth",
+    "borderBottomWidth",
+    "borderLeftWidth",
+    "borderRadius",
+    ...cornerRadiusProps,
+    // Positioning props
+    "width",
+    "maxWidth",
+    "height",
+    "maxHeight",
+    "top",
+    "right",
+    "bottom",
+    "left",
+    "inset",
+    "insetBlock",
+    "insetBlockStart",
+    "insetBlockEnd",
+    "insetInline",
+    "insetInlineStart",
+    "insetInlineEnd",
+    // Spacing props
+    "padding",
+    "paddingTop",
+    "paddingRight",
+    "paddingBottom",
+    "paddingLeft",
+    "paddingBlock",
+    "paddingBlockStart",
+    "paddingBlockEnd",
+    "paddingInline",
+    "paddingInlineStart",
+    "paddingInlineEnd",
+    "margin",
+    "marginTop",
+    "marginRight",
+    "marginBottom",
+    "marginLeft",
+    "marginBlock",
+    "marginBlockStart",
+    "marginBlockEnd",
+    "marginInline",
+    "marginInlineStart",
+    "marginInlineEnd",
+    // Typography
+    "fontSize",
+    // Misc
+    "backgroundPositionX",
+    "backgroundPositionY"
+  ]);
+
+  // node_modules/motion-dom/dist/es/animation/keyframes/utils/apply-px-defaults.mjs
+  function applyPxDefaults(keyframes, name) {
+    for (let i2 = 0; i2 < keyframes.length; i2++) {
+      if (typeof keyframes[i2] === "number" && pxValues.has(name)) {
+        keyframes[i2] = keyframes[i2] + "px";
+      }
+    }
+  }
+
+  // node_modules/motion-dom/dist/es/utils/resolve-elements.mjs
+  function resolveElements(elementOrSelector, scope, selectorCache) {
+    if (elementOrSelector == null) {
+      return [];
+    }
+    if (elementOrSelector instanceof EventTarget) {
+      return [elementOrSelector];
+    } else if (typeof elementOrSelector === "string") {
+      let root = document;
+      if (scope) {
+        root = scope.current;
+      }
+      const elements = selectorCache?.[elementOrSelector] ?? root.querySelectorAll(elementOrSelector);
+      return elements ? Array.from(elements) : [];
+    }
+    return Array.from(elementOrSelector).filter((element) => element != null);
+  }
+
+  // node_modules/motion-dom/dist/es/render/dom/style-computed.mjs
+  function getComputedStyle(element, name) {
+    const computedStyle = window.getComputedStyle(element);
+    return isCSSVar(name) ? computedStyle.getPropertyValue(name) : computedStyle[name];
+  }
+
+  // node_modules/framer-motion/dist/es/animation/animators/waapi/animate-elements.mjs
+  function animateElements(elementOrSelector, keyframes, options, scope) {
+    if (elementOrSelector == null) {
+      return [];
+    }
+    const elements = resolveElements(elementOrSelector, scope);
+    const numElements = elements.length;
+    invariant(Boolean(numElements), "No valid elements provided.", "no-valid-elements");
+    const animationDefinitions = [];
+    for (let i2 = 0; i2 < numElements; i2++) {
+      const element = elements[i2];
+      const elementTransition = { ...options };
+      if (typeof elementTransition.delay === "function") {
+        elementTransition.delay = elementTransition.delay(i2, numElements);
+      }
+      for (const valueName in keyframes) {
+        let valueKeyframes = keyframes[valueName];
+        if (!Array.isArray(valueKeyframes)) {
+          valueKeyframes = [valueKeyframes];
+        }
+        const valueOptions = {
+          ...getValueTransition(elementTransition, valueName)
+        };
+        valueOptions.duration && (valueOptions.duration = secondsToMilliseconds(valueOptions.duration));
+        valueOptions.delay && (valueOptions.delay = secondsToMilliseconds(valueOptions.delay));
+        const map = getAnimationMap(element);
+        const key = animationMapKey(valueName, valueOptions.pseudoElement || "");
+        const currentAnimation = map.get(key);
+        currentAnimation && currentAnimation.stop();
+        animationDefinitions.push({
+          map,
+          key,
+          unresolvedKeyframes: valueKeyframes,
+          options: {
+            ...valueOptions,
+            element,
+            name: valueName,
+            allowFlatten: !elementTransition.type && !elementTransition.ease
+          }
+        });
+      }
+    }
+    for (let i2 = 0; i2 < animationDefinitions.length; i2++) {
+      const { unresolvedKeyframes, options: animationOptions } = animationDefinitions[i2];
+      const { element, name, pseudoElement } = animationOptions;
+      if (!pseudoElement && unresolvedKeyframes[0] === null) {
+        unresolvedKeyframes[0] = getComputedStyle(element, name);
+      }
+      fillWildcards(unresolvedKeyframes);
+      applyPxDefaults(unresolvedKeyframes, name);
+      if (!pseudoElement && unresolvedKeyframes.length < 2) {
+        unresolvedKeyframes.unshift(getComputedStyle(element, name));
+      }
+      animationOptions.keyframes = unresolvedKeyframes;
+    }
+    const animations = [];
+    for (let i2 = 0; i2 < animationDefinitions.length; i2++) {
+      const { map, key, options: animationOptions } = animationDefinitions[i2];
+      const animation = new NativeAnimation(animationOptions);
+      map.set(key, animation);
+      animation.finished.finally(() => map.delete(key));
+      animations.push(animation);
+    }
+    return animations;
+  }
+
+  // node_modules/framer-motion/dist/es/animation/animators/waapi/animate-style.mjs
+  var createScopedWaapiAnimate = (scope) => {
+    function scopedAnimate(elementOrSelector, keyframes, options) {
+      return new GroupAnimationWithThen(animateElements(elementOrSelector, keyframes, options, scope));
+    }
+    return scopedAnimate;
+  };
+  var animateMini = /* @__PURE__ */ createScopedWaapiAnimate();
+
+  // runtime/src/injected/motion.ts
+  var reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var easeOut = [0.2, 0.8, 0.2, 1];
+  function enterDashboard(overlay, dialog) {
+    animateMini(overlay, { opacity: [0, 1] }, { duration: reducedMotionQuery.matches ? 0.1 : 0.14, ease: "easeOut" });
+    if (reducedMotionQuery.matches) return;
+    animateMini(
+      dialog,
+      {
+        opacity: [0, 1],
+        transform: ["translateY(6px) scale(.985)", "translateY(0) scale(1)"]
+      },
+      { duration: 0.18, ease: easeOut }
+    );
+  }
+  async function exitDashboard(overlay, dialog) {
+    const animations = [animateMini(overlay, { opacity: 0 }, { duration: reducedMotionQuery.matches ? 0.08 : 0.12, ease: "easeIn" })];
+    if (!reducedMotionQuery.matches) {
+      animations.push(animateMini(
+        dialog,
+        { opacity: 0, transform: "translateY(4px) scale(.99)" },
+        { duration: 0.12, ease: "easeIn" }
+      ));
+    }
+    await Promise.all(animations);
+  }
+  function enterSortMenu(menu) {
+    if (reducedMotionQuery.matches) return;
+    animateMini(
+      menu,
+      { opacity: [0, 1], transform: ["translateY(-4px) scale(.98)", "translateY(0) scale(1)"] },
+      { duration: 0.12, ease: easeOut }
+    );
+  }
+  function enterDashboardContent(content) {
+    animateMini(
+      content,
+      reducedMotionQuery.matches ? { opacity: [0, 1] } : { opacity: [0, 1], transform: ["translateY(2px)", "translateY(0)"] },
+      { duration: reducedMotionQuery.matches ? 0.08 : 0.12, ease: "easeOut" }
+    );
+  }
+  function refreshResults(results) {
+    animateMini(
+      results,
+      reducedMotionQuery.matches ? { opacity: [0.72, 1] } : { opacity: [0.72, 1], transform: ["translateY(2px)", "translateY(0)"] },
+      { duration: reducedMotionQuery.matches ? 0.08 : 0.12, ease: "easeOut" }
+    );
+  }
+
   // runtime/src/injected/search.ts
   function timeRank(value) {
     const match = /^(\d{1,2})[-/.](\d{1,2})$/.exec(value);
@@ -450,6 +1135,7 @@ var CodexTagsInjected = (() => {
     let pinnedToggleRef = null;
     let pointerActive = false;
     let pendingToolbarRefresh = false;
+    let dashboardClosing = false;
     const debugEvents = [];
     const clearPendingSearch = () => {
       if (searchRequestTimer !== null) clearTimeout(searchRequestTimer);
@@ -542,9 +1228,10 @@ var CodexTagsInjected = (() => {
     .codex-sidebar-dashboard-launcher { width: 100%; color: inherit; font: inherit; }
     .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"] {
       display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 6px;
-      background: transparent; text-align: left; cursor: pointer;
+      background: transparent; text-align: left; cursor: pointer; transition: background 100ms ease, transform 100ms ease;
     }
     .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"]:hover { background: var(--color-token-list-hover-background, #8882); }
+    .codex-sidebar-dashboard-launcher:active { transform: scale(.985); }
     .codex-sidebar-dashboard-launcher:focus-visible { outline: 2px solid var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); outline-offset: -2px; }
 
     .codex-sidebar-dashboard-overlay {
@@ -555,15 +1242,16 @@ var CodexTagsInjected = (() => {
       display: flex; width: min(680px, calc(100vw - 40px)); max-height: min(720px, calc(100vh - 48px)); flex-direction: column;
       border: 1px solid var(--color-border-light, var(--color-token-menu-border, #8884)); border-radius: 16px;
       color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: var(--color-background-elevated-base, var(--color-token-menu-background, #181818));
-      box-shadow: 0 24px 70px #0007, 0 4px 18px #0003; overflow: hidden;
+      box-shadow: 0 24px 70px #0007, 0 4px 18px #0003; overflow: hidden; transform-origin: 50% 45%;
     }
     .codex-sidebar-dashboard-header { display: flex; align-items: center; gap: 12px; padding: 15px 16px 12px; border-bottom: 1px solid var(--color-border-light, var(--color-token-border-light, #8883)); }
     .codex-sidebar-dashboard-heading { margin: 0; font-size: 17px; font-weight: 650; }
     .codex-sidebar-dashboard-subtitle { color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
     .codex-sidebar-dashboard-tabs { display: flex; gap: 3px; margin-left: auto; padding: 3px; border-radius: 8px; background: var(--color-background-control, var(--color-token-input-background, #8881)); }
-    .codex-sidebar-dashboard-tab { height: 29px; padding: 0 11px; border: 0; border-radius: 6px; color: var(--color-text-secondary, inherit); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+    .codex-sidebar-dashboard-tab { height: 29px; padding: 0 11px; border: 0; border-radius: 6px; color: var(--color-text-secondary, inherit); background: transparent; font: inherit; font-size: 12px; cursor: pointer; transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease, transform 100ms ease; }
     .codex-sidebar-dashboard-tab[aria-selected="true"] { color: var(--color-text-foreground, inherit); background: var(--color-background-elevated-high, var(--color-token-list-active-selection-background, #8883)); box-shadow: 0 1px 2px #0002; }
-    .codex-sidebar-dashboard-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; font-size: 17px; cursor: pointer; }
+    .codex-sidebar-dashboard-tab:active, .codex-sidebar-dashboard-close:active, .codex-sidebar-sort-trigger:active, .codex-sidebar-tag-add:active, .codex-sidebar-tag-delete:active { transform: scale(.97); }
+    .codex-sidebar-dashboard-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; font-size: 17px; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }
     .codex-sidebar-dashboard-close:hover { color: var(--color-text-foreground, inherit); background: var(--color-token-toolbar-hover-background, #8882); }
     .codex-sidebar-dashboard-body { min-height: 0; padding: 14px 16px 16px; overflow-y: auto; }
     .codex-sidebar-dashboard-controls { display: flex; align-items: center; gap: 8px; }
@@ -577,6 +1265,11 @@ var CodexTagsInjected = (() => {
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border-focus, #4b8cff) 18%, transparent);
     }
     .codex-sidebar-search-icon { width: 29px; flex: 0 0 29px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 15px; text-align: center; pointer-events: none; }
+    .codex-sidebar-search[data-loading="true"] .codex-sidebar-search-icon { font-size: 0; }
+    .codex-sidebar-search[data-loading="true"] .codex-sidebar-search-icon::after {
+      display: inline-block; width: 11px; height: 11px; border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; border-radius: 50%; content: ""; animation: codex-sidebar-search-spin 700ms linear infinite;
+    }
+    @keyframes codex-sidebar-search-spin { to { transform: rotate(360deg); } }
     .codex-sidebar-search-input {
       width: 100%; min-width: 0; border: 0; outline: 0; padding: 0 7px 0 0; color: var(--color-text-foreground, var(--color-token-input-foreground, inherit));
       background: transparent; font: inherit; font-size: 14px;
@@ -587,7 +1280,7 @@ var CodexTagsInjected = (() => {
     }
     .codex-sidebar-sort-trigger {
       display: flex; width: 100%; height: 36px; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid var(--color-border-light, var(--color-token-input-border, #8883)); border-radius: 8px;
-      color: var(--color-text-foreground, var(--color-token-input-foreground, inherit)); background: var(--color-background-control, var(--color-token-input-background, #8881)); font: inherit; font-size: 13px; cursor: pointer;
+      color: var(--color-text-foreground, var(--color-token-input-foreground, inherit)); background: var(--color-background-control, var(--color-token-input-background, #8881)); font: inherit; font-size: 13px; cursor: pointer; transition: border-color 120ms ease, background 100ms ease, box-shadow 120ms ease, transform 100ms ease;
     }
     .codex-sidebar-sort-trigger:hover { background: var(--color-background-control-opaque, var(--color-token-list-hover-background, #8882)); }
     .codex-sidebar-sort-trigger:focus-visible, .codex-sidebar-sort-trigger[aria-expanded="true"] { outline: 0; border-color: var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border-focus, #4b8cff) 18%, transparent); }
@@ -599,9 +1292,9 @@ var CodexTagsInjected = (() => {
       position: absolute; top: calc(100% + 5px); right: 0; z-index: 8; width: 144px; padding: 4px;
       border: 1px solid var(--color-border-light, var(--color-token-menu-border, #8884)); border-radius: 9px;
       color: var(--color-text-foreground, var(--color-token-dropdown-foreground, inherit)); background: var(--color-background-elevated-high, var(--color-token-menu-background, #202020));
-      box-shadow: 0 12px 32px #0006, 0 2px 8px #0003;
+      box-shadow: 0 12px 32px #0006, 0 2px 8px #0003; transform-origin: top right;
     }
-    .codex-sidebar-sort-option { display: flex; width: 100%; height: 32px; align-items: center; padding: 0 9px; border: 0; border-radius: 6px; color: inherit; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+    .codex-sidebar-sort-option { display: flex; width: 100%; height: 32px; align-items: center; padding: 0 9px; border: 0; border-radius: 6px; color: inherit; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; transition: background 100ms ease; }
     .codex-sidebar-sort-option:hover, .codex-sidebar-sort-option:focus-visible { outline: 0; background: var(--color-token-list-hover-background, #8882); }
     .codex-sidebar-sort-option[aria-selected="true"] { background: var(--color-token-list-active-selection-background, #8883); }
     .codex-sidebar-sort-check { width: 14px; margin-left: auto; color: var(--color-text-secondary, inherit); text-align: center; }
@@ -621,8 +1314,9 @@ var CodexTagsInjected = (() => {
     .codex-sidebar-filter-count { margin-left: 4px; opacity: .62; font-variant-numeric: tabular-nums; }
     .codex-sidebar-results {
       margin-top: 12px; padding: 6px; border: 1px solid var(--color-border-light, var(--color-token-border-light, #8883)); border-radius: 11px;
-      background: var(--color-background-surface, var(--color-token-bg-secondary, #8881)); overflow-anchor: none;
+      background: var(--color-background-surface, var(--color-token-bg-secondary, #8881)); overflow-anchor: none; transition: opacity 120ms ease;
     }
+    .codex-sidebar-results[data-loading="true"] { opacity: .78; }
     .codex-sidebar-results-head { display: flex; align-items: center; justify-content: space-between; min-height: 26px; padding: 0 5px 5px 7px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
     .codex-sidebar-results-list { max-height: min(430px, calc(100vh - 250px)); overflow-y: auto; overscroll-behavior: contain; }
     .codex-sidebar-result-group {
@@ -631,9 +1325,10 @@ var CodexTagsInjected = (() => {
     }
     .codex-sidebar-result {
       display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; min-height: 40px; padding: 8px;
-      border: 0; border-radius: 8px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: transparent; text-align: left; font: inherit; cursor: pointer;
+      border: 0; border-radius: 8px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: transparent; text-align: left; font: inherit; cursor: pointer; transition: background 100ms ease, transform 100ms ease;
     }
     .codex-sidebar-result:hover, .codex-sidebar-result:focus-visible { outline: 0; background: var(--color-token-list-hover-background, #8882); }
+    .codex-sidebar-result:active { transform: scale(.995); }
     .codex-sidebar-result-tag { font-size: 11px; }
     .codex-sidebar-result-content { min-width: 0; }
     .codex-sidebar-result-title { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.4; }
@@ -641,8 +1336,9 @@ var CodexTagsInjected = (() => {
     .codex-sidebar-search-mark {
       padding: 0 1px; border-radius: 3px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit));
       background: color-mix(in srgb, var(--color-border-focus, var(--color-token-focus-border, #4b8cff)) 32%, transparent);
-      font-weight: 650; box-decoration-break: clone; -webkit-box-decoration-break: clone;
+      font-weight: 650; box-decoration-break: clone; -webkit-box-decoration-break: clone; animation: codex-sidebar-search-mark-in 180ms ease-out;
     }
+    @keyframes codex-sidebar-search-mark-in { from { background-color: transparent; } }
     .codex-sidebar-results-empty { padding: 17px 8px 19px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 13px; text-align: center; }
     .codex-sidebar-tag-settings-note { margin: 0 0 12px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 13px; line-height: 1.5; }
     .codex-sidebar-tag-form { display: grid; grid-template-columns: minmax(0, 1fr) 105px auto; gap: 8px; margin-bottom: 12px; }
@@ -653,12 +1349,12 @@ var CodexTagsInjected = (() => {
     .codex-sidebar-tag-input { padding: 0 9px; }
     .codex-sidebar-tag-tone { padding: 0 20px 0 8px; }
     .codex-sidebar-tag-input:focus, .codex-sidebar-tag-tone:focus { border-color: var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border-focus, #4b8cff) 18%, transparent); }
-    .codex-sidebar-tag-add { height: 32px; padding: 0 12px; border: 1px solid var(--color-border-light, #8884); border-radius: 8px; color: var(--color-token-button-foreground, inherit); background: var(--color-token-button-background, #8882); font: inherit; font-size: 13px; cursor: pointer; }
+    .codex-sidebar-tag-add { height: 32px; padding: 0 12px; border: 1px solid var(--color-border-light, #8884); border-radius: 8px; color: var(--color-token-button-foreground, inherit); background: var(--color-token-button-background, #8882); font: inherit; font-size: 13px; cursor: pointer; transition: background 100ms ease, transform 100ms ease; }
     .codex-sidebar-tag-error { min-height: 18px; margin: -5px 0 5px; color: #c53b3b; font-size: 12px; }
     .codex-sidebar-tag-config-list { display: grid; gap: 5px; }
     .codex-sidebar-tag-config-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 28px; align-items: center; min-height: 36px; padding: 0 7px 0 10px; border-radius: 8px; background: var(--color-background-control, var(--color-token-input-background, #8881)); }
     .codex-sidebar-tag-config-tone { color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
-    .codex-sidebar-tag-delete { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; cursor: pointer; }
+    .codex-sidebar-tag-delete { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }
     .codex-sidebar-tag-delete:hover { color: #c53b3b; background: #ef444418; }
     @media (prefers-color-scheme: dark) {
       .codex-sidebar-tag-chip[data-tone="amber"], .codex-sidebar-result-tag[data-tone="amber"] { color: #f2b84b; }
@@ -677,7 +1373,10 @@ var CodexTagsInjected = (() => {
       .codex-sidebar-tag-add { grid-column: 1 / -1; }
       .codex-sidebar-results-list { max-height: calc(100vh - 300px); }
     }
-    @media (prefers-reduced-motion: reduce) { .codex-sidebar-filter-chip, .codex-sidebar-search { transition: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .codex-sidebar-dashboard-launcher, .codex-sidebar-dashboard-tab, .codex-sidebar-dashboard-close, .codex-sidebar-search, .codex-sidebar-sort-trigger, .codex-sidebar-sort-chevron, .codex-sidebar-sort-option, .codex-sidebar-filter-chip, .codex-sidebar-results, .codex-sidebar-result, .codex-sidebar-search-mark, .codex-sidebar-tag-add, .codex-sidebar-tag-delete { animation: none; transition: none; }
+      .codex-sidebar-search[data-loading="true"] .codex-sidebar-search-icon::after { animation: none; border-color: currentColor; opacity: .65; }
+    }
   `;
     const restoreNode = (node) => {
       const raw = node.getAttribute(RAW);
@@ -809,14 +1508,16 @@ var CodexTagsInjected = (() => {
       }));
     };
     const openEntry = async (entry) => {
-      let row = entry.row?.isConnected && entry.row.getClientRects().length > 0 ? entry.row : findVisibleThreadRow(entry.threadId);
+      const owningProject = entry.projectId ? findProjectRow(entry.projectId) : null;
+      const projectCollapsed = owningProject?.getAttribute("data-app-action-sidebar-project-collapsed") === "true";
+      let row = projectCollapsed ? null : entry.row?.isConnected && entry.row.getClientRects().length > 0 ? entry.row : findVisibleThreadRow(entry.threadId);
       trace("open-entry", { threadId: entry.threadId, projectId: entry.projectId, pinned: entry.pinned, visibleRow: Boolean(row) });
       if (!row && entry.pinned) {
         const pinnedToggle = pinnedToggleRef?.isConnected ? pinnedToggleRef : document.querySelector(codexSelectors.sectionToggle);
         if (pinnedToggle && !document.querySelector("[data-app-action-sidebar-thread-pinned='true']")) pinnedToggle.click();
       }
       if (!row && entry.projectId) {
-        const projectRow = findProjectRow(entry.projectId);
+        const projectRow = owningProject ?? findProjectRow(entry.projectId);
         if (projectRow?.getAttribute("data-app-action-sidebar-project-collapsed") === "true") {
           trace("expand-project", { projectId: entry.projectId });
           projectRow.click();
@@ -834,8 +1535,7 @@ var CodexTagsInjected = (() => {
         searchError = "";
         state.tag = "all";
         state.sortOpen = false;
-        state.open = false;
-        renderToolbar(entriesFrom(titleNodes()));
+        await closeDashboard("open-entry");
         row.scrollIntoView({ block: "nearest" });
         row.click();
       } else {
@@ -883,7 +1583,23 @@ var CodexTagsInjected = (() => {
       element.textContent = text;
       return element;
     };
+    const closeDashboard = async (reason) => {
+      if (!state.open || dashboardClosing) return;
+      dashboardClosing = true;
+      trace("dashboard-close-start", { reason });
+      state.sortOpen = false;
+      const closingModal = modal;
+      const dialog = closingModal?.querySelector(".codex-sidebar-dashboard-dialog");
+      if (closingModal && dialog) await exitDashboard(closingModal, dialog);
+      if (modal === closingModal) {
+        state.open = false;
+        renderToolbar(entriesFrom(titleNodes()), reason);
+      }
+      dashboardClosing = false;
+      trace("dashboard-close-end", { reason });
+    };
     const renderToolbar = (entries, reason = "state") => {
+      if (dashboardClosing && state.open) return;
       const toolbar = ensureToolbar(entries.map((entry2) => entry2.node).filter(Boolean));
       if (!toolbar) return;
       pendingToolbarRefresh = false;
@@ -922,6 +1638,7 @@ var CodexTagsInjected = (() => {
       launcher.setAttribute("aria-haspopup", "dialog");
       launcher.setAttribute("aria-expanded", String(state.open));
       launcher.addEventListener("click", () => {
+        dashboardClosing = false;
         state.open = true;
         state.view = "sessions";
         state.sortOpen = false;
@@ -966,9 +1683,7 @@ var CodexTagsInjected = (() => {
       close.title = "\u5173\u95ED";
       close.setAttribute("aria-label", "\u5173\u95ED\u4F1A\u8BDD\u770B\u677F");
       close.addEventListener("click", () => {
-        state.open = false;
-        state.sortOpen = false;
-        renderToolbar(entriesFrom(titleNodes()), "close-dashboard");
+        void closeDashboard("close-dashboard");
       });
       header.append(headingGroup, tabs, close);
       const body = document.createElement("div");
@@ -978,6 +1693,7 @@ var CodexTagsInjected = (() => {
         controls.className = "codex-sidebar-dashboard-controls";
         const search = document.createElement("label");
         search.className = "codex-sidebar-search";
+        search.dataset.loading = String(searchLoading);
         const searchIcon = document.createElement("span");
         searchIcon.className = "codex-sidebar-search-icon";
         searchIcon.textContent = "\u2315";
@@ -1095,7 +1811,7 @@ var CodexTagsInjected = (() => {
           const badge = document.createElement("span");
           badge.className = "codex-sidebar-filter-count";
           badge.textContent = String(count);
-          if (value === "all" || state.tag === value) chip.appendChild(badge);
+          chip.appendChild(badge);
           chip.addEventListener("click", () => {
             state.tag = state.tag === value && value !== "all" ? "all" : value;
             trace("tag-click", { value, selected: state.tag });
@@ -1106,6 +1822,7 @@ var CodexTagsInjected = (() => {
         const results = selectVisibleEntries(entries, state, contentMatches);
         const panel = document.createElement("div");
         panel.className = "codex-sidebar-results";
+        panel.dataset.loading = String(searchLoading);
         const panelHead = document.createElement("div");
         panelHead.className = "codex-sidebar-results-head";
         const summary = document.createElement("span");
@@ -1189,9 +1906,7 @@ var CodexTagsInjected = (() => {
       overlay.appendChild(dialog);
       overlay.addEventListener("pointerdown", (event) => {
         if (event.target !== overlay) return;
-        state.open = false;
-        state.sortOpen = false;
-        renderToolbar(entriesFrom(titleNodes()), "backdrop");
+        void closeDashboard("backdrop");
       });
       dialog.addEventListener("pointerdown", (event) => {
         if (!state.sortOpen || event.target.closest(".codex-sidebar-sort-control")) return;
@@ -1203,9 +1918,7 @@ var CodexTagsInjected = (() => {
       dialog.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
           event.preventDefault();
-          state.open = false;
-          state.sortOpen = false;
-          renderToolbar(entriesFrom(titleNodes()), "escape");
+          void closeDashboard("escape");
           return;
         }
         if (event.key !== "Tab") return;
@@ -1223,6 +1936,10 @@ var CodexTagsInjected = (() => {
       });
       modal = overlay;
       document.body.appendChild(overlay);
+      if (reason === "open-dashboard") enterDashboard(overlay, dialog);
+      if (reason === "dashboard-tab") enterDashboardContent(body);
+      if (reason === "sort-toggle" && state.sortOpen) enterSortMenu(dialog.querySelector(".codex-sidebar-sort-menu"));
+      if (["tag", "sort", "search-result"].includes(reason)) refreshResults(dialog.querySelector(".codex-sidebar-results"));
       const restoredInput = activeInputClass ? dialog.querySelector(`.${activeInputClass}`) : null;
       if (restoredInput) {
         restoredInput.focus({ preventScroll: true });

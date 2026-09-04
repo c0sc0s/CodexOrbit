@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { titlePatternSource } from "./title-format.mjs";
 import { DEFAULT_TAG_DEFINITIONS } from "./tag-settings.mjs";
 
-export const RUNTIME_VERSION = "5.1.0";
+export const RUNTIME_VERSION = "5.2.2";
 export const SEARCH_BINDING = "__codexTagsSearchRequest";
 
 const TONES = DEFAULT_TAG_DEFINITIONS.map(({ name, tone }) => [name, tone]);

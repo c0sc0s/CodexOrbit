@@ -10,6 +10,7 @@ import {
   mutationContainsSidebarNode,
   queryThreadTitles,
 } from "./codex-dom-adapter";
+import { enterDashboard, enterDashboardContent, enterSortMenu, exitDashboard, refreshResults } from "./motion";
 import { selectVisibleEntries } from "./search";
 import { createInitialState } from "./store";
 
@@ -61,6 +62,7 @@ export function installRuntime(config: RuntimeConfig) {
   let pinnedToggleRef = null;
   let pointerActive = false;
   let pendingToolbarRefresh = false;
+  let dashboardClosing = false;
   const debugEvents = [];
 
   const clearPendingSearch = () => {
@@ -154,9 +156,10 @@ export function installRuntime(config: RuntimeConfig) {
     .codex-sidebar-dashboard-launcher { width: 100%; color: inherit; font: inherit; }
     .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"] {
       display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 6px;
-      background: transparent; text-align: left; cursor: pointer;
+      background: transparent; text-align: left; cursor: pointer; transition: background 100ms ease, transform 100ms ease;
     }
     .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"]:hover { background: var(--color-token-list-hover-background, #8882); }
+    .codex-sidebar-dashboard-launcher:active { transform: scale(.985); }
     .codex-sidebar-dashboard-launcher:focus-visible { outline: 2px solid var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); outline-offset: -2px; }
 
     .codex-sidebar-dashboard-overlay {
@@ -167,15 +170,16 @@ export function installRuntime(config: RuntimeConfig) {
       display: flex; width: min(680px, calc(100vw - 40px)); max-height: min(720px, calc(100vh - 48px)); flex-direction: column;
       border: 1px solid var(--color-border-light, var(--color-token-menu-border, #8884)); border-radius: 16px;
       color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: var(--color-background-elevated-base, var(--color-token-menu-background, #181818));
-      box-shadow: 0 24px 70px #0007, 0 4px 18px #0003; overflow: hidden;
+      box-shadow: 0 24px 70px #0007, 0 4px 18px #0003; overflow: hidden; transform-origin: 50% 45%;
     }
     .codex-sidebar-dashboard-header { display: flex; align-items: center; gap: 12px; padding: 15px 16px 12px; border-bottom: 1px solid var(--color-border-light, var(--color-token-border-light, #8883)); }
     .codex-sidebar-dashboard-heading { margin: 0; font-size: 17px; font-weight: 650; }
     .codex-sidebar-dashboard-subtitle { color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
     .codex-sidebar-dashboard-tabs { display: flex; gap: 3px; margin-left: auto; padding: 3px; border-radius: 8px; background: var(--color-background-control, var(--color-token-input-background, #8881)); }
-    .codex-sidebar-dashboard-tab { height: 29px; padding: 0 11px; border: 0; border-radius: 6px; color: var(--color-text-secondary, inherit); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+    .codex-sidebar-dashboard-tab { height: 29px; padding: 0 11px; border: 0; border-radius: 6px; color: var(--color-text-secondary, inherit); background: transparent; font: inherit; font-size: 12px; cursor: pointer; transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease, transform 100ms ease; }
     .codex-sidebar-dashboard-tab[aria-selected="true"] { color: var(--color-text-foreground, inherit); background: var(--color-background-elevated-high, var(--color-token-list-active-selection-background, #8883)); box-shadow: 0 1px 2px #0002; }
-    .codex-sidebar-dashboard-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; font-size: 17px; cursor: pointer; }
+    .codex-sidebar-dashboard-tab:active, .codex-sidebar-dashboard-close:active, .codex-sidebar-sort-trigger:active, .codex-sidebar-tag-add:active, .codex-sidebar-tag-delete:active { transform: scale(.97); }
+    .codex-sidebar-dashboard-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; font-size: 17px; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }
     .codex-sidebar-dashboard-close:hover { color: var(--color-text-foreground, inherit); background: var(--color-token-toolbar-hover-background, #8882); }
     .codex-sidebar-dashboard-body { min-height: 0; padding: 14px 16px 16px; overflow-y: auto; }
     .codex-sidebar-dashboard-controls { display: flex; align-items: center; gap: 8px; }
@@ -189,6 +193,11 @@ export function installRuntime(config: RuntimeConfig) {
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border-focus, #4b8cff) 18%, transparent);
     }
     .codex-sidebar-search-icon { width: 29px; flex: 0 0 29px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 15px; text-align: center; pointer-events: none; }
+    .codex-sidebar-search[data-loading="true"] .codex-sidebar-search-icon { font-size: 0; }
+    .codex-sidebar-search[data-loading="true"] .codex-sidebar-search-icon::after {
+      display: inline-block; width: 11px; height: 11px; border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; border-radius: 50%; content: ""; animation: codex-sidebar-search-spin 700ms linear infinite;
+    }
+    @keyframes codex-sidebar-search-spin { to { transform: rotate(360deg); } }
     .codex-sidebar-search-input {
       width: 100%; min-width: 0; border: 0; outline: 0; padding: 0 7px 0 0; color: var(--color-text-foreground, var(--color-token-input-foreground, inherit));
       background: transparent; font: inherit; font-size: 14px;
@@ -199,7 +208,7 @@ export function installRuntime(config: RuntimeConfig) {
     }
     .codex-sidebar-sort-trigger {
       display: flex; width: 100%; height: 36px; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid var(--color-border-light, var(--color-token-input-border, #8883)); border-radius: 8px;
-      color: var(--color-text-foreground, var(--color-token-input-foreground, inherit)); background: var(--color-background-control, var(--color-token-input-background, #8881)); font: inherit; font-size: 13px; cursor: pointer;
+      color: var(--color-text-foreground, var(--color-token-input-foreground, inherit)); background: var(--color-background-control, var(--color-token-input-background, #8881)); font: inherit; font-size: 13px; cursor: pointer; transition: border-color 120ms ease, background 100ms ease, box-shadow 120ms ease, transform 100ms ease;
     }
     .codex-sidebar-sort-trigger:hover { background: var(--color-background-control-opaque, var(--color-token-list-hover-background, #8882)); }
     .codex-sidebar-sort-trigger:focus-visible, .codex-sidebar-sort-trigger[aria-expanded="true"] { outline: 0; border-color: var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border-focus, #4b8cff) 18%, transparent); }
@@ -211,9 +220,9 @@ export function installRuntime(config: RuntimeConfig) {
       position: absolute; top: calc(100% + 5px); right: 0; z-index: 8; width: 144px; padding: 4px;
       border: 1px solid var(--color-border-light, var(--color-token-menu-border, #8884)); border-radius: 9px;
       color: var(--color-text-foreground, var(--color-token-dropdown-foreground, inherit)); background: var(--color-background-elevated-high, var(--color-token-menu-background, #202020));
-      box-shadow: 0 12px 32px #0006, 0 2px 8px #0003;
+      box-shadow: 0 12px 32px #0006, 0 2px 8px #0003; transform-origin: top right;
     }
-    .codex-sidebar-sort-option { display: flex; width: 100%; height: 32px; align-items: center; padding: 0 9px; border: 0; border-radius: 6px; color: inherit; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+    .codex-sidebar-sort-option { display: flex; width: 100%; height: 32px; align-items: center; padding: 0 9px; border: 0; border-radius: 6px; color: inherit; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; transition: background 100ms ease; }
     .codex-sidebar-sort-option:hover, .codex-sidebar-sort-option:focus-visible { outline: 0; background: var(--color-token-list-hover-background, #8882); }
     .codex-sidebar-sort-option[aria-selected="true"] { background: var(--color-token-list-active-selection-background, #8883); }
     .codex-sidebar-sort-check { width: 14px; margin-left: auto; color: var(--color-text-secondary, inherit); text-align: center; }
@@ -233,8 +242,9 @@ export function installRuntime(config: RuntimeConfig) {
     .codex-sidebar-filter-count { margin-left: 4px; opacity: .62; font-variant-numeric: tabular-nums; }
     .codex-sidebar-results {
       margin-top: 12px; padding: 6px; border: 1px solid var(--color-border-light, var(--color-token-border-light, #8883)); border-radius: 11px;
-      background: var(--color-background-surface, var(--color-token-bg-secondary, #8881)); overflow-anchor: none;
+      background: var(--color-background-surface, var(--color-token-bg-secondary, #8881)); overflow-anchor: none; transition: opacity 120ms ease;
     }
+    .codex-sidebar-results[data-loading="true"] { opacity: .78; }
     .codex-sidebar-results-head { display: flex; align-items: center; justify-content: space-between; min-height: 26px; padding: 0 5px 5px 7px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
     .codex-sidebar-results-list { max-height: min(430px, calc(100vh - 250px)); overflow-y: auto; overscroll-behavior: contain; }
     .codex-sidebar-result-group {
@@ -243,9 +253,10 @@ export function installRuntime(config: RuntimeConfig) {
     }
     .codex-sidebar-result {
       display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; min-height: 40px; padding: 8px;
-      border: 0; border-radius: 8px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: transparent; text-align: left; font: inherit; cursor: pointer;
+      border: 0; border-radius: 8px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: transparent; text-align: left; font: inherit; cursor: pointer; transition: background 100ms ease, transform 100ms ease;
     }
     .codex-sidebar-result:hover, .codex-sidebar-result:focus-visible { outline: 0; background: var(--color-token-list-hover-background, #8882); }
+    .codex-sidebar-result:active { transform: scale(.995); }
     .codex-sidebar-result-tag { font-size: 11px; }
     .codex-sidebar-result-content { min-width: 0; }
     .codex-sidebar-result-title { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.4; }
@@ -253,8 +264,9 @@ export function installRuntime(config: RuntimeConfig) {
     .codex-sidebar-search-mark {
       padding: 0 1px; border-radius: 3px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit));
       background: color-mix(in srgb, var(--color-border-focus, var(--color-token-focus-border, #4b8cff)) 32%, transparent);
-      font-weight: 650; box-decoration-break: clone; -webkit-box-decoration-break: clone;
+      font-weight: 650; box-decoration-break: clone; -webkit-box-decoration-break: clone; animation: codex-sidebar-search-mark-in 180ms ease-out;
     }
+    @keyframes codex-sidebar-search-mark-in { from { background-color: transparent; } }
     .codex-sidebar-results-empty { padding: 17px 8px 19px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 13px; text-align: center; }
     .codex-sidebar-tag-settings-note { margin: 0 0 12px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 13px; line-height: 1.5; }
     .codex-sidebar-tag-form { display: grid; grid-template-columns: minmax(0, 1fr) 105px auto; gap: 8px; margin-bottom: 12px; }
@@ -265,12 +277,12 @@ export function installRuntime(config: RuntimeConfig) {
     .codex-sidebar-tag-input { padding: 0 9px; }
     .codex-sidebar-tag-tone { padding: 0 20px 0 8px; }
     .codex-sidebar-tag-input:focus, .codex-sidebar-tag-tone:focus { border-color: var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border-focus, #4b8cff) 18%, transparent); }
-    .codex-sidebar-tag-add { height: 32px; padding: 0 12px; border: 1px solid var(--color-border-light, #8884); border-radius: 8px; color: var(--color-token-button-foreground, inherit); background: var(--color-token-button-background, #8882); font: inherit; font-size: 13px; cursor: pointer; }
+    .codex-sidebar-tag-add { height: 32px; padding: 0 12px; border: 1px solid var(--color-border-light, #8884); border-radius: 8px; color: var(--color-token-button-foreground, inherit); background: var(--color-token-button-background, #8882); font: inherit; font-size: 13px; cursor: pointer; transition: background 100ms ease, transform 100ms ease; }
     .codex-sidebar-tag-error { min-height: 18px; margin: -5px 0 5px; color: #c53b3b; font-size: 12px; }
     .codex-sidebar-tag-config-list { display: grid; gap: 5px; }
     .codex-sidebar-tag-config-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 28px; align-items: center; min-height: 36px; padding: 0 7px 0 10px; border-radius: 8px; background: var(--color-background-control, var(--color-token-input-background, #8881)); }
     .codex-sidebar-tag-config-tone { color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
-    .codex-sidebar-tag-delete { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; cursor: pointer; }
+    .codex-sidebar-tag-delete { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }
     .codex-sidebar-tag-delete:hover { color: #c53b3b; background: #ef444418; }
     @media (prefers-color-scheme: dark) {
       .codex-sidebar-tag-chip[data-tone="amber"], .codex-sidebar-result-tag[data-tone="amber"] { color: #f2b84b; }
@@ -289,7 +301,10 @@ export function installRuntime(config: RuntimeConfig) {
       .codex-sidebar-tag-add { grid-column: 1 / -1; }
       .codex-sidebar-results-list { max-height: calc(100vh - 300px); }
     }
-    @media (prefers-reduced-motion: reduce) { .codex-sidebar-filter-chip, .codex-sidebar-search { transition: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .codex-sidebar-dashboard-launcher, .codex-sidebar-dashboard-tab, .codex-sidebar-dashboard-close, .codex-sidebar-search, .codex-sidebar-sort-trigger, .codex-sidebar-sort-chevron, .codex-sidebar-sort-option, .codex-sidebar-filter-chip, .codex-sidebar-results, .codex-sidebar-result, .codex-sidebar-search-mark, .codex-sidebar-tag-add, .codex-sidebar-tag-delete { animation: none; transition: none; }
+      .codex-sidebar-search[data-loading="true"] .codex-sidebar-search-icon::after { animation: none; border-color: currentColor; opacity: .65; }
+    }
   `;
 
   const restoreNode = (node) => {
@@ -430,7 +445,13 @@ export function installRuntime(config: RuntimeConfig) {
   };
 
   const openEntry = async (entry) => {
-    let row = entry.row?.isConnected && entry.row.getClientRects().length > 0 ? entry.row : findVisibleThreadRow(entry.threadId);
+    const owningProject = entry.projectId ? findProjectRow(entry.projectId) : null;
+    const projectCollapsed = owningProject?.getAttribute("data-app-action-sidebar-project-collapsed") === "true";
+    let row = projectCollapsed
+      ? null
+      : entry.row?.isConnected && entry.row.getClientRects().length > 0
+        ? entry.row
+        : findVisibleThreadRow(entry.threadId);
     trace("open-entry", { threadId: entry.threadId, projectId: entry.projectId, pinned: entry.pinned, visibleRow: Boolean(row) });
     if (!row && entry.pinned) {
       const pinnedToggle = pinnedToggleRef?.isConnected
@@ -439,7 +460,7 @@ export function installRuntime(config: RuntimeConfig) {
       if (pinnedToggle && !document.querySelector("[data-app-action-sidebar-thread-pinned='true']")) pinnedToggle.click();
     }
     if (!row && entry.projectId) {
-      const projectRow = findProjectRow(entry.projectId);
+      const projectRow = owningProject ?? findProjectRow(entry.projectId);
       if (projectRow?.getAttribute("data-app-action-sidebar-project-collapsed") === "true") {
         trace("expand-project", { projectId: entry.projectId });
         projectRow.click();
@@ -457,8 +478,7 @@ export function installRuntime(config: RuntimeConfig) {
       searchError = "";
       state.tag = "all";
       state.sortOpen = false;
-      state.open = false;
-      renderToolbar(entriesFrom(titleNodes()));
+      await closeDashboard("open-entry");
       row.scrollIntoView({ block: "nearest" });
       row.click();
     } else {
@@ -512,7 +532,24 @@ export function installRuntime(config: RuntimeConfig) {
     return element;
   };
 
+  const closeDashboard = async (reason) => {
+    if (!state.open || dashboardClosing) return;
+    dashboardClosing = true;
+    trace("dashboard-close-start", { reason });
+    state.sortOpen = false;
+    const closingModal = modal;
+    const dialog = closingModal?.querySelector(".codex-sidebar-dashboard-dialog");
+    if (closingModal && dialog) await exitDashboard(closingModal, dialog);
+    if (modal === closingModal) {
+      state.open = false;
+      renderToolbar(entriesFrom(titleNodes()), reason);
+    }
+    dashboardClosing = false;
+    trace("dashboard-close-end", { reason });
+  };
+
   const renderToolbar = (entries, reason = "state") => {
+    if (dashboardClosing && state.open) return;
     const toolbar = ensureToolbar(entries.map((entry) => entry.node).filter(Boolean));
     if (!toolbar) return;
     pendingToolbarRefresh = false;
@@ -552,6 +589,7 @@ export function installRuntime(config: RuntimeConfig) {
     launcher.setAttribute("aria-haspopup", "dialog");
     launcher.setAttribute("aria-expanded", String(state.open));
     launcher.addEventListener("click", () => {
+      dashboardClosing = false;
       state.open = true;
       state.view = "sessions";
       state.sortOpen = false;
@@ -594,7 +632,7 @@ export function installRuntime(config: RuntimeConfig) {
     const close = button("codex-sidebar-dashboard-close", "×");
     close.title = "关闭";
     close.setAttribute("aria-label", "关闭会话看板");
-    close.addEventListener("click", () => { state.open = false; state.sortOpen = false; renderToolbar(entriesFrom(titleNodes()), "close-dashboard"); });
+    close.addEventListener("click", () => { void closeDashboard("close-dashboard"); });
     header.append(headingGroup, tabs, close);
     const body = document.createElement("div");
     body.className = "codex-sidebar-dashboard-body";
@@ -604,6 +642,7 @@ export function installRuntime(config: RuntimeConfig) {
       controls.className = "codex-sidebar-dashboard-controls";
       const search = document.createElement("label");
       search.className = "codex-sidebar-search";
+      search.dataset.loading = String(searchLoading);
       const searchIcon = document.createElement("span");
       searchIcon.className = "codex-sidebar-search-icon";
       searchIcon.textContent = "⌕";
@@ -723,7 +762,7 @@ export function installRuntime(config: RuntimeConfig) {
           const badge = document.createElement("span");
           badge.className = "codex-sidebar-filter-count";
           badge.textContent = String(count);
-          if (value === "all" || state.tag === value) chip.appendChild(badge);
+          chip.appendChild(badge);
           chip.addEventListener("click", () => {
             state.tag = state.tag === value && value !== "all" ? "all" : value;
             trace("tag-click", { value, selected: state.tag });
@@ -735,6 +774,7 @@ export function installRuntime(config: RuntimeConfig) {
       const results = selectVisibleEntries(entries, state, contentMatches);
       const panel = document.createElement("div");
       panel.className = "codex-sidebar-results";
+      panel.dataset.loading = String(searchLoading);
       const panelHead = document.createElement("div");
       panelHead.className = "codex-sidebar-results-head";
       const summary = document.createElement("span");
@@ -822,9 +862,7 @@ export function installRuntime(config: RuntimeConfig) {
     overlay.appendChild(dialog);
     overlay.addEventListener("pointerdown", (event) => {
       if (event.target !== overlay) return;
-      state.open = false;
-      state.sortOpen = false;
-      renderToolbar(entriesFrom(titleNodes()), "backdrop");
+      void closeDashboard("backdrop");
     });
     dialog.addEventListener("pointerdown", (event) => {
       if (!state.sortOpen || event.target.closest(".codex-sidebar-sort-control")) return;
@@ -836,9 +874,7 @@ export function installRuntime(config: RuntimeConfig) {
     dialog.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        state.open = false;
-        state.sortOpen = false;
-        renderToolbar(entriesFrom(titleNodes()), "escape");
+        void closeDashboard("escape");
         return;
       }
       if (event.key !== "Tab") return;
@@ -851,6 +887,11 @@ export function installRuntime(config: RuntimeConfig) {
     });
     modal = overlay;
     document.body.appendChild(overlay);
+
+    if (reason === "open-dashboard") enterDashboard(overlay, dialog);
+    if (reason === "dashboard-tab") enterDashboardContent(body);
+    if (reason === "sort-toggle" && state.sortOpen) enterSortMenu(dialog.querySelector(".codex-sidebar-sort-menu"));
+    if (["tag", "sort", "search-result"].includes(reason)) refreshResults(dialog.querySelector(".codex-sidebar-results"));
 
     const restoredInput = activeInputClass ? dialog.querySelector(`.${activeInputClass}`) : null;
     if (restoredInput) {

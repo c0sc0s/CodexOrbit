@@ -53,7 +53,8 @@ const collapseRetention = await evaluate(selected, `(async () => {
     return Number(all?.querySelector(".codex-sidebar-filter-count")?.textContent);
   };
   const pinned = [...document.querySelectorAll("[data-app-action-sidebar-section-toggle]")].find((item) => item.textContent?.trim() === "Pinned");
-  const project = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-label") === "tiktok_live_studio");
+  const targetEntry = window.__codexSidebarTags.debugIndex().find((item) => item.title.includes("Codex 会话标签"));
+  const project = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-id") === targetEntry?.projectId);
   if (!document.querySelector("[data-app-action-sidebar-thread-pinned='true']")) pinned?.click();
   if (project?.getAttribute("data-app-action-sidebar-project-collapsed") === "true") project.click();
   await wait();
@@ -69,7 +70,7 @@ const collapseRetention = await evaluate(selected, `(async () => {
   input.dispatchEvent(new InputEvent("input", { bubbles: true, data: input.value }));
   document.querySelector(".codex-sidebar-result")?.click();
   await new Promise((resolve) => setTimeout(resolve, 2600));
-  const currentProject = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-label") === "tiktok_live_studio");
+  const currentProject = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-id") === targetEntry?.projectId);
   return { baseline, pinnedCollapsed, projectCollapsed, projectExpanded: currentProject?.getAttribute("data-app-action-sidebar-project-collapsed") !== "true", modalClosed: !document.querySelector(".codex-sidebar-dashboard-overlay") };
 })()`);
 assert.ok(collapseRetention.baseline.indexed > 0);
@@ -236,12 +237,15 @@ const settingsPath = join(outputDir, "sidebar-v3-settings.png");
 const settingsShot = await command(selected, "Page.captureScreenshot", { format: "png", fromSurface: true });
 await writeFile(settingsPath, Buffer.from(settingsShot.data, "base64"));
 
-const cleared = await evaluate(selected, `(() => {
+const cleared = await evaluate(selected, `(async () => {
   document.querySelectorAll(".codex-sidebar-dashboard-tab")[0]?.click();
   const sort = document.querySelector(".codex-sidebar-sort-trigger");
   sort.click();
   document.querySelector(".codex-sidebar-sort-option[data-value='sidebar']")?.click();
   document.querySelector(".codex-sidebar-dashboard-close")?.click();
+  for (let attempt = 0; document.querySelector(".codex-sidebar-dashboard-overlay") && attempt < 20; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
   return { modal: Boolean(document.querySelector(".codex-sidebar-dashboard-overlay")), results: window.__codexSidebarTags.status().visibleResults };
 })()`);
 assert.deepEqual(cleared, { modal: false, results: 0 });
