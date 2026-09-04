@@ -1,0 +1,13 @@
+{
+  "name": "codex-tags",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check runtime/src/controller.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check scripts/manage.mjs",
+    "test": "node --test runtime/test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
