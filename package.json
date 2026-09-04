@@ -1,13 +1,23 @@
 {
   "name": "codex-tags",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "check": "node --check runtime/src/controller.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check scripts/manage.mjs",
-    "test": "node --test runtime/test/*.test.mjs"
+    "test": "node --test runtime/test/*.test.mjs && vitest run runtime/test/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0"
   }
 }

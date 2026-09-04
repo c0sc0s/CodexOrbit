@@ -21,14 +21,16 @@ The current release is a macOS productization preview. The plugin packages insta
 ## Local development
 
 ```bash
-node --test runtime/test/*.test.mjs
+npm ci
+npm run build
+npm run typecheck
+npm test
 node scripts/manage.mjs install
 node scripts/manage.mjs status
 node scripts/manage.mjs enable
 node scripts/manage.mjs restore
 ```
 
-`install` only writes the versioned runtime into the user Application Support directory and creates the launcher. `enable` applies it to an already debuggable Codex process; if Codex needs to be relaunched with CDP, the command performs a graceful quit and relaunch.
+The injected UI is authored in TypeScript and Preact, then bundled into a single browser IIFE. `install` writes that checked-in build artifact into the user Application Support directory and creates the launcher. `enable` applies it to an already debuggable Codex process; if Codex needs to be relaunched with CDP, the command performs a graceful quit and relaunch.
 
 See [Architecture](docs/architecture.md), [Runtime protocol](docs/protocol.md), and [Compatibility policy](docs/compatibility.md).
-

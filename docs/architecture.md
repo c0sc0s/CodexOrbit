@@ -23,17 +23,20 @@ local controller ── versioned snapshot/delta ──▶ injected runtime
 
 Only user and assistant text is indexed. Tool output, system instructions, images, and attachments are excluded. Content remains local.
 
-## Target architecture
+## Injected runtime architecture
 
-The current injected runtime is preserved for compatibility while it is decomposed into typed modules. The intended module boundaries are:
+The injected runtime is authored as typed modules and built into one browser-compatible IIFE. Its current module boundaries are:
 
 - `controller/app-lifecycle`: application discovery, graceful launch, and process ownership
 - `controller/cdp-client`: target discovery and versioned runtime calls
 - `controller/session-catalog`: authoritative session metadata and incremental content indexing
-- `injected/codex-dom-adapter`: all private Codex DOM knowledge
-- `injected/store`: serializable UI state and reducer actions
-- `injected/components`: Tags launcher, dashboard, filters, results, and settings
-- `shared/protocol`: controller/runtime message shapes and compatibility versions
+- `injected/codex-dom-adapter`: private Codex selectors and native-row discovery
+- `injected/store`: serializable dashboard state
+- `injected/search`: title/content matching, snippets, filters, and sorting
+- `injected/components`: Preact-owned result rows and search highlighting
+- `injected/runtime`: lifecycle orchestration, native title decoration, dashboard shell, and compatibility restoration
+- `inject-expression`: Node-side bundle loading and controller/runtime expression boundary
 
-The injected modules will be authored in TypeScript and bundled as one dependency-free IIFE. Preact is the preferred UI runtime because it provides predictable component lifecycle and state updates with a small bundle. Codex theme variables remain the styling contract; large component libraries are intentionally avoided.
+`esbuild` bundles Preact and the TypeScript modules, so the installed runtime has no package-manager or network dependency. The dynamic Codex integration shell remains deliberately isolated and temporarily uses a permissive type boundary; new state, search, adapter, and component code must be strict TypeScript. Codex theme variables remain the styling contract, and large component libraries are intentionally avoided.
 
+The next extraction target is the dashboard shell. Moving it behind Preact components can proceed incrementally because search, state, result rendering, and native DOM discovery no longer depend on one another.

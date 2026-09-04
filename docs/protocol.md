@@ -12,7 +12,17 @@ Both ASCII and Chinese brackets are accepted. Tags are case-insensitive for colo
 
 ## Controller/runtime protocol
 
-The legacy runtime currently exposes `window.__codexSidebarTags`. New controller/runtime messages must carry independent protocol and runtime versions.
+The injected runtime exposes `window.__codexSidebarTags` as a deliberately small compatibility surface:
+
+- `setContentIndex(items)`: replace the local searchable content snapshot
+- `contentThreadIds()`: enumerate sessions currently mapped by the DOM adapter
+- `status()`: report runtime version, enhanced rows, index sizes, and render counters
+- `debug()`: return the bounded local interaction trace
+- `dispose()`: restore native DOM and remove injected UI and listeners
+
+The controller sends only JSON-serializable data through evaluated expressions. The browser bundle is loaded from the installed runtime directory; no remote script is fetched.
+
+Future controller/runtime messages must carry independent protocol and runtime versions.
 
 Planned message families:
 
@@ -26,4 +36,3 @@ Planned message families:
 - `runtimeStatus`: health, compatibility, indexing progress, and the last recoverable error
 
 Unknown message types must be ignored. Unsupported protocol majors must fail closed without modifying native Codex DOM.
-

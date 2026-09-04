@@ -20,6 +20,7 @@ const runtimeFiles = new Map([
   ["content-index.mjs", "content-index.mjs"],
   ["inject-expression.mjs", "inject-expression.mjs"],
   ["title-format.mjs", "title-format.mjs"],
+  ["../dist/injected.js", "dist/injected.js"],
 ]);
 
 async function pathExists(path) {
@@ -32,6 +33,7 @@ async function pathExists(path) {
 }
 
 async function copyFileAtomically(source, destination) {
+  await mkdir(dirname(destination), { recursive: true });
   const temporaryPath = `${destination}.next-${process.pid}`;
   await copyFile(source, temporaryPath);
   await chmod(temporaryPath, 0o644);
