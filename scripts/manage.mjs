@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { access, chmod, copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,12 +14,19 @@ const installRoot = process.env.CODEX_TAGS_INSTALL_DIR
 const applicationsRoot = process.env.CODEX_TAGS_APPLICATIONS_DIR ?? join(homedir(), "Applications");
 const launcherPath = join(applicationsRoot, "Codex Tags.app");
 const installedController = join(installRoot, "app.mjs");
+const sqlitePackageSource = join(pluginRoot, "node_modules", "better-sqlite3");
+const sqlitePackageDestination = join(installRoot, "node_modules", "better-sqlite3");
+const sqlitePrebuildName = `${process.platform}-${process.arch}.node`;
+const searchDatabaseFiles = ["search.sqlite", "search.sqlite-wal", "search.sqlite-shm"];
 const runtimeFiles = new Map([
   ["controller.mjs", "app.mjs"],
+  ["cdp-client.mjs", "cdp-client.mjs"],
   ["controller-state.mjs", "controller-state.mjs"],
   ["content-index.mjs", "content-index.mjs"],
   ["inject-expression.mjs", "inject-expression.mjs"],
+  ["search-index.mjs", "search-index.mjs"],
   ["title-format.mjs", "title-format.mjs"],
+  ["tag-settings.mjs", "tag-settings.mjs"],
   ["../dist/injected.js", "dist/injected.js"],
 ]);
 
@@ -75,10 +82,27 @@ async function createLauncher() {
 }
 
 async function install() {
+  if (!(await pathExists(join(sqlitePackageSource, "package.json")))) {
+    throw new Error("Runtime dependency better-sqlite3 is missing. Run `npm ci` before installing.");
+  }
   await mkdir(installRoot, { recursive: true });
+  await chmod(installRoot, 0o700);
   for (const [sourceName, destinationName] of runtimeFiles) {
     await copyFileAtomically(join(runtimeSource, sourceName), join(installRoot, destinationName));
   }
+  const nextSqlitePackage = `${sqlitePackageDestination}.next-${process.pid}`;
+  await mkdir(dirname(nextSqlitePackage), { recursive: true });
+  await rm(nextSqlitePackage, { recursive: true, force: true });
+  await cp(sqlitePackageSource, nextSqlitePackage, {
+    recursive: true,
+    filter: (source) => {
+      const relative = source.slice(sqlitePackageSource.length).replace(/^\//, "");
+      return !relative || relative === "package.json" || relative === "LICENSE" || relative === "lib" || relative.startsWith("lib/") || relative === "prebuilds" || relative === `prebuilds/${sqlitePrebuildName}`;
+    },
+  });
+  await rm(sqlitePackageDestination, { recursive: true, force: true });
+  await mkdir(dirname(sqlitePackageDestination), { recursive: true });
+  await rename(nextSqlitePackage, sqlitePackageDestination);
   const pluginVersion = await readPluginVersion();
   const installation = {
     schemaVersion: 1,
@@ -86,6 +110,7 @@ async function install() {
     installedAt: new Date().toISOString(),
     pluginRoot,
     runtimeFiles: [...runtimeFiles.values()],
+    runtimeDependencies: ["better-sqlite3"],
   };
   await writeFile(join(installRoot, "install.json"), `${JSON.stringify(installation, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   const launcher = await createLauncher();
@@ -117,6 +142,8 @@ async function uninstall() {
     }
   }
   for (const destinationName of runtimeFiles.values()) await rm(join(installRoot, destinationName), { force: true });
+  await rm(sqlitePackageDestination, { recursive: true, force: true });
+  for (const databaseFile of searchDatabaseFiles) await rm(join(installRoot, databaseFile), { force: true });
   await rm(join(installRoot, "install.json"), { force: true });
   await rm(launcherPath, { recursive: true, force: true });
   console.log(JSON.stringify({ status: "uninstalled", installRoot, launcherPath }, null, 2));

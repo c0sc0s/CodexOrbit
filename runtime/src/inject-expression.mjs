@@ -3,13 +3,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { titlePatternSource } from "./title-format.mjs";
+import { DEFAULT_TAG_DEFINITIONS } from "./tag-settings.mjs";
 
-export const RUNTIME_VERSION = "4.0.0";
+export const RUNTIME_VERSION = "5.1.0";
+export const SEARCH_BINDING = "__codexTagsSearchRequest";
 
-const TONES = [
-  ["Pending", "amber"], ["进行中", "blue"], ["需求", "blue"], ["Feature", "blue"],
-  ["Bug", "red"], ["阻塞", "red"], ["调研", "purple"], ["设计", "purple"], ["完成", "green"],
-];
+const TONES = DEFAULT_TAG_DEFINITIONS.map(({ name, tone }) => [name, tone]);
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
 const bundleCandidates = [
@@ -25,12 +24,12 @@ if (!bundlePath) {
 const injectedBundle = readFileSync(bundlePath, "utf8");
 
 export function buildInjectionExpression() {
-  const config = { version: RUNTIME_VERSION, patternSource: titlePatternSource, toneEntries: TONES };
+  const config = { version: RUNTIME_VERSION, patternSource: titlePatternSource, toneEntries: TONES, searchBinding: SEARCH_BINDING };
   return `(() => { ${injectedBundle}\nreturn CodexTagsInjected.installRuntime(${JSON.stringify(config)}); })()`;
 }
 
-export function buildContentIndexExpression(contentIndex) {
-  return `window.__codexSidebarTags?.setContentIndex?.(${JSON.stringify(contentIndex)}) ?? 0`;
+export function buildSearchResultExpression(result) {
+  return `window.__codexSidebarTags?.setSearchResult?.(${JSON.stringify(result)}) ?? false`;
 }
 
 export function buildRemovalExpression() {

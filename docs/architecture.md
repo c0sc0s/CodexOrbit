@@ -16,20 +16,25 @@ The installed runtime is a build artifact. Source changes originate in this repo
 ~/.codex/sessions/*.jsonl
           │
           ▼
-local controller ── versioned snapshot/delta ──▶ injected runtime
-          │                                      │
-          └── Codex lifecycle/CDP                 └── native sidebar adapter
+local controller ── bounded search results ──▶ injected runtime
+      │          ◀── async search requests ──       │
+      │          ◀──── tag definitions ──────       │
+      ├── SQLite FTS5                               └── native sidebar adapter
+      ├── settings.json ──▶ naming hook
+      └── Codex lifecycle/persistent CDP
 ```
 
-Only user and assistant text is indexed. Tool output, system instructions, images, and attachments are excluded. Content remains local.
+Only user and assistant text is indexed. Tool output, system instructions, images, and attachments are excluded. Content remains local in a persistent SQLite FTS5 database. Full conversation bodies are never copied into the Codex renderer; it receives only bounded matching snippets.
+
+The naming hook is a prompt-context adapter, not a title writer. It injects the configured tag vocabulary into the first turn of a newly started session and leaves title selection and persistence to the Codex agent and its built-in task naming capability.
 
 ## Injected runtime architecture
 
 The injected runtime is authored as typed modules and built into one browser-compatible IIFE. Its current module boundaries are:
 
 - `controller/app-lifecycle`: application discovery, graceful launch, and process ownership
-- `controller/cdp-client`: target discovery and versioned runtime calls
-- `controller/session-catalog`: authoritative session metadata and incremental content indexing
+- `cdp-client`: persistent CDP commands and runtime binding events
+- `search-index`: incremental SQLite FTS5 indexing and bounded snippet search
 - `injected/codex-dom-adapter`: private Codex selectors and native-row discovery
 - `injected/store`: serializable dashboard state
 - `injected/search`: title/content matching, snippets, filters, and sorting

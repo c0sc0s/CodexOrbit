@@ -6,9 +6,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { buildContentIndex } from "./content-index.mjs";
-import { buildContentIndexExpression, buildInjectionExpression, buildRemovalExpression, RUNTIME_VERSION } from "./inject-expression.mjs";
+import { CdpClient } from "./cdp-client.mjs";
+import { buildInjectionExpression, buildRemovalExpression, buildSearchResultExpression, RUNTIME_VERSION, SEARCH_BINDING } from "./inject-expression.mjs";
 import { isOwnedControllerCommand, parseControllerPid } from "./controller-state.mjs";
+import { SessionSearchIndex } from "./search-index.mjs";
+
+process.umask(0o077);
+import { createTagSettings } from "./tag-settings.mjs";
 
 const run = promisify(execFile);
 const configuredPort = Number(process.env.CODEX_TAGS_CDP_PORT ?? 9341);
@@ -20,7 +24,9 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const STATE_DIR = process.env.CODEX_TAGS_STATE_DIR ?? dirname(SCRIPT_PATH);
 const PID_PATH = join(STATE_DIR, "controller.pid");
 const LOG_PATH = join(STATE_DIR, "controller.log");
-const CONTENT_REFRESH_INTERVAL_MS = 30_000;
+const SEARCH_DATABASE_PATH = join(STATE_DIR, "search.sqlite");
+const SETTINGS_PATH = join(STATE_DIR, "settings.json");
+const INDEX_REFRESH_INTERVAL_MS = 30_000;
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -88,21 +94,8 @@ async function ensureInjectedTargets() {
   return { targets, results, injectedTargetIds };
 }
 
-async function collectContentIndex(targets) {
-  const threadIds = new Set();
-  for (const target of targets) {
-    const ids = await evaluate(target, "window.__codexSidebarTags?.contentThreadIds?.() ?? []");
-    if (Array.isArray(ids)) ids.forEach((threadId) => threadIds.add(threadId));
-  }
-  const contentIndex = await buildContentIndex([...threadIds]);
-  return { contentIndex, threadSignature: [...threadIds].sort().join("\u0000") };
-}
-
 async function apply() {
   const { targets, results } = await ensureInjectedTargets();
-  const { contentIndex } = await collectContentIndex(targets);
-  const contentExpression = buildContentIndexExpression(contentIndex);
-  for (const target of targets) await evaluate(target, contentExpression);
   return results;
 }
 
@@ -262,12 +255,80 @@ async function watch() {
   await rename(nextPidPath, PID_PATH);
   console.log(`${new Date().toISOString()} watching ${RUNTIME_VERSION}`);
   let misses = 0;
-  let lastThreadSignature = "";
-  let lastContentJson = "";
-  let lastContentIndex = [];
-  let nextContentRefreshAt = 0;
-  let knownTargetIds = new Set();
+  const searchIndex = new SessionSearchIndex(SEARCH_DATABASE_PATH);
+  const searchClients = new Map();
+  const latestSearchRequestIds = new Map();
+  let indexStatus = { phase: "indexing", completed: 0, total: 0, changed: 0 };
+  let indexRefresh = Promise.resolve();
+  let nextIndexRefreshAt = 0;
+  let persistedSettings = null;
+  const syncTagSettings = async (target) => {
+    const definitions = await evaluate(target, "window.__codexSidebarTags?.tagDefinitions?.() ?? null");
+    if (!Array.isArray(definitions)) return;
+    const nextSettings = `${JSON.stringify(createTagSettings(definitions), null, 2)}\n`;
+    if (nextSettings === persistedSettings) return;
+    const temporaryPath = `${SETTINGS_PATH}.next-${process.pid}`;
+    await writeFile(temporaryPath, nextSettings, { encoding: "utf8", mode: 0o600 });
+    await rename(temporaryPath, SETTINGS_PATH);
+    persistedSettings = nextSettings;
+  };
+  const scheduleIndexRefresh = () => {
+    indexRefresh = indexRefresh
+      .then(() => searchIndex.refresh((status) => { indexStatus = status; }))
+      .catch((error) => {
+        indexStatus = { phase: "error", message: error.message };
+        console.error(`${new Date().toISOString()} search indexing failed: ${error.message}`);
+      });
+    nextIndexRefreshAt = Date.now() + INDEX_REFRESH_INTERVAL_MS;
+  };
+  scheduleIndexRefresh();
+
+  const handleSearchRequest = async (client, params) => {
+    let request;
+    try {
+      request = JSON.parse(params.payload);
+    } catch {
+      return;
+    }
+    if (request?.type !== "searchRequest" || !Number.isSafeInteger(request.requestId)) return;
+    latestSearchRequestIds.set(client.target.id, request.requestId);
+    await indexRefresh;
+    if (latestSearchRequestIds.get(client.target.id) !== request.requestId) return;
+    try {
+      const items = searchIndex.search(request);
+      await client.evaluate(buildSearchResultExpression({
+        type: "searchResult",
+        requestId: request.requestId,
+        query: request.query,
+        items,
+        indexStatus,
+      }), params.executionContextId);
+    } catch (error) {
+      await client.evaluate(buildSearchResultExpression({
+        type: "searchResult",
+        requestId: request.requestId,
+        query: request.query,
+        items: [],
+        indexStatus,
+        error: error.message,
+      }), params.executionContextId).catch(() => {});
+    }
+  };
+
+  const ensureSearchClient = async (target) => {
+    const existing = searchClients.get(target.id);
+    if (existing?.connected) return existing;
+    existing?.close();
+    const client = await CdpClient.connect(target);
+    await client.addBinding(SEARCH_BINDING, (params) => handleSearchRequest(client, params));
+    searchClients.set(target.id, client);
+    return client;
+  };
+
   const clean = async () => {
+    for (const client of searchClients.values()) client.close();
+    searchClients.clear();
+    searchIndex.close();
     if ((await readControllerPid()) === process.pid) await rm(PID_PATH, { force: true });
   };
   process.once("SIGTERM", () => { clean().finally(() => process.exit(0)); });
@@ -276,40 +337,26 @@ async function watch() {
   try {
     while (true) {
       try {
-        const { targets, injectedTargetIds } = await ensureInjectedTargets();
+        const { targets } = await ensureInjectedTargets();
         const currentTargetIds = new Set(targets.map(({ id }) => id));
-        const newTargetIds = new Set([...currentTargetIds].filter((id) => !knownTargetIds.has(id)));
-        const now = Date.now();
-        const threadIds = new Set();
+        for (const [targetId, client] of searchClients) {
+          if (currentTargetIds.has(targetId)) continue;
+          client.close();
+          searchClients.delete(targetId);
+          latestSearchRequestIds.delete(targetId);
+        }
         for (const target of targets) {
-          const ids = await evaluate(target, "window.__codexSidebarTags?.contentThreadIds?.() ?? []");
-          if (Array.isArray(ids)) ids.forEach((threadId) => threadIds.add(threadId));
+          await ensureSearchClient(target);
+          await syncTagSettings(target);
         }
-        const threadSignature = [...threadIds].sort().join("\u0000");
-        const refreshContent = threadSignature !== lastThreadSignature || now >= nextContentRefreshAt;
-        let contentChanged = false;
-        if (refreshContent) {
-          lastContentIndex = await buildContentIndex([...threadIds]);
-          const contentJson = JSON.stringify(lastContentIndex);
-          contentChanged = contentJson !== lastContentJson;
-          lastContentJson = contentJson;
-          lastThreadSignature = threadSignature;
-          nextContentRefreshAt = now + CONTENT_REFRESH_INTERVAL_MS;
-        }
-        if (refreshContent || injectedTargetIds.size > 0 || newTargetIds.size > 0) {
-          const contentExpression = buildContentIndexExpression(lastContentIndex);
-          for (const target of targets) {
-            if (contentChanged || injectedTargetIds.has(target.id) || newTargetIds.has(target.id)) await evaluate(target, contentExpression);
-          }
-        }
-        knownTargetIds = currentTargetIds;
+        if (Date.now() >= nextIndexRefreshAt) scheduleIndexRefresh();
         misses = 0;
       } catch (error) {
         misses += 1;
         if (misses === 1 || misses % 10 === 0) console.error(`${new Date().toISOString()} sync failed (${misses}): ${error.message}`);
         if (misses >= 10 && !(await codexIsRunning())) return;
       }
-      await wait(2000);
+      await wait(1000);
     }
   } finally {
     await clean();
@@ -332,7 +379,17 @@ async function status() {
       activeVersions.push(await evaluate(target, "window.__codexSidebarTags?.version ?? null"));
     }
   }
-  console.log(JSON.stringify({ codexRunning, cdp: ready, controllerPid, sourceVersion: RUNTIME_VERSION, activeVersions }, null, 2));
+  let searchIndex = null;
+  try {
+    const index = new SessionSearchIndex(SEARCH_DATABASE_PATH, { readOnly: true });
+    searchIndex = index.status();
+    index.close();
+  } catch (error) {
+    searchIndex = { error: error.message };
+  }
+  let tagSettings = null;
+  try { tagSettings = JSON.parse(await readFile(SETTINGS_PATH, "utf8")); } catch {}
+  console.log(JSON.stringify({ codexRunning, cdp: ready, controllerPid, sourceVersion: RUNTIME_VERSION, activeVersions, searchIndex, tagSettings }, null, 2));
 }
 
 const command = process.argv[2] ?? "start";

@@ -374,7 +374,7 @@ var CodexTagsInjected = (() => {
     const match = /^(\d{1,2})[-/.](\d{1,2})$/.exec(value);
     return match ? Number(match[1]) * 100 + Number(match[2]) : -1;
   }
-  function selectVisibleEntries(entries, state, contentByThread) {
+  function selectVisibleEntries(entries, state, contentMatches) {
     const query = state.query.trim().toLocaleLowerCase();
     const filtered = entries.flatMap((entry) => {
       if (state.tag !== "all" && entry.tag !== state.tag) return [];
@@ -382,14 +382,9 @@ var CodexTagsInjected = (() => {
       if (`${entry.tag} ${entry.time} ${entry.title}`.toLocaleLowerCase().includes(query)) {
         return [{ ...entry, matchType: "title", snippet: "" }];
       }
-      const contentMatch = (contentByThread.get(entry.threadId ?? "") ?? []).find(({ text }) => text.toLocaleLowerCase().includes(query));
+      const contentMatch = contentMatches.get(entry.threadId ?? "");
       if (!contentMatch) return [];
-      const normalized = contentMatch.text.replace(/\s+/gu, " ");
-      const matchIndex = normalized.toLocaleLowerCase().indexOf(query);
-      const start = Math.max(0, matchIndex - 46);
-      const end = Math.min(normalized.length, matchIndex + query.length + 82);
-      const snippet = `${start > 0 ? "\u2026" : ""}${normalized.slice(start, end)}${end < normalized.length ? "\u2026" : ""}`;
-      return [{ ...entry, matchType: "content", snippet: `${contentMatch.role}\uFF1A${snippet}` }];
+      return [{ ...entry, matchType: "content", snippet: `${contentMatch.role}\uFF1A${contentMatch.snippet}` }];
     });
     if (state.sort === "time") return filtered.sort((left, right) => timeRank(right.time) - timeRank(left.time) || left.index - right.index);
     if (state.sort === "tag") return filtered.sort((left, right) => left.tag.localeCompare(right.tag, "zh-CN") || left.title.localeCompare(right.title, "zh-CN"));
@@ -412,7 +407,7 @@ var CodexTagsInjected = (() => {
 
   // runtime/src/injected/runtime.ts
   function installRuntime(config) {
-    const { version, patternSource, toneEntries, initialContentIndex = [] } = config;
+    const { version, patternSource, toneEntries, searchBinding } = config;
     const STYLE_ID = "codex-sidebar-tags-style";
     const TOOLBAR_ID = "codex-sidebar-tags-toolbar";
     const CACHE_KEY = "codex-sidebar-tags-index-v1";
@@ -435,8 +430,12 @@ var CodexTagsInjected = (() => {
     } catch {
     }
     let tones = new Map(tagDefinitions.map(({ name, tone }) => [name.toLocaleLowerCase(), tone]));
-    const contentByThread = new Map(initialContentIndex.map(({ threadId, chunks }) => [threadId, Array.isArray(chunks) ? chunks : []]));
-    let contentIndexJson = JSON.stringify(initialContentIndex);
+    const contentMatches = /* @__PURE__ */ new Map();
+    let searchRequestTimer = null;
+    let activeSearchRequestId = 0;
+    let searchLoading = false;
+    let searchError = "";
+    let searchIndexStatus = { phase: "idle", completed: 0, total: 0 };
     const state = createInitialState();
     const entryCache = /* @__PURE__ */ new Map();
     const originalNodeState = /* @__PURE__ */ new WeakMap();
@@ -452,6 +451,10 @@ var CodexTagsInjected = (() => {
     let pointerActive = false;
     let pendingToolbarRefresh = false;
     const debugEvents = [];
+    const clearPendingSearch = () => {
+      if (searchRequestTimer !== null) clearTimeout(searchRequestTimer);
+      searchRequestTimer = null;
+    };
     const trace = (event, details = {}) => {
       debugEvents.push({ at: (/* @__PURE__ */ new Date()).toISOString(), event, ...details });
       if (debugEvents.length > 80) debugEvents.shift();
@@ -825,6 +828,10 @@ var CodexTagsInjected = (() => {
       }
       if (row) {
         state.query = "";
+        clearPendingSearch();
+        contentMatches.clear();
+        searchLoading = false;
+        searchError = "";
         state.tag = "all";
         state.sortOpen = false;
         state.open = false;
@@ -838,6 +845,37 @@ var CodexTagsInjected = (() => {
       }
     };
     const indexSignature = (entries) => entries.map((entry) => [entry.key, entry.raw, entry.pinned, entry.projectId].join("")).join("");
+    const scheduleContentSearch = (entries) => {
+      clearPendingSearch();
+      contentMatches.clear();
+      searchError = "";
+      const query = state.query.trim();
+      if (!query) {
+        searchLoading = false;
+        return;
+      }
+      searchLoading = true;
+      activeSearchRequestId += 1;
+      const requestId = activeSearchRequestId;
+      searchRequestTimer = setTimeout(() => {
+        searchRequestTimer = null;
+        const request = window[searchBinding];
+        if (typeof request !== "function") {
+          searchLoading = false;
+          searchError = "\u672C\u5730\u641C\u7D22\u670D\u52A1\u5C1A\u672A\u8FDE\u63A5";
+          renderToolbar(entriesFrom(titleNodes()), "search-unavailable");
+          return;
+        }
+        request(JSON.stringify({
+          type: "searchRequest",
+          requestId,
+          query,
+          threadIds: entries.map(({ threadId }) => threadId).filter(Boolean),
+          limit: 100
+        }));
+        trace("search-request", { requestId, queryLength: query.length, threads: entries.length });
+      }, 200);
+    };
     const button = (className, text) => {
       const element = document.createElement("button");
       element.type = "button";
@@ -907,8 +945,7 @@ var CodexTagsInjected = (() => {
       heading.textContent = state.view === "sessions" ? "\u4F1A\u8BDD\u770B\u677F" : "\u6807\u7B7E\u8BBE\u7F6E";
       const subtitle = document.createElement("div");
       subtitle.className = "codex-sidebar-dashboard-subtitle";
-      const contentIndexedCount = entries.filter((item) => contentByThread.has(item.threadId)).length;
-      subtitle.textContent = state.view === "sessions" ? `${entries.length} \u4E2A\u4F1A\u8BDD \xB7 ${contentIndexedCount} \u4E2A\u6B63\u6587\u7D22\u5F15` : `${tagDefinitions.length} \u4E2A\u5DF2\u914D\u7F6E\u6807\u7B7E`;
+      subtitle.textContent = state.view === "sessions" ? `${entries.length} \u4E2A\u4F1A\u8BDD \xB7 ${searchIndexStatus.phase === "ready" ? "\u672C\u5730\u7D22\u5F15\u5DF2\u5C31\u7EEA" : "\u672C\u5730\u7D22\u5F15\u6309\u9700\u52A0\u8F7D"}` : `${tagDefinitions.length} \u4E2A\u5DF2\u914D\u7F6E\u6807\u7B7E`;
       headingGroup.append(heading, subtitle);
       const tabs = document.createElement("div");
       tabs.className = "codex-sidebar-dashboard-tabs";
@@ -957,11 +994,17 @@ var CodexTagsInjected = (() => {
         input.addEventListener("compositionend", (event) => {
           composing = false;
           state.query = event.currentTarget.value;
-          renderToolbar(entriesFrom(titleNodes()), "compositionend");
+          const currentEntries = entriesFrom(titleNodes());
+          scheduleContentSearch(currentEntries);
+          renderToolbar(currentEntries, "compositionend");
         });
         input.addEventListener("input", (event) => {
           state.query = event.currentTarget.value;
-          if (!composing && !event.isComposing) renderToolbar(entriesFrom(titleNodes()), "query");
+          if (!composing && !event.isComposing) {
+            const currentEntries = entriesFrom(titleNodes());
+            scheduleContentSearch(currentEntries);
+            renderToolbar(currentEntries, "query");
+          }
         });
         search.append(searchIcon, input);
         const sortOptions = [["sidebar", "\u9ED8\u8BA4"], ["time", "\u65E5\u671F\u2193"], ["tag", "\u6807\u7B7E"], ["title", "\u6807\u9898"]];
@@ -1060,13 +1103,14 @@ var CodexTagsInjected = (() => {
           });
           rail.appendChild(chip);
         });
-        const results = selectVisibleEntries(entries, state, contentByThread);
+        const results = selectVisibleEntries(entries, state, contentMatches);
         const panel = document.createElement("div");
         panel.className = "codex-sidebar-results";
         const panelHead = document.createElement("div");
         panelHead.className = "codex-sidebar-results-head";
         const summary = document.createElement("span");
-        summary.textContent = `${results.length} / ${entries.length} \u4E2A\u4F1A\u8BDD${state.query ? " \xB7 \u540D\u79F0\u4E0E\u6B63\u6587" : ""}`;
+        summary.setAttribute("aria-live", "polite");
+        summary.textContent = searchLoading ? `${results.length} / ${entries.length} \u4E2A\u4F1A\u8BDD \xB7 \u6B63\u5728\u641C\u7D22\u6B63\u6587\u2026` : searchError ? `${results.length} / ${entries.length} \u4E2A\u4F1A\u8BDD \xB7 ${searchError}` : `${results.length} / ${entries.length} \u4E2A\u4F1A\u8BDD${state.query ? " \xB7 \u540D\u79F0\u4E0E\u6B63\u6587" : ""}`;
         panelHead.appendChild(summary);
         const list = document.createElement("div");
         list.className = "codex-sidebar-results-list";
@@ -1245,29 +1289,31 @@ var CodexTagsInjected = (() => {
     refresh("install");
     const runtime = {
       version,
+      tagDefinitions: () => tagDefinitions.map(({ name, tone }) => ({ name, tone })),
       contentThreadIds: () => Array.from(entryCache.values(), (entry) => entry.threadId).filter(Boolean),
       debugIndex: () => Array.from(entryCache.values(), ({ key, threadId, title, projectId, pinned }) => ({ key, threadId, title, projectId, pinned })),
-      setContentIndex: (items) => {
-        const nextContentIndexJson = JSON.stringify(Array.isArray(items) ? items : []);
-        if (nextContentIndexJson === contentIndexJson) return contentByThread.size;
-        contentIndexJson = nextContentIndexJson;
-        contentByThread.clear();
-        if (Array.isArray(items)) {
-          items.forEach(({ threadId, chunks }) => {
-            if (typeof threadId === "string" && Array.isArray(chunks)) contentByThread.set(threadId, chunks);
+      setSearchResult: (result) => {
+        if (!result || result.type !== "searchResult" || result.requestId !== activeSearchRequestId || result.query !== state.query.trim()) return false;
+        contentMatches.clear();
+        if (Array.isArray(result.items)) {
+          result.items.forEach((item) => {
+            if (typeof item?.threadId === "string" && typeof item?.snippet === "string") contentMatches.set(item.threadId, item);
           });
         }
-        if (state.open) {
-          if (pointerActive || hasInteractionFocus()) pendingToolbarRefresh = true;
-          else renderToolbar(entriesFrom(titleNodes()), "content-index");
-        }
-        return contentByThread.size;
+        searchLoading = false;
+        searchError = typeof result.error === "string" ? result.error : "";
+        if (result.indexStatus && typeof result.indexStatus === "object") searchIndexStatus = result.indexStatus;
+        trace("search-result", { requestId: result.requestId, results: contentMatches.size, error: searchError || null });
+        if (state.open) renderToolbar(entriesFrom(titleNodes()), "search-result");
+        return true;
       },
       status: () => ({
         version,
         enhanced: document.querySelectorAll(`[${ENHANCED}]`).length,
         indexed: entryCache.size,
-        contentIndexed: contentByThread.size,
+        searchLoading,
+        searchResults: contentMatches.size,
+        searchIndexStatus,
         toolbar: Boolean(document.getElementById(TOOLBAR_ID)),
         visibleResults: modal?.querySelectorAll(".codex-sidebar-result").length ?? 0,
         renderCount,
@@ -1275,6 +1321,7 @@ var CodexTagsInjected = (() => {
       }),
       debug: () => debugEvents.slice(),
       dispose: () => {
+        clearPendingSearch();
         observer.disconnect();
         document.removeEventListener("pointerdown", trackPointerDown, true);
         document.removeEventListener("pointerup", trackPointerEnd, true);

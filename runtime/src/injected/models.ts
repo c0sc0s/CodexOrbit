@@ -1,6 +1,7 @@
-export interface ContentChunk {
+export interface ContentSearchMatch {
   role: string;
-  text: string;
+  snippet: string;
+  score: number;
 }
 
 export interface SessionEntry {

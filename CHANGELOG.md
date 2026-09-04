@@ -2,6 +2,16 @@
 
 All notable changes to Codex Tags are documented here. Versions follow Semantic Versioning.
 
+## 0.3.0 — 2026-09-04
+
+- Replaced full conversation transfer to the renderer with asynchronous local search requests.
+- Added a persistent, incremental SQLite FTS5 index with Chinese substring search support.
+- Added a persistent CDP binding for search requests and bounded result delivery.
+- Added loading and failure states while keeping title and tag matches immediate.
+- Added search-index lifecycle tests and packaged the SQLite runtime dependency during installation.
+- Added a plugin-native first-prompt hook that gives the Codex agent the current tag vocabulary and naming protocol without editing session data.
+- Added versioned tag-settings synchronization and lifecycle tests for new versus resumed sessions.
+
 ## 0.2.0 — 2026-09-04
 
 - Migrated the injected runtime build to TypeScript, Preact, and esbuild.

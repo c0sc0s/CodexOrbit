@@ -17,11 +17,11 @@ export interface RuntimeConfig {
   version: string;
   patternSource: string;
   toneEntries: Array<[string, string]>;
-  initialContentIndex?: Array<{ threadId: string; chunks: Array<{ role: string; text: string }> }>;
+  searchBinding: string;
 }
 
 export function installRuntime(config: RuntimeConfig) {
-  const { version, patternSource, toneEntries, initialContentIndex = [] } = config;
+  const { version, patternSource, toneEntries, searchBinding } = config;
   const STYLE_ID = "codex-sidebar-tags-style";
   const TOOLBAR_ID = "codex-sidebar-tags-toolbar";
   const CACHE_KEY = "codex-sidebar-tags-index-v1";
@@ -41,8 +41,12 @@ export function installRuntime(config: RuntimeConfig) {
     }
   } catch {}
   let tones = new Map(tagDefinitions.map(({ name, tone }) => [name.toLocaleLowerCase(), tone]));
-  const contentByThread = new Map(initialContentIndex.map(({ threadId, chunks }) => [threadId, Array.isArray(chunks) ? chunks : []]));
-  let contentIndexJson = JSON.stringify(initialContentIndex);
+  const contentMatches = new Map();
+  let searchRequestTimer = null;
+  let activeSearchRequestId = 0;
+  let searchLoading = false;
+  let searchError = "";
+  let searchIndexStatus = { phase: "idle", completed: 0, total: 0 };
   const state = createInitialState();
   const entryCache = new Map();
   const originalNodeState = new WeakMap();
@@ -58,6 +62,11 @@ export function installRuntime(config: RuntimeConfig) {
   let pointerActive = false;
   let pendingToolbarRefresh = false;
   const debugEvents = [];
+
+  const clearPendingSearch = () => {
+    if (searchRequestTimer !== null) clearTimeout(searchRequestTimer);
+    searchRequestTimer = null;
+  };
 
   const trace = (event, details = {}) => {
     debugEvents.push({ at: new Date().toISOString(), event, ...details });
@@ -442,6 +451,10 @@ export function installRuntime(config: RuntimeConfig) {
     }
     if (row) {
       state.query = "";
+      clearPendingSearch();
+      contentMatches.clear();
+      searchLoading = false;
+      searchError = "";
       state.tag = "all";
       state.sortOpen = false;
       state.open = false;
@@ -458,6 +471,38 @@ export function installRuntime(config: RuntimeConfig) {
   const indexSignature = (entries) => entries
     .map((entry) => [entry.key, entry.raw, entry.pinned, entry.projectId].join("\u0001"))
     .join("\u0002");
+
+  const scheduleContentSearch = (entries) => {
+    clearPendingSearch();
+    contentMatches.clear();
+    searchError = "";
+    const query = state.query.trim();
+    if (!query) {
+      searchLoading = false;
+      return;
+    }
+    searchLoading = true;
+    activeSearchRequestId += 1;
+    const requestId = activeSearchRequestId;
+    searchRequestTimer = setTimeout(() => {
+      searchRequestTimer = null;
+      const request = window[searchBinding];
+      if (typeof request !== "function") {
+        searchLoading = false;
+        searchError = "本地搜索服务尚未连接";
+        renderToolbar(entriesFrom(titleNodes()), "search-unavailable");
+        return;
+      }
+      request(JSON.stringify({
+        type: "searchRequest",
+        requestId,
+        query,
+        threadIds: entries.map(({ threadId }) => threadId).filter(Boolean),
+        limit: 100,
+      }));
+      trace("search-request", { requestId, queryLength: query.length, threads: entries.length });
+    }, 200);
+  };
 
   const button = (className, text) => {
     const element = document.createElement("button");
@@ -532,9 +577,8 @@ export function installRuntime(config: RuntimeConfig) {
     heading.textContent = state.view === "sessions" ? "会话看板" : "标签设置";
     const subtitle = document.createElement("div");
     subtitle.className = "codex-sidebar-dashboard-subtitle";
-    const contentIndexedCount = entries.filter((item) => contentByThread.has(item.threadId)).length;
     subtitle.textContent = state.view === "sessions"
-      ? `${entries.length} 个会话 · ${contentIndexedCount} 个正文索引`
+      ? `${entries.length} 个会话 · ${searchIndexStatus.phase === "ready" ? "本地索引已就绪" : "本地索引按需加载"}`
       : `${tagDefinitions.length} 个已配置标签`;
     headingGroup.append(heading, subtitle);
     const tabs = document.createElement("div");
@@ -574,11 +618,17 @@ export function installRuntime(config: RuntimeConfig) {
       input.addEventListener("compositionend", (event) => {
         composing = false;
         state.query = event.currentTarget.value;
-        renderToolbar(entriesFrom(titleNodes()), "compositionend");
+        const currentEntries = entriesFrom(titleNodes());
+        scheduleContentSearch(currentEntries);
+        renderToolbar(currentEntries, "compositionend");
       });
       input.addEventListener("input", (event) => {
         state.query = event.currentTarget.value;
-        if (!composing && !event.isComposing) renderToolbar(entriesFrom(titleNodes()), "query");
+        if (!composing && !event.isComposing) {
+          const currentEntries = entriesFrom(titleNodes());
+          scheduleContentSearch(currentEntries);
+          renderToolbar(currentEntries, "query");
+        }
       });
       search.append(searchIcon, input);
 
@@ -682,13 +732,18 @@ export function installRuntime(config: RuntimeConfig) {
           rail.appendChild(chip);
         });
 
-      const results = selectVisibleEntries(entries, state, contentByThread);
+      const results = selectVisibleEntries(entries, state, contentMatches);
       const panel = document.createElement("div");
       panel.className = "codex-sidebar-results";
       const panelHead = document.createElement("div");
       panelHead.className = "codex-sidebar-results-head";
       const summary = document.createElement("span");
-      summary.textContent = `${results.length} / ${entries.length} 个会话${state.query ? " · 名称与正文" : ""}`;
+      summary.setAttribute("aria-live", "polite");
+      summary.textContent = searchLoading
+        ? `${results.length} / ${entries.length} 个会话 · 正在搜索正文…`
+        : searchError
+          ? `${results.length} / ${entries.length} 个会话 · ${searchError}`
+          : `${results.length} / ${entries.length} 个会话${state.query ? " · 名称与正文" : ""}`;
       panelHead.appendChild(summary);
       const list = document.createElement("div");
       list.className = "codex-sidebar-results-list";
@@ -867,29 +922,31 @@ export function installRuntime(config: RuntimeConfig) {
 
   const runtime = {
     version,
+    tagDefinitions: () => tagDefinitions.map(({ name, tone }) => ({ name, tone })),
     contentThreadIds: () => Array.from(entryCache.values(), (entry) => entry.threadId).filter(Boolean),
     debugIndex: () => Array.from(entryCache.values(), ({ key, threadId, title, projectId, pinned }) => ({ key, threadId, title, projectId, pinned })),
-    setContentIndex: (items) => {
-      const nextContentIndexJson = JSON.stringify(Array.isArray(items) ? items : []);
-      if (nextContentIndexJson === contentIndexJson) return contentByThread.size;
-      contentIndexJson = nextContentIndexJson;
-      contentByThread.clear();
-      if (Array.isArray(items)) {
-        items.forEach(({ threadId, chunks }) => {
-          if (typeof threadId === "string" && Array.isArray(chunks)) contentByThread.set(threadId, chunks);
+    setSearchResult: (result) => {
+      if (!result || result.type !== "searchResult" || result.requestId !== activeSearchRequestId || result.query !== state.query.trim()) return false;
+      contentMatches.clear();
+      if (Array.isArray(result.items)) {
+        result.items.forEach((item) => {
+          if (typeof item?.threadId === "string" && typeof item?.snippet === "string") contentMatches.set(item.threadId, item);
         });
       }
-      if (state.open) {
-        if (pointerActive || hasInteractionFocus()) pendingToolbarRefresh = true;
-        else renderToolbar(entriesFrom(titleNodes()), "content-index");
-      }
-      return contentByThread.size;
+      searchLoading = false;
+      searchError = typeof result.error === "string" ? result.error : "";
+      if (result.indexStatus && typeof result.indexStatus === "object") searchIndexStatus = result.indexStatus;
+      trace("search-result", { requestId: result.requestId, results: contentMatches.size, error: searchError || null });
+      if (state.open) renderToolbar(entriesFrom(titleNodes()), "search-result");
+      return true;
     },
     status: () => ({
       version,
       enhanced: document.querySelectorAll(`[${ENHANCED}]`).length,
       indexed: entryCache.size,
-      contentIndexed: contentByThread.size,
+      searchLoading,
+      searchResults: contentMatches.size,
+      searchIndexStatus,
       toolbar: Boolean(document.getElementById(TOOLBAR_ID)),
       visibleResults: modal?.querySelectorAll(".codex-sidebar-result").length ?? 0,
       renderCount,
@@ -897,6 +954,7 @@ export function installRuntime(config: RuntimeConfig) {
     }),
     debug: () => debugEvents.slice(),
     dispose: () => {
+      clearPendingSearch();
       observer.disconnect();
       document.removeEventListener("pointerdown", trackPointerDown, true);
       document.removeEventListener("pointerup", trackPointerEnd, true);

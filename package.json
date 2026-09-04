@@ -1,11 +1,11 @@
 {
   "name": "codex-tags",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node --check runtime/src/controller.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check scripts/manage.mjs",
+    "check": "node --check runtime/src/controller.mjs && node --check runtime/src/cdp-client.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check runtime/src/search-index.mjs && node --check runtime/src/tag-settings.mjs && node --check hooks/session-naming.mjs && node --check scripts/manage.mjs",
     "test": "node --test runtime/test/*.test.mjs && vitest run runtime/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -13,6 +13,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "better-sqlite3": "13.0.3",
     "preact": "10.29.8"
   },
   "devDependencies": {

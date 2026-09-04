@@ -49,7 +49,8 @@ const collapseRetention = await evaluate(selected, `(async () => {
   const wait = () => new Promise((resolve) => setTimeout(resolve, 500));
   const count = () => {
     if (!document.querySelector(".codex-sidebar-dashboard-overlay")) document.querySelector(".codex-sidebar-dashboard-launcher")?.click();
-    return Number(document.querySelector(".codex-sidebar-filter-chip .codex-sidebar-filter-count")?.textContent);
+    const all = [...document.querySelectorAll(".codex-sidebar-filter-chip")].find((item) => item.firstChild?.textContent === "全部");
+    return Number(all?.querySelector(".codex-sidebar-filter-count")?.textContent);
   };
   const pinned = [...document.querySelectorAll("[data-app-action-sidebar-section-toggle]")].find((item) => item.textContent?.trim() === "Pinned");
   const project = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-label") === "tiktok_live_studio");
@@ -120,7 +121,7 @@ const interaction = await evaluate(selected, `(async () => {
   const sort = document.querySelector(".codex-sidebar-sort-trigger");
   sort.focus();
   const sortResult = await stress(sort); await wait(20);
-  return { chipResult, sortResult, selectedTag, focused: document.activeElement === sort, modal: Boolean(document.querySelector(".codex-sidebar-dashboard-overlay")), deferred: window.__codexSidebarTags.debug().some((item) => item.event === "render-deferred") };
+  return { chipResult, sortResult, selectedTag, focused: document.activeElement?.classList.contains("codex-sidebar-sort-trigger") === true, modal: Boolean(document.querySelector(".codex-sidebar-dashboard-overlay")), deferred: window.__codexSidebarTags.debug().some((item) => item.event === "render-deferred") };
 })()`);
 assert.deepEqual(interaction.chipResult, { connected: true, delta: 0 });
 assert.deepEqual(interaction.sortResult, { connected: true, delta: 0 });
@@ -166,26 +167,33 @@ assert.notEqual(sessionFeatures.menuBackground, "rgb(255, 255, 255)");
 assert.notEqual(sessionFeatures.menuColor, sessionFeatures.menuBackground);
 assert.ok(sessionFeatures.titles.includes("修复 App Passport 重试验签"));
 
-const contentSearch = await evaluate(selected, `(() => {
+const contentSearch = await evaluate(selected, `(async () => {
   const input = document.querySelector(".codex-sidebar-search-input");
   input.value = "按钮做的也太丑了";
   input.dispatchEvent(new Event("input", { bubbles: true }));
+  for (let attempt = 0; window.__codexSidebarTags.status().searchLoading && attempt < 100; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   return {
     count: document.querySelectorAll(".codex-sidebar-result").length,
     snippets: [...document.querySelectorAll(".codex-sidebar-result-snippet")].map((item) => item.textContent),
     snippetFont: parseFloat(getComputedStyle(document.querySelector(".codex-sidebar-result-snippet")).fontSize),
-    indexed: window.__codexSidebarTags.status().contentIndexed,
+    status: window.__codexSidebarTags.status(),
   };
 })()`);
-assert.ok(contentSearch.indexed > 0);
+assert.equal(contentSearch.status.searchLoading, false);
+assert.equal(contentSearch.status.searchIndexStatus.phase, "ready");
 assert.ok(contentSearch.count > 0);
 assert.ok(contentSearch.snippets.some((text) => text.includes("按钮做的也太丑了")));
 assert.equal(contentSearch.snippetFont, 11);
 
-const highlightedSearch = await evaluate(selected, `(() => {
+const highlightedSearch = await evaluate(selected, `(async () => {
   const input = document.querySelector(".codex-sidebar-search-input");
   input.value = "高价值";
   input.dispatchEvent(new Event("input", { bubbles: true }));
+  for (let attempt = 0; window.__codexSidebarTags.status().searchLoading && attempt < 100; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   return {
     count: document.querySelectorAll(".codex-sidebar-result").length,
     titleMarks: [...document.querySelectorAll(".codex-sidebar-result-title .codex-sidebar-search-mark")].map((item) => item.textContent),

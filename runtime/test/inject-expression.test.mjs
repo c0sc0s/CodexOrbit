@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildContentIndexExpression, buildInjectionExpression, buildRemovalExpression } from "../src/inject-expression.mjs";
+import { buildInjectionExpression, buildRemovalExpression, buildSearchResultExpression } from "../src/inject-expression.mjs";
 
 test("builds valid standalone JavaScript expressions", () => {
   assert.doesNotThrow(() => new Function(`return ${buildInjectionExpression()}`));
   assert.doesNotThrow(() => new Function(`return ${buildRemovalExpression()}`));
-  assert.doesNotThrow(() => new Function(`return ${buildContentIndexExpression([])}`));
+  assert.doesNotThrow(() => new Function(`return ${buildSearchResultExpression({ type: "searchResult", requestId: 1, query: "test", items: [] })}`));
 });
 
 test("targets only Codex thread title nodes", () => {
@@ -17,7 +17,7 @@ test("targets only Codex thread title nodes", () => {
   assert.match(expression, /codex-sidebar-dashboard-dialog/);
   assert.match(expression, /Tags/);
   assert.doesNotMatch(expression, /Kanban/);
-  assert.match(expression, /contentByThread/);
+  assert.match(expression, /contentMatches/);
   assert.match(expression, /codex-sidebar-search-input/);
   assert.match(expression, /codex-sidebar-tags-config-v1/);
   assert.match(expression, /codex-sidebar-sort-control/);
@@ -25,7 +25,9 @@ test("targets only Codex thread title nodes", () => {
   assert.match(expression, /codex-sidebar-search-mark/);
   assert.match(expression, /renderResultsList/);
   assert.match(expression, /originalNodeState/);
-  assert.match(expression, /nextContentIndexJson === contentIndexJson/);
+  assert.match(expression, /searchRequest/);
+  assert.match(expression, /setSearchResult/);
+  assert.doesNotMatch(expression, /setContentIndex|contentByThread/);
   assert.match(expression, /role", "listbox/);
   assert.match(expression, /sortOptions/);
   assert.match(expression, /compositionstart/);

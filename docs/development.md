@@ -28,12 +28,14 @@ The repository commits `runtime/dist/injected.js`, so end users do not need npm 
 | Change | Primary location |
 | --- | --- |
 | Dashboard results and highlighting | `runtime/src/injected/components/` |
-| Search, snippets, filtering, and sorting | `runtime/src/injected/search.ts` |
+| Result merging, filtering, and sorting | `runtime/src/injected/search.ts` |
 | Dashboard state types and defaults | `runtime/src/injected/models.ts`, `store.ts` |
 | Codex private selectors and native-row discovery | `runtime/src/injected/codex-dom-adapter.ts` |
 | Title decoration, modal shell, observers, and cleanup | `runtime/src/injected/runtime.ts` |
-| Session JSONL content indexing | `runtime/src/content-index.mjs` |
-| Codex launch, CDP connection, injection, and health loop | `runtime/src/controller.mjs` |
+| Session JSONL parsing and discovery | `runtime/src/content-index.mjs` |
+| Incremental SQLite FTS5 search | `runtime/src/search-index.mjs` |
+| Persistent CDP transport | `runtime/src/cdp-client.mjs` |
+| Codex launch, injection, search bridge, and health loop | `runtime/src/controller.mjs` |
 | Installed-file and launcher management | `scripts/manage.mjs` |
 | Browser bundle generation | `scripts/build.mjs` |
 
@@ -120,9 +122,11 @@ Useful local files:
 
 The injected runtime exposes a bounded, content-free diagnostic surface as `window.__codexSidebarTags`:
 
-- `status()` reports versions, row counts, index counts, and render counters.
+- `status()` reports versions, row counts, asynchronous search state, and render counters.
 - `debug()` reports recent interaction and refresh events without conversation bodies.
 - `dispose()` removes the enhancement and restores native title DOM.
+
+The plugin also bundles `hooks/hooks.json`. Use Codex's hook review UI to trust the current definition before end-to-end testing. Unit tests exercise the lifecycle contract without modifying global Codex configuration: `startup` arms a session, its first `UserPromptSubmit` receives naming context, and later or resumed turns receive nothing.
 
 Common failures:
 
@@ -130,7 +134,7 @@ Common failures:
 - Port `9341` belongs to another process: stop and report the conflict; never terminate the foreign process automatically.
 - UI missing after a Codex update: inspect only `codex-dom-adapter.ts`, verify stable `data-*` anchors, and fail closed if they changed.
 - Stale UI after source changes: confirm `npm run build`, then `install`, then `apply`, in that order.
-- Search content missing: verify `contentIndexed` in `status`; the controller refreshes changed local session content approximately every 30 seconds.
+- Search content missing: verify `searchIndex.indexedSessions` in controller status and `searchIndexStatus` in runtime status; the controller refreshes changed local sessions approximately every 30 seconds.
 
 Environment overrides available for isolated tests are `CODEX_TAGS_CDP_PORT`, `CODEX_TAGS_INSTALL_DIR`, `CODEX_TAGS_APPLICATIONS_DIR`, and `CODEX_TAGS_STATE_DIR`. Do not use them in normal user installation instructions.
 

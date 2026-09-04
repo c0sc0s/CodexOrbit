@@ -17,10 +17,17 @@ describe("selectVisibleEntries", () => {
 
   it("creates a contextual content snippet", () => {
     const state = { ...createInitialState(), query: "中文关键词" };
-    const content = new Map([["1", [{ role: "你", text: "这是一段包含中文关键词的会话正文" }]]]);
+    const content = new Map([["1", { role: "你", snippet: "这是一段包含中文关键词的会话正文", score: 1 }]]);
     const [result] = selectVisibleEntries(entries, state, content);
     expect(result.key).toBe("1");
     expect(result.snippet).toContain("你：这是一段包含中文关键词的会话正文");
+  });
+
+  it("does not retain full conversation content in the renderer", () => {
+    const state = { ...createInitialState(), query: "关键词" };
+    const content = new Map([["1", { role: "Codex", snippet: "只返回关键词附近的摘要", score: 1 }]]);
+    const [result] = selectVisibleEntries(entries, state, content);
+    expect(result.snippet).toBe("Codex：只返回关键词附近的摘要");
   });
 
   it("combines tag filtering and title sorting", () => {

@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -10,13 +10,11 @@ const SESSION_ROOTS = [
 const TEXT_FIELD = '"text":"';
 const MAX_FIELD_LENGTH = 24_000;
 const MAX_THREAD_LENGTH = 500_000;
-const MIN_REFRESH_INTERVAL_MS = 30_000;
 const SESSION_FILE_DISCOVERY_TTL_MS = 30_000;
-const cache = new Map();
 let sessionFiles = null;
 let sessionFilesScannedAt = 0;
 
-async function discoverSessionFiles(force = false) {
+export async function discoverSessionFiles(force = false) {
   if (!force && sessionFiles && Date.now() - sessionFilesScannedAt < SESSION_FILE_DISCOVERY_TTL_MS) return sessionFiles;
   const files = new Map();
   for (const root of SESSION_ROOTS) {
@@ -136,27 +134,4 @@ export async function extractConversationText(path) {
     }
   }
   return chunks;
-}
-
-export async function buildContentIndex(threadIds) {
-  const uniqueThreadIds = [...new Set(threadIds.filter(Boolean))];
-  const localThreadIdFor = (threadId) => threadId.includes(":") ? threadId.slice(threadId.lastIndexOf(":") + 1) : threadId;
-  let files = await discoverSessionFiles();
-  if (uniqueThreadIds.some((threadId) => !files.has(localThreadIdFor(threadId)))) files = await discoverSessionFiles(true);
-  const index = [];
-  for (const threadId of uniqueThreadIds) {
-    const localThreadId = localThreadIdFor(threadId);
-    const path = files.get(localThreadId);
-    if (!path) continue;
-    let metadata;
-    try { metadata = await stat(path); } catch { continue; }
-    const signature = `${metadata.size}:${metadata.mtimeMs}`;
-    let cached = cache.get(threadId);
-    if (!cached || (cached.signature !== signature && Date.now() - cached.scannedAt >= MIN_REFRESH_INTERVAL_MS)) {
-      cached = { signature, scannedAt: Date.now(), chunks: await extractConversationText(path) };
-      cache.set(threadId, cached);
-    }
-    index.push({ threadId, chunks: cached.chunks });
-  }
-  return index;
 }

@@ -18,6 +18,8 @@ The current release is a macOS productization preview. The plugin packages insta
 
 `Time` is optional. Untagged sessions remain visible as uncategorized sessions.
 
+For newly created sessions, the plugin's lifecycle hook supplies the configured tag list and naming protocol to the Codex agent on the first prompt. The hook does not rename sessions or edit transcript files itself.
+
 ## Documentation
 
 - [Local development and debugging](docs/development.md)
@@ -39,6 +41,6 @@ node scripts/manage.mjs enable
 node scripts/manage.mjs restore
 ```
 
-The injected UI is authored in TypeScript and Preact, then bundled into a single browser IIFE. `install` writes that checked-in build artifact into the user Application Support directory and creates the launcher. `enable` applies it to an already debuggable Codex process; if Codex needs to be relaunched with CDP, the command performs a graceful quit and relaunch.
+The injected UI is authored in TypeScript and Preact, then bundled into a single browser IIFE. Conversation bodies are incrementally indexed in a local SQLite FTS5 database and searched asynchronously; only bounded matching snippets enter the renderer. `install` writes the checked-in browser artifact and SQLite runtime into the user Application Support directory and creates the launcher. `enable` applies it to an already debuggable Codex process; if Codex needs to be relaunched with CDP, the command performs a graceful quit and relaunch.
 
 For the complete edit-and-preview loop and real-app QA, follow [Local development and debugging](docs/development.md). For current and future installation channels, follow [Distribution and user installation](docs/distribution.md).
