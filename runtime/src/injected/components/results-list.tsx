@@ -29,12 +29,13 @@ interface ResultsListProps {
   entries: SessionEntry[];
   query: string;
   sort: SortMode;
+  emptyMessage: string;
   onOpen: (entry: SessionEntry) => void;
 }
 
-function ResultsList({ entries, query, sort, onOpen }: ResultsListProps) {
+function ResultsList({ entries, query, sort, emptyMessage, onOpen }: ResultsListProps) {
   let lastGroup: string | null = null;
-  if (entries.length === 0) return <div class="codex-sidebar-results-empty">没有匹配的会话</div>;
+  if (entries.length === 0) return <div class="codex-sidebar-results-empty">{emptyMessage}</div>;
   return <>{entries.flatMap((entry) => {
     const nodes = [];
     if (sort === "tag" && entry.tag !== lastGroup) {
@@ -43,7 +44,7 @@ function ResultsList({ entries, query, sort, onOpen }: ResultsListProps) {
     }
     nodes.push(
       <button key={entry.key} type="button" class="codex-sidebar-result" role="listitem" title={entry.raw} onClick={() => onOpen(entry)}>
-        <span class="codex-sidebar-result-tag" data-tone={entry.tone}>{entry.tag}</span>
+        <span class="codex-sidebar-result-tag" style={{ "--codex-sidebar-tag-color": entry.color }}>{entry.tag}</span>
         <span class="codex-sidebar-result-content">
           <span class="codex-sidebar-result-title"><HighlightedText text={entry.title} query={query} /></span>
           {entry.snippet ? <span class="codex-sidebar-result-snippet"><HighlightedText text={entry.snippet} query={query} /></span> : null}

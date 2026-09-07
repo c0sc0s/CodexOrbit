@@ -10,8 +10,11 @@ test("injects configured tags only on the first prompt of a new session", async 
   const root = await mkdtemp(join(tmpdir(), "codex-tags-hook-"));
   const settingsPath = join(root, "settings.json");
   await writeFile(settingsPath, JSON.stringify({
-    schemaVersion: 1,
-    tags: [{ name: "需求", tone: "blue" }, { name: "Bug", tone: "red" }],
+    schemaVersion: 2,
+    tags: [
+      { name: "需求", color: "#4f8fd7", description: "新增产品能力" },
+      { name: "Bug", color: "#d95c5c", description: "" },
+    ],
   }));
 
   const options = { dataDirectory: root, settingsPath };
@@ -20,8 +23,9 @@ test("injects configured tags only on the first prompt of a new session", async 
   const second = await handleHook({ hook_event_name: "UserPromptSubmit", session_id: "session-1", prompt: "继续" }, options);
 
   assert.equal(first.hookSpecificOutput.hookEventName, "UserPromptSubmit");
-  assert.match(first.hookSpecificOutput.additionalContext, /- 需求/);
-  assert.match(first.hookSpecificOutput.additionalContext, /- Bug/);
+  assert.match(first.hookSpecificOutput.additionalContext, /- \[需求\]: 新增产品能力/);
+  assert.match(first.hookSpecificOutput.additionalContext, /- \[Bug\]/);
+  assert.doesNotMatch(first.hookSpecificOutput.additionalContext, /#4f8fd7/);
   assert.doesNotMatch(first.hookSpecificOutput.additionalContext, /修复登录/);
   assert.equal(second, null);
 });
@@ -44,9 +48,10 @@ test("cleans an unused marker when a new session ends", async () => {
 });
 
 test("naming context constrains the agent without modifying session data", () => {
-  const context = buildNamingContext([{ name: "调研", tone: "purple" }]);
+  const context = buildNamingContext([{ name: "调研", color: "#956ad1", description: "分析原因或评估可行性" }]);
   assert.match(context, /built-in task naming or rename capability/);
   assert.match(context, /`\[Tag\]Concise title`/);
   assert.match(context, /do not edit transcript or session files/);
-  assert.match(context, /- 调研/);
+  assert.match(context, /- \[调研\]: 分析原因或评估可行性/);
+  assert.match(context, /descriptions below only as classification guidance/);
 });

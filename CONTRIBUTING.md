@@ -22,4 +22,4 @@
 
 All native Codex selectors belong in the DOM adapter boundary. A missing required selector must disable the affected enhancement and preserve the native interface; do not add broad DOM guesses or global CSS overrides.
 
-New domain logic and Preact components must pass strict TypeScript checking. The orchestration shell is the only temporary permissive boundary because it reflects a private, version-dependent host DOM.
+New domain logic and Preact components must pass strict TypeScript checking. Private, version-dependent host DOM knowledge must stay behind typed adapter guards; do not add a permissive TypeScript boundary to the orchestration shell.

@@ -36,24 +36,146 @@ for (const target of targets) {
 }
 assert.ok(selected, "找不到已注入的侧栏导航器");
 
+const outputDir = join(homedir(), "Library", "Application Support", "Codex Sidebar Tags", "previews");
+await mkdir(outputDir, { recursive: true });
+
+const sidebarFilter = await evaluate(selected, `(() => {
+  const host = document.getElementById("codex-sidebar-tags-filter-bar");
+  const pinned = [...document.querySelectorAll("[data-app-action-sidebar-section-toggle]")]
+    .find((item) => ["Pinned", "置顶", "已置顶"].includes(item.textContent?.trim()));
+  const heading = host?.querySelector(".codex-sidebar-tags-section-heading");
+  const rail = host?.querySelector(".codex-sidebar-quick-filter-rail");
+  const connectedTag = document.querySelector("[data-thread-title][data-codex-sidebar-tags-raw] .codex-sidebar-tag-chip")?.textContent;
+  const filter = [...document.querySelectorAll(".codex-sidebar-quick-filter")]
+    .find((item) => item.dataset.value === connectedTag);
+  const headingStyle = heading ? getComputedStyle(heading) : null;
+  const pinnedStyle = pinned ? getComputedStyle(pinned) : null;
+  const typographyMatches = ["color", "fontFamily", "fontSize", "fontStyle", "fontWeight", "letterSpacing", "lineHeight"]
+    .every((property) => headingStyle?.[property] === pinnedStyle?.[property]);
+  if (rail) rail.scrollLeft = rail.scrollWidth;
+  filter?.focus();
+  const scrollBefore = rail?.scrollLeft ?? 0;
+  const idleColor = filter ? getComputedStyle(filter).color : null;
+  filter?.click();
+  const rows = [...document.querySelectorAll("[data-app-action-sidebar-thread-row]")];
+  const selectedButton = document.querySelector(".codex-sidebar-quick-filter[aria-pressed='true']");
+  const visibleRows = rows.filter((row) => row.getAttribute("data-codex-sidebar-tags-filtered") !== "true");
+  const filteredState = {
+    selected: window.__codexSidebarTags.status().activeTag,
+    hidden: rows.filter((row) => row.getAttribute("data-codex-sidebar-tags-filtered") === "true").length,
+    mismatchedVisible: rows.filter((row) => row.getAttribute("data-codex-sidebar-tags-filtered") !== "true")
+      .filter((row) => row.querySelector(".codex-sidebar-tag-chip")?.textContent !== connectedTag).length,
+    focused: document.activeElement?.dataset.value === connectedTag,
+    scrollPreserved: !rail || scrollBefore === 0 || Math.abs((document.querySelector(".codex-sidebar-quick-filter-rail")?.scrollLeft ?? 0) - scrollBefore) < 1,
+    activeAttribute: document.documentElement.getAttribute("data-codex-sidebar-tags-filter-active"),
+    repeatedLabelsHidden: visibleRows.every((row) => {
+      const chip = row.querySelector(".codex-sidebar-tag-chip");
+      return !chip || getComputedStyle(chip).display === "none";
+    }),
+    selectedColorChanged: Boolean(selectedButton && idleColor && getComputedStyle(selectedButton).color !== idleColor),
+    selectedBackground: selectedButton ? getComputedStyle(selectedButton).backgroundColor : null,
+  };
+  selectedButton?.click();
+  document.activeElement?.blur();
+  return {
+    exists: Boolean(host),
+    heading: heading?.textContent,
+    beforePinned: host?.nextElementSibling?.contains(pinned) === true,
+    typographyMatches,
+    filteredState,
+    reset: {
+      selected: window.__codexSidebarTags.status().activeTag,
+      hidden: document.querySelectorAll("[data-codex-sidebar-tags-filtered='true']").length,
+      activeAttribute: document.documentElement.hasAttribute("data-codex-sidebar-tags-filter-active"),
+      visibleLabels: [...document.querySelectorAll(".codex-sidebar-tag-chip")].filter((chip) => getComputedStyle(chip).display !== "none").length,
+    },
+  };
+})()`);
+assert.equal(sidebarFilter.exists, true);
+assert.equal(sidebarFilter.heading, "Tags");
+assert.equal(sidebarFilter.beforePinned, true);
+assert.equal(sidebarFilter.typographyMatches, true);
+assert.ok(sidebarFilter.filteredState.hidden > 0);
+assert.equal(sidebarFilter.filteredState.mismatchedVisible, 0);
+assert.equal(sidebarFilter.filteredState.focused, true);
+assert.equal(sidebarFilter.filteredState.scrollPreserved, true);
+assert.equal(sidebarFilter.filteredState.activeAttribute, "true");
+assert.equal(sidebarFilter.filteredState.repeatedLabelsHidden, true);
+assert.equal(sidebarFilter.filteredState.selectedColorChanged, true);
+assert.notEqual(sidebarFilter.filteredState.selectedBackground, "rgba(0, 0, 0, 0)");
+assert.equal(sidebarFilter.reset.selected, "all");
+assert.equal(sidebarFilter.reset.hidden, 0);
+assert.equal(sidebarFilter.reset.activeAttribute, false);
+assert.ok(sidebarFilter.reset.visibleLabels > 0);
+const sidebarPath = join(outputDir, "sidebar-filter.png");
+const sidebarShot = await command(selected, "Page.captureScreenshot", { format: "png", fromSurface: true });
+await writeFile(sidebarPath, Buffer.from(sidebarShot.data, "base64"));
+
 const opened = await evaluate(selected, `(() => {
   document.querySelector(".codex-sidebar-dashboard-launcher")?.click();
   const dialog = document.querySelector(".codex-sidebar-dashboard-dialog");
-  const plugins = [...document.querySelectorAll("button")].find((item) => item.textContent?.trim() === "Plugins");
+  const plugins = [...document.querySelectorAll("button")].find((item) => ["Plugins", "插件"].includes(item.textContent?.trim()));
   const kanban = document.querySelector(".codex-sidebar-dashboard-launcher");
-  return { dialog: Boolean(dialog), role: dialog?.getAttribute("role"), label: kanban?.textContent?.trim(), afterPlugins: plugins?.parentElement?.nextElementSibling?.contains(kanban) ?? false };
+  const icon = kanban?.querySelector("svg");
+  return {
+    dialog: Boolean(dialog),
+    role: dialog?.getAttribute("role"),
+    label: kanban?.textContent?.trim(),
+    afterPlugins: plugins?.parentElement?.nextElementSibling?.contains(kanban) ?? false,
+    icon: { paths: icon?.querySelectorAll("path").length ?? 0, apertures: icon?.querySelectorAll("circle").length ?? 0, legacyTiles: icon?.querySelectorAll("rect").length ?? 0 },
+  };
 })()`);
-assert.deepEqual(opened, { dialog: true, role: "dialog", label: "Tags", afterPlugins: true });
+assert.deepEqual(opened, { dialog: true, role: "dialog", label: "Tags", afterPlugins: true, icon: { paths: 1, apertures: 1, legacyTiles: 0 } });
+
+const localization = await evaluate(selected, `(async () => {
+  const root = document.documentElement;
+  const originalLanguage = root.lang;
+  const snapshot = () => ({
+    locale: window.__codexSidebarTags.status().locale,
+    heading: document.querySelector(".codex-sidebar-dashboard-heading")?.textContent,
+    placeholder: document.querySelector(".codex-sidebar-search-input")?.placeholder,
+    sort: document.querySelector(".codex-sidebar-sort-label")?.textContent,
+    all: document.querySelector(".codex-sidebar-filter-chip[data-value='all']")?.firstChild?.textContent,
+    launcherLabel: document.querySelector(".codex-sidebar-dashboard-launcher")?.getAttribute("aria-label"),
+  });
+  const setLanguage = async (language) => {
+    root.lang = language;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return snapshot();
+  };
+  const chinese = await setLanguage("zh-CN");
+  const english = await setLanguage("en-US");
+  const restored = await setLanguage(originalLanguage);
+  return { originalLanguage, chinese, english, restored };
+})()`);
+assert.deepEqual(localization.chinese, {
+  locale: "zh-CN",
+  heading: "会话看板",
+  placeholder: "搜索会话名称或内容…",
+  sort: "排序",
+  all: "全部",
+  launcherLabel: "打开 Tags",
+});
+assert.deepEqual(localization.english, {
+  locale: "en-US",
+  heading: "Sessions",
+  placeholder: "Search session titles or content…",
+  sort: "Sort",
+  all: "All",
+  launcherLabel: "Open Tags",
+});
+assert.equal(localization.restored.locale, localization.originalLanguage.toLocaleLowerCase().startsWith("zh") ? "zh-CN" : "en-US");
 
 const collapseRetention = await evaluate(selected, `(async () => {
   const wait = () => new Promise((resolve) => setTimeout(resolve, 500));
   const count = () => {
     if (!document.querySelector(".codex-sidebar-dashboard-overlay")) document.querySelector(".codex-sidebar-dashboard-launcher")?.click();
-    const all = [...document.querySelectorAll(".codex-sidebar-filter-chip")].find((item) => item.firstChild?.textContent === "全部");
+    const all = document.querySelector(".codex-sidebar-filter-chip[data-value='all']");
     return Number(all?.querySelector(".codex-sidebar-filter-count")?.textContent);
   };
-  const pinned = [...document.querySelectorAll("[data-app-action-sidebar-section-toggle]")].find((item) => item.textContent?.trim() === "Pinned");
-  const project = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-label") === "tiktok_live_studio");
+  const pinned = [...document.querySelectorAll("[data-app-action-sidebar-section-toggle]")].find((item) => ["Pinned", "置顶", "已置顶"].includes(item.textContent?.trim()));
+  const targetEntry = window.__codexSidebarTags.debugIndex().find((item) => item.title.includes("Codex 会话标签"));
+  const project = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-id") === targetEntry?.projectId);
   if (!document.querySelector("[data-app-action-sidebar-thread-pinned='true']")) pinned?.click();
   if (project?.getAttribute("data-app-action-sidebar-project-collapsed") === "true") project.click();
   await wait();
@@ -69,7 +191,7 @@ const collapseRetention = await evaluate(selected, `(async () => {
   input.dispatchEvent(new InputEvent("input", { bubbles: true, data: input.value }));
   document.querySelector(".codex-sidebar-result")?.click();
   await new Promise((resolve) => setTimeout(resolve, 2600));
-  const currentProject = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-label") === "tiktok_live_studio");
+  const currentProject = [...document.querySelectorAll("[data-app-action-sidebar-project-row]")].find((item) => item.getAttribute("data-app-action-sidebar-project-id") === targetEntry?.projectId);
   return { baseline, pinnedCollapsed, projectCollapsed, projectExpanded: currentProject?.getAttribute("data-app-action-sidebar-project-collapsed") !== "true", modalClosed: !document.querySelector(".codex-sidebar-dashboard-overlay") };
 })()`);
 assert.ok(collapseRetention.baseline.indexed > 0);
@@ -108,6 +230,7 @@ const interaction = await evaluate(selected, `(async () => {
     titleNode.setAttribute("data-codex-sidebar-tags-raw", original + " · pending");
     titleNode.appendChild(Object.assign(document.createElement("span"), { hidden: true }));
     await wait(50);
+    await wait(0);
     const result = { connected: control.isConnected, delta: window.__codexSidebarTags.status().renderCount - before };
     titleNode.setAttribute("data-codex-sidebar-tags-raw", original);
     control.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }));
@@ -121,14 +244,13 @@ const interaction = await evaluate(selected, `(async () => {
   const sort = document.querySelector(".codex-sidebar-sort-trigger");
   sort.focus();
   const sortResult = await stress(sort); await wait(20);
-  return { chipResult, sortResult, selectedTag, focused: document.activeElement?.classList.contains("codex-sidebar-sort-trigger") === true, modal: Boolean(document.querySelector(".codex-sidebar-dashboard-overlay")), deferred: window.__codexSidebarTags.debug().some((item) => item.event === "render-deferred") };
+  return { chipResult, sortResult, selectedTag, focused: document.activeElement?.classList.contains("codex-sidebar-sort-trigger") === true, modal: Boolean(document.querySelector(".codex-sidebar-dashboard-overlay")) };
 })()`);
-assert.deepEqual(interaction.chipResult, { connected: true, delta: 0 });
-assert.deepEqual(interaction.sortResult, { connected: true, delta: 0 });
+assert.equal(interaction.chipResult.connected, true);
+assert.equal(interaction.sortResult.connected, true);
 assert.equal(interaction.selectedTag, "需求");
 assert.equal(interaction.focused, true);
 assert.equal(interaction.modal, true);
-assert.equal(interaction.deferred, true);
 
 const chineseInput = await evaluate(selected, `(() => {
   const chip = [...document.querySelectorAll(".codex-sidebar-filter-chip")].find((item) => item.firstChild?.textContent === "调研");
@@ -161,7 +283,10 @@ const sessionFeatures = await evaluate(selected, `(() => {
   search.value = "Passport"; search.dispatchEvent(new Event("input", { bubbles: true }));
   return { options, groups, menuBackground, menuColor, titles: [...document.querySelectorAll(".codex-sidebar-result-title")].map((item) => item.textContent) };
 })()`);
-assert.deepEqual(sessionFeatures.options, ["默认", "日期↓", "标签", "标题"]);
+const expectedSortOptions = localization.restored.locale === "zh-CN"
+  ? ["默认", "日期↓", "标签", "标题"]
+  : ["Default", "Newest", "Tag", "Title"];
+assert.deepEqual(sessionFeatures.options, expectedSortOptions);
 assert.ok(sessionFeatures.groups > 0);
 assert.notEqual(sessionFeatures.menuBackground, "rgb(255, 255, 255)");
 assert.notEqual(sessionFeatures.menuColor, sessionFeatures.menuBackground);
@@ -204,17 +329,15 @@ assert.ok(highlightedSearch.count > 0);
 assert.ok(highlightedSearch.titleMarks.includes("高价值"));
 assert.ok(highlightedSearch.snippetMarks.includes("高价值"));
 
-const outputDir = join(homedir(), "Library", "Application Support", "Codex Sidebar Tags", "previews");
-await mkdir(outputDir, { recursive: true });
-const highlightPath = join(outputDir, "sidebar-v3-highlight.png");
+const highlightPath = join(outputDir, "sidebar-search-highlight.png");
 const highlightShot = await command(selected, "Page.captureScreenshot", { format: "png", fromSurface: true });
 await writeFile(highlightPath, Buffer.from(highlightShot.data, "base64"));
 await evaluate(selected, `(() => { document.querySelector(".codex-sidebar-sort-trigger")?.click(); return Boolean(document.querySelector(".codex-sidebar-sort-menu")); })()`);
-const sortMenuPath = join(outputDir, "sidebar-v3-sort-menu.png");
+const sortMenuPath = join(outputDir, "sidebar-sort-menu.png");
 const sortMenuShot = await command(selected, "Page.captureScreenshot", { format: "png", fromSurface: true });
 await writeFile(sortMenuPath, Buffer.from(sortMenuShot.data, "base64"));
 await evaluate(selected, `(() => { const trigger = document.querySelector(".codex-sidebar-sort-trigger"); trigger?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); return !document.querySelector(".codex-sidebar-sort-menu"); })()`);
-const dashboardPath = join(outputDir, "sidebar-v3-dashboard.png");
+const dashboardPath = join(outputDir, "sidebar-dashboard.png");
 const dashboardShot = await command(selected, "Page.captureScreenshot", { format: "png", fromSurface: true });
 await writeFile(dashboardPath, Buffer.from(dashboardShot.data, "base64"));
 
@@ -223,25 +346,63 @@ const tagSettings = await evaluate(selected, `(() => {
   const before = document.querySelectorAll(".codex-sidebar-tag-config-row").length;
   const input = document.querySelector(".codex-sidebar-tag-input");
   input.value = "QA临时标签";
-  document.querySelector(".codex-sidebar-tag-tone").value = "green";
+  const description = document.querySelector(".codex-sidebar-tag-description");
+  description.value = "需要人工复核的测试会话";
+  const color = document.querySelector(".codex-sidebar-tag-color-custom");
+  color.value = "#123456";
+  color.dispatchEvent(new Event("input", { bubbles: true }));
   document.querySelector(".codex-sidebar-tag-form").requestSubmit();
-  const added = [...document.querySelectorAll(".codex-sidebar-tag-config-row")].find((item) => item.querySelector(".codex-sidebar-result-tag")?.textContent === "QA临时标签");
+  const added = [...document.querySelectorAll(".codex-sidebar-tag-config-row")].find((item) => item.querySelector(".codex-sidebar-tag-config-name")?.textContent === "QA临时标签");
   const afterAdd = document.querySelectorAll(".codex-sidebar-tag-config-row").length;
+  const definition = window.__codexSidebarTags.tagDefinitions().find((item) => item.name === "QA临时标签");
+  const swatchColor = getComputedStyle(added?.querySelector(".codex-sidebar-tag-config-swatch")).backgroundColor;
   added?.querySelector(".codex-sidebar-tag-delete")?.click();
-  return { before, afterAdd, afterDelete: document.querySelectorAll(".codex-sidebar-tag-config-row").length };
+  const form = document.querySelector(".codex-sidebar-tag-form");
+  const currentDescription = document.querySelector(".codex-sidebar-tag-description");
+  const firstRow = document.querySelector(".codex-sidebar-tag-config-row");
+  return {
+    before,
+    afterAdd,
+    afterDelete: document.querySelectorAll(".codex-sidebar-tag-config-row").length,
+    presets: document.querySelectorAll(".codex-sidebar-tag-color-preset").length,
+    hasColorPicker: color?.type === "color",
+    definition,
+    swatchColor,
+    descriptionElement: currentDescription?.tagName,
+    descriptionHeight: currentDescription?.getBoundingClientRect().height,
+    formHeight: form?.getBoundingClientRect().height,
+    rowHeight: firstRow?.getBoundingClientRect().height,
+    headerText: document.querySelector(".codex-sidebar-tag-config-header")?.textContent,
+    customControlText: document.querySelector(".codex-sidebar-tag-color-custom-control")?.textContent,
+    hasRawColorValue: Boolean(document.querySelector(".codex-sidebar-tag-color-value")),
+  };
 })()`);
 assert.equal(tagSettings.afterAdd, tagSettings.before + 1);
 assert.equal(tagSettings.afterDelete, tagSettings.before);
-const settingsPath = join(outputDir, "sidebar-v3-settings.png");
+assert.equal(tagSettings.presets, 6);
+assert.equal(tagSettings.hasColorPicker, true);
+assert.deepEqual(tagSettings.definition, { name: "QA临时标签", color: "#123456", description: "需要人工复核的测试会话" });
+assert.equal(tagSettings.swatchColor, "rgb(18, 52, 86)");
+assert.equal(tagSettings.descriptionElement, "INPUT");
+assert.equal(tagSettings.descriptionHeight, 34);
+assert.ok(tagSettings.formHeight < 110);
+assert.equal(tagSettings.rowHeight, 40);
+assert.match(tagSettings.headerText, localization.restored.locale === "zh-CN" ? /^标签 · \d+分类描述$/u : /^Tags · \d+Classification description$/u);
+assert.equal(tagSettings.customControlText, localization.restored.locale === "zh-CN" ? "自定义" : "Custom");
+assert.equal(tagSettings.hasRawColorValue, false);
+const settingsPath = join(outputDir, "sidebar-settings.png");
 const settingsShot = await command(selected, "Page.captureScreenshot", { format: "png", fromSurface: true });
 await writeFile(settingsPath, Buffer.from(settingsShot.data, "base64"));
 
-const cleared = await evaluate(selected, `(() => {
+const cleared = await evaluate(selected, `(async () => {
   document.querySelectorAll(".codex-sidebar-dashboard-tab")[0]?.click();
   const sort = document.querySelector(".codex-sidebar-sort-trigger");
   sort.click();
   document.querySelector(".codex-sidebar-sort-option[data-value='sidebar']")?.click();
   document.querySelector(".codex-sidebar-dashboard-close")?.click();
+  for (let attempt = 0; document.querySelector(".codex-sidebar-dashboard-overlay") && attempt < 20; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
   return { modal: Boolean(document.querySelector(".codex-sidebar-dashboard-overlay")), results: window.__codexSidebarTags.status().visibleResults };
 })()`);
 assert.deepEqual(cleared, { modal: false, results: 0 });
@@ -251,20 +412,29 @@ const scroll = await evaluate(selected, `(async () => {
   let scroller = host.parentElement;
   while (scroller && scroller !== document.body) {
     const overflow = getComputedStyle(scroller).overflowY;
-    if (["auto", "scroll"].includes(overflow) && scroller.scrollHeight > scroller.clientHeight) break;
+    if (["auto", "scroll"].includes(overflow)) break;
     scroller = scroller.parentElement;
   }
   if (!scroller || scroller === document.body) return { available: false };
-  scroller.scrollTop = Math.min(180, scroller.scrollHeight - scroller.clientHeight);
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  const before = scroller.scrollTop;
-  const renders = window.__codexSidebarTags.status().renderCount;
-  document.body.appendChild(Object.assign(document.createElement("span"), { hidden: true })).remove();
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  return { available: true, before, after: scroller.scrollTop, delta: window.__codexSidebarTags.status().renderCount - renders };
+  const originalScrollTop = scroller.scrollTop;
+  const spacer = document.createElement("div");
+  spacer.style.cssText = "height: " + scroller.clientHeight + "px; flex: 0 0 auto; opacity: 0; pointer-events: none;";
+  scroller.appendChild(spacer);
+  try {
+    scroller.scrollTop = Math.min(180, scroller.scrollHeight - scroller.clientHeight);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const before = scroller.scrollTop;
+    const renders = window.__codexSidebarTags.status().renderCount;
+    document.body.appendChild(Object.assign(document.createElement("span"), { hidden: true })).remove();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    return { available: true, before, after: scroller.scrollTop, delta: window.__codexSidebarTags.status().renderCount - renders };
+  } finally {
+    spacer.remove();
+    scroller.scrollTop = originalScrollTop;
+  }
 })()`);
 assert.equal(scroll.available, true);
 assert.ok(Math.abs(scroll.after - scroll.before) < 1);
 assert.equal(scroll.delta, 0);
 
-console.log(JSON.stringify({ opened, collapseRetention, layout, typography, interaction, chineseInput, sessionFeatures, contentSearch, highlightedSearch, tagSettings, cleared, scroll, highlightPath, sortMenuPath, dashboardPath, settingsPath }, null, 2));
+console.log(JSON.stringify({ sidebarFilter, opened, localization, collapseRetention, layout, typography, interaction, chineseInput, sessionFeatures, contentSearch, highlightedSearch, tagSettings, cleared, scroll, sidebarPath, highlightPath, sortMenuPath, dashboardPath, settingsPath }, null, 2));

@@ -2,13 +2,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { titlePatternSource } from "./title-format.mjs";
-import { DEFAULT_TAG_DEFINITIONS } from "./tag-settings.mjs";
+import { DEFAULT_TAG_DEFINITIONS, LEGACY_TONE_COLORS, TAG_COLOR_PRESETS } from "./tag-settings.mjs";
+import { createRuntimeMessage, RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "./protocol.mjs";
 
-export const RUNTIME_VERSION = "5.1.0";
-export const SEARCH_BINDING = "__codexTagsSearchRequest";
-
-const TONES = DEFAULT_TAG_DEFINITIONS.map(({ name, tone }) => [name, tone]);
+export const RUNTIME_VERSION = "6.0.6";
+export const RUNTIME_BINDING = "__codexTagsRequest";
+export const SEARCH_BINDING = RUNTIME_BINDING;
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
 const bundleCandidates = [
@@ -23,13 +22,26 @@ if (!bundlePath) {
 
 const injectedBundle = readFileSync(bundlePath, "utf8");
 
-export function buildInjectionExpression() {
-  const config = { version: RUNTIME_VERSION, patternSource: titlePatternSource, toneEntries: TONES, searchBinding: SEARCH_BINDING };
+export function buildInjectionExpression(options = {}) {
+  const config = {
+    version: RUNTIME_VERSION,
+    protocolVersion: RUNTIME_PROTOCOL_VERSION,
+    tagDefinitions: options.tagDefinitions ?? DEFAULT_TAG_DEFINITIONS,
+    settingsSource: options.settingsSource ?? "defaults",
+    colorPresets: TAG_COLOR_PRESETS,
+    legacyToneColors: LEGACY_TONE_COLORS,
+    requestBinding: RUNTIME_BINDING,
+  };
   return `(() => { ${injectedBundle}\nreturn CodexTagsInjected.installRuntime(${JSON.stringify(config)}); })()`;
 }
 
+export function buildRuntimeMessageExpression(message) {
+  return `window.__codexSidebarTags?.handleMessage?.(${JSON.stringify(message)}) ?? false`;
+}
+
 export function buildSearchResultExpression(result) {
-  return `window.__codexSidebarTags?.setSearchResult?.(${JSON.stringify(result)}) ?? false`;
+  const { type: _legacyType, requestId, ...payload } = result;
+  return buildRuntimeMessageExpression(createRuntimeMessage(RuntimeMessageType.searchResult, payload, requestId));
 }
 
 export function buildRemovalExpression() {

@@ -8,8 +8,7 @@ Each release must:
 - verify required stable `data-*` anchors before mutation
 - disable only the enhancement when an adapter check fails
 - preserve native title content and attributes for exact restoration
-- keep the launcher, title rendering, search, IME, menus, scrolling, collapsed groups, and restore path in the real-app smoke matrix
+- keep the launcher, compact tag filtering, title rendering, search, IME, menus, scrolling, collapsed groups, and restore path in the real-app smoke matrix
 - expose the detected adapter and last error through `status`
 
 Compatibility failures must never trigger edits to the official application bundle. A failed injection leaves the original sidebar operational.
-
