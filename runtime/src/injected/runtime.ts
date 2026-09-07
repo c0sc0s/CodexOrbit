@@ -21,6 +21,7 @@ import {
   projectIdForThreadRow,
   queryThreadTitles,
   sectionToggleForThreadRow,
+  sidebarOrderGroups,
   threadIdForRow,
 } from "./codex-dom-adapter";
 import { DashboardView } from "./dashboard-view";
@@ -30,6 +31,7 @@ import type { ContentSearchMatch, ParsedSessionTitle, SessionEntry } from "./mod
 import { RuntimeClient } from "./runtime-client";
 import { parseRuntimeConfig } from "./runtime-config";
 import { SessionRegistry } from "./session-registry";
+import { SidebarTagOrder } from "./sidebar-tag-order";
 import { SidebarTagFilter } from "./sidebar-tag-filter";
 import { RuntimeStore } from "./store";
 import { buildRuntimeStyles } from "./styles";
@@ -145,6 +147,11 @@ export function installRuntime(input: unknown) {
   });
 
   const titleNodes = () => queryThreadTitles(TOOLBAR_ID);
+  const sidebarTagOrder = new SidebarTagOrder();
+  const applySidebarOrder = (): void => sidebarTagOrder.apply(
+    sidebarOrderGroups(), tagDefinitions.map(({ name }) => name),
+    (title) => parse(title.getAttribute(RAW) ?? title.textContent)?.tag ?? i18n.t("uncategorized"),
+  );
 
   const commonAncestor = (left: HTMLElement | null | undefined, right: HTMLElement | null | undefined): HTMLElement | null => {
     if (!left || !right) return left?.parentElement ?? null;
@@ -341,6 +348,7 @@ export function installRuntime(input: unknown) {
     renderedIndexSignature = indexSignature(entries);
     renderCount += 1;
     trace("render", { reason, count: entries.length, open: state.open });
+    applySidebarOrder();
     sidebarTagFilter.render(entries);
     dashboardView.render(entries, reason);
   };
@@ -349,6 +357,7 @@ export function installRuntime(input: unknown) {
     const nodes = titleNodes();
     nodes.forEach((node) => titleDecorator.enhance(node));
     const entries = entriesFrom(nodes);
+    applySidebarOrder();
     sidebarTagFilter.apply(entries);
     if (host?.isConnected && renderedIndexSignature === indexSignature(entries)) return;
     if (hostLifecycle.deferIfInteracting(reason)) return;
@@ -427,7 +436,7 @@ export function installRuntime(input: unknown) {
       const nextDefinitions = normalizeTagDefinitions(settings?.tags, defaultDefinitions);
       tagDefinitions = nextDefinitions;
       syncTagDefinitions(false);
-      if (state.open) renderToolbar(entriesFrom(titleNodes()), "settings-snapshot");
+      renderToolbar(entriesFrom(titleNodes()), "settings-snapshot");
       return true;
     }
     return false;
@@ -465,6 +474,7 @@ export function installRuntime(input: unknown) {
       clearPendingSearch();
       stopLocaleObserver();
       hostLifecycle.dispose();
+      sidebarTagOrder.dispose();
       titleDecorator.dispose(document.querySelectorAll<HTMLElement>(`[${ENHANCED}]`));
       sidebarTagFilter.dispose(document.querySelectorAll<HTMLElement>(`[${FILTERED}]`));
       document.querySelectorAll<HTMLElement>(`[${ROW}]`).forEach((row) => row.removeAttribute(ROW));

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Group sidebar tasks by configured tag order within Pinned and each project, preserving native order within each tag and restoring native presentation on disposal.
+- Keep row tag labels visible when filtering by a specific tag.
+
 ## 0.5.0 — 2026-09-07
 
 Initial public early release. Automated verification and packed-consumer tests pass; clean-account GUI and hook-trust acceptance remain pending.

@@ -32,8 +32,6 @@ export function buildRuntimeStyles({
       background: transparent; font-size: 10px; font-weight: 600; line-height: 18px; white-space: nowrap; transition: color 120ms ease;
     }
     [${ROW}="true"]:hover .codex-sidebar-tag-chip { color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-secondary, #999)) 68%, var(--color-text-secondary, var(--color-token-text-secondary, #999))); }
-    [data-codex-sidebar-tags-filter-active="true"] .codex-sidebar-tag-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
-    [data-codex-sidebar-tags-filter-active="true"] .codex-sidebar-tag-chip { display: none; }
     .codex-sidebar-tag-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #${FILTER_BAR_ID} { min-width: 0; margin: 0 0 6px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); }

@@ -232,6 +232,25 @@ var CodexTagsInjected = (() => {
     const selector = Object.values(codexSelectors).join(",");
     return node.matches(selector) || Boolean(node.querySelector(selector));
   }
+  function sidebarOrderGroups() {
+    const groups = /* @__PURE__ */ new Map();
+    for (const title of queryThreadTitles("codex-sidebar-tags-toolbar")) {
+      const row = findThreadRow(title);
+      if (!row) continue;
+      for (let item = row; item.parentElement; item = item.parentElement) {
+        const parent = item.parentElement;
+        const style = getComputedStyle(parent);
+        if (style.display !== "flex" || style.flexDirection !== "column") continue;
+        const siblings = [...parent.children];
+        if (!siblings.every((sibling) => !sibling.querySelector(codexSelectors.projectRow) && !sibling.querySelector(codexSelectors.sectionToggle) && (sibling.matches(codexSelectors.threadRow) ? 1 : sibling.querySelectorAll(codexSelectors.threadRow).length) <= 1)) break;
+        const items = groups.get(parent) ?? [];
+        items.push({ element: item, title });
+        groups.set(parent, items);
+        break;
+      }
+    }
+    return [...groups.values()];
+  }
 
   // node_modules/preact/dist/preact.module.js
   var n;
@@ -2304,6 +2323,39 @@ var CodexTagsInjected = (() => {
     }
   };
 
+  // runtime/src/injected/sidebar-tag-order.ts
+  var SidebarTagOrder = class {
+    originals = /* @__PURE__ */ new Map();
+    apply(groups, definitions, tagForTitle) {
+      const configured = definitions.map((name) => name.toLocaleLowerCase());
+      const active = /* @__PURE__ */ new Set();
+      for (const group of groups) {
+        const tags = group.map(({ title }) => tagForTitle(title).toLocaleLowerCase());
+        const unknown = [...new Set(tags.filter((tag) => !configured.includes(tag)))].sort();
+        const order = [...configured, ...unknown];
+        group.forEach(({ element }, index) => {
+          active.add(element);
+          if (!this.originals.has(element)) this.originals.set(element, {
+            value: element.style.getPropertyValue("order"),
+            priority: element.style.getPropertyPriority("order")
+          });
+          const value = String(order.indexOf(tags[index]) - order.length);
+          if (element.style.order !== value) element.style.setProperty("order", value);
+        });
+      }
+      for (const element of this.originals.keys()) if (!active.has(element)) this.restore(element);
+    }
+    dispose() {
+      for (const element of this.originals.keys()) this.restore(element);
+    }
+    restore(element) {
+      const original = this.originals.get(element);
+      if (original.value) element.style.setProperty("order", original.value, original.priority);
+      else element.style.removeProperty("order");
+      this.originals.delete(element);
+    }
+  };
+
   // runtime/src/injected/sidebar-tag-filter.ts
   var SidebarTagFilter = class {
     constructor(options) {
@@ -2453,8 +2505,6 @@ var CodexTagsInjected = (() => {
       background: transparent; font-size: 10px; font-weight: 600; line-height: 18px; white-space: nowrap; transition: color 120ms ease;
     }
     [${ROW}="true"]:hover .codex-sidebar-tag-chip { color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-secondary, #999)) 68%, var(--color-text-secondary, var(--color-token-text-secondary, #999))); }
-    [data-codex-sidebar-tags-filter-active="true"] .codex-sidebar-tag-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
-    [data-codex-sidebar-tags-filter-active="true"] .codex-sidebar-tag-chip { display: none; }
     .codex-sidebar-tag-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #${FILTER_BAR_ID} { min-width: 0; margin: 0 0 6px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); }
@@ -2844,6 +2894,12 @@ var CodexTagsInjected = (() => {
       rowAttribute: ROW
     });
     const titleNodes = () => queryThreadTitles(TOOLBAR_ID);
+    const sidebarTagOrder = new SidebarTagOrder();
+    const applySidebarOrder = () => sidebarTagOrder.apply(
+      sidebarOrderGroups(),
+      tagDefinitions.map(({ name }) => name),
+      (title) => parse(title.getAttribute(RAW) ?? title.textContent)?.tag ?? i18n.t("uncategorized")
+    );
     const commonAncestor = (left, right) => {
       if (!left || !right) return left?.parentElement ?? null;
       const parents = /* @__PURE__ */ new Set();
@@ -3023,6 +3079,7 @@ var CodexTagsInjected = (() => {
       renderedIndexSignature = indexSignature(entries);
       renderCount += 1;
       trace("render", { reason, count: entries.length, open: state.open });
+      applySidebarOrder();
       sidebarTagFilter.render(entries);
       dashboardView.render(entries, reason);
     };
@@ -3030,6 +3087,7 @@ var CodexTagsInjected = (() => {
       const nodes = titleNodes();
       nodes.forEach((node) => titleDecorator.enhance(node));
       const entries = entriesFrom(nodes);
+      applySidebarOrder();
       sidebarTagFilter.apply(entries);
       if (host?.isConnected && renderedIndexSignature === indexSignature(entries)) return;
       if (hostLifecycle.deferIfInteracting(reason)) return;
@@ -3106,7 +3164,7 @@ var CodexTagsInjected = (() => {
         const nextDefinitions = normalizeTagDefinitions(settings?.tags, defaultDefinitions);
         tagDefinitions = nextDefinitions;
         syncTagDefinitions(false);
-        if (state.open) renderToolbar(entriesFrom(titleNodes()), "settings-snapshot");
+        renderToolbar(entriesFrom(titleNodes()), "settings-snapshot");
         return true;
       }
       return false;
@@ -3143,6 +3201,7 @@ var CodexTagsInjected = (() => {
         clearPendingSearch();
         stopLocaleObserver();
         hostLifecycle.dispose();
+        sidebarTagOrder.dispose();
         titleDecorator.dispose(document.querySelectorAll(`[${ENHANCED}]`));
         sidebarTagFilter.dispose(document.querySelectorAll(`[${FILTERED}]`));
         document.querySelectorAll(`[${ROW}]`).forEach((row) => row.removeAttribute(ROW));

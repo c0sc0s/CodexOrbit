@@ -123,3 +123,31 @@ export function mutationContainsSidebarNode(node: Node): boolean {
   const selector = Object.values(codexSelectors).join(",");
   return node.matches(selector) || Boolean(node.querySelector(selector));
 }
+
+export interface SidebarOrderItem {
+  element: HTMLElement;
+  title: HTMLElement;
+}
+
+export function sidebarOrderGroups(): SidebarOrderItem[][] {
+  const groups = new Map<HTMLElement, SidebarOrderItem[]>();
+  for (const title of queryThreadTitles("codex-sidebar-tags-toolbar")) {
+    const row = findThreadRow(title);
+    if (!row) continue;
+    for (let item = row; item.parentElement; item = item.parentElement) {
+      const parent = item.parentElement;
+      const style = getComputedStyle(parent);
+      if (style.display !== "flex" || style.flexDirection !== "column") continue;
+      const siblings = [...parent.children];
+      // Only reorder individual thread wrappers, never project or section containers.
+      if (!siblings.every((sibling) => !sibling.querySelector(codexSelectors.projectRow)
+        && !sibling.querySelector(codexSelectors.sectionToggle)
+        && (sibling.matches(codexSelectors.threadRow) ? 1 : sibling.querySelectorAll(codexSelectors.threadRow).length) <= 1)) break;
+      const items = groups.get(parent) ?? [];
+      items.push({ element: item, title });
+      groups.set(parent, items);
+      break;
+    }
+  }
+  return [...groups.values()];
+}
