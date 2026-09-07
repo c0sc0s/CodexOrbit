@@ -28,7 +28,6 @@ const runtimeFiles = new Map([
   ["runtime-target-registry.mjs", "runtime-target-registry.mjs"],
   ["title-format.mjs", "title-format.mjs"],
   ["tag-settings.mjs", "tag-settings.mjs"],
-  ["launch-supervisor.mjs", "launch-supervisor.mjs"],
   ["../dist/injected.js", "dist/injected.js"],
 ]);
 
@@ -138,7 +137,10 @@ export function createManager(options = {}) {
     const shellQuote = (value) => `'${value.replaceAll("'", `'"'"'`)}'`;
     const script = [
       "#!/bin/sh",
-      `nohup ${shellQuote(nodePath)} ${shellQuote(installedController)} start >> ${shellQuote(logPath)} 2>&1 </dev/null &`,
+      `if ! ${shellQuote(nodePath)} ${shellQuote(installedController)} start >> ${shellQuote(logPath)} 2>&1 </dev/null; then`,
+      `  /usr/bin/osascript -e 'display dialog "Tags could not start. If Codex is already open, quit it completely and reopen Codex Tags. Otherwise check launcher.log in Library/Application Support/Codex Sidebar Tags." with title "Codex Tags" buttons {"OK"} default button "OK"'`,
+      "  exit 1",
+      "fi",
       "",
     ].join("\n");
     const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
@@ -148,6 +150,7 @@ export function createManager(options = {}) {
 <key>CFBundleExecutable</key><string>${executableName}</string>
 <key>CFBundleIdentifier</key><string>io.github.c0sc0s.codex-tags</string>
 <key>CFBundleName</key><string>Codex Tags</string>
+<key>CFBundleIconFile</key><string>icon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>LSUIElement</key><true/>
@@ -156,6 +159,8 @@ export function createManager(options = {}) {
     try {
       await rm(nextLauncherPath, { recursive: true, force: true });
       await mkdir(dirname(executablePath), { recursive: true });
+      await mkdir(join(nextLauncherPath, "Contents", "Resources"), { recursive: true });
+      await copyFile(join(root, "assets", "icon.icns"), join(nextLauncherPath, "Contents", "Resources", "icon.icns"));
       await writeFile(executablePath, script, { encoding: "utf8", mode: 0o755 });
       await chmod(executablePath, 0o755);
       await writeFile(join(nextLauncherPath, "Contents", "Info.plist"), infoPlist, { encoding: "utf8", mode: 0o644 });
@@ -167,26 +172,17 @@ export function createManager(options = {}) {
     return launcherPath;
   }
 
-  function escapeXml(value) {
-    return value
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&apos;");
-  }
-
   async function supervisorStatus() {
     const installed = await pathExists(launchAgentPath);
-    if (platform !== "darwin" || !installed || !Number.isInteger(userId)) {
+    if (platform !== "darwin" || !Number.isInteger(userId)) {
       return { supported: platform === "darwin", installed, loaded: false, launchAgentPath };
     }
     try {
       const { stdout } = await run("/bin/launchctl", ["print", `gui/${userId}/${launchAgentLabel}`]);
       const pid = Number(stdout.match(/\bpid\s*=\s*(\d+)/u)?.[1]);
-      return { supported: true, installed: true, loaded: true, pid: Number.isSafeInteger(pid) ? pid : null, launchAgentPath };
+      return { supported: true, installed, loaded: true, pid: Number.isSafeInteger(pid) ? pid : null, launchAgentPath };
     } catch {
-      return { supported: true, installed: true, loaded: false, launchAgentPath };
+      return { supported: true, installed, loaded: false, launchAgentPath };
     }
   }
 
@@ -205,6 +201,7 @@ export function createManager(options = {}) {
   }
 
   async function removeLaunchSupervisor() {
+    await checkOwnedDirectory();
     if (platform !== "darwin") return { supported: false, installed: false, loaded: false, launchAgentPath };
     if (Number.isInteger(userId)) {
       try {
@@ -213,43 +210,8 @@ export function createManager(options = {}) {
       await waitForLaunchSupervisorToUnload();
     }
     await rm(launchAgentPath, { force: true });
+    await rm(installedSupervisor, { force: true });
     return { supported: true, installed: false, loaded: false, launchAgentPath };
-  }
-
-  async function installLaunchSupervisor() {
-    if (platform !== "darwin" || !Number.isInteger(userId)) {
-      throw new Error("The automatic official-app launcher currently requires a macOS GUI session.");
-    }
-    const standardLogPath = join(installRoot, "supervisor-launchd.log");
-    const plist = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>Label</key><string>${launchAgentLabel}</string>
-<key>ProgramArguments</key><array>
-<string>${escapeXml(nodePath)}</string>
-<string>${escapeXml(installedSupervisor)}</string>
-</array>
-<key>RunAtLoad</key><true/>
-<key>KeepAlive</key><true/>
-<key>ProcessType</key><string>Background</string>
-<key>ThrottleInterval</key><integer>5</integer>
-<key>StandardOutPath</key><string>${escapeXml(standardLogPath)}</string>
-<key>StandardErrorPath</key><string>${escapeXml(standardLogPath)}</string>
-</dict></plist>
-`;
-    const nextLaunchAgentPath = `${launchAgentPath}.next-${process.pid}`;
-    await mkdir(launchAgentsRoot, { recursive: true });
-    try {
-      await writeFile(nextLaunchAgentPath, plist, { encoding: "utf8", mode: 0o644 });
-      await chmod(nextLaunchAgentPath, 0o644);
-      await run("/usr/bin/plutil", ["-lint", nextLaunchAgentPath]);
-      await removeLaunchSupervisor();
-      await rename(nextLaunchAgentPath, launchAgentPath);
-      await run("/bin/launchctl", ["bootstrap", `gui/${userId}`, launchAgentPath]);
-    } finally {
-      await rm(nextLaunchAgentPath, { force: true });
-    }
-    return supervisorStatus();
   }
 
   async function copyRuntimeDependency() {
@@ -310,6 +272,7 @@ export function createManager(options = {}) {
 
   async function installRuntime() {
     await checkOwnedDirectory();
+    await removeLaunchSupervisor();
     await mkdir(installRoot, { recursive: true });
     await chmod(installRoot, 0o700);
     for (const [sourceName, destinationName] of runtimeFiles) {
@@ -427,10 +390,9 @@ export function createManager(options = {}) {
     const installation = await installRuntime();
     const plugin = await installCodexPlugin();
     const controller = await runController("start");
-    const supervisor = await installLaunchSupervisor();
     const verification = await waitForHealthyStatus();
     const health = activationHealth(verification);
-    return { status: health.ok ? "enabled" : "incomplete", installation, plugin, controller, supervisor, verification, health };
+    return { status: health.ok ? "enabled" : "incomplete", installation, plugin, controller, verification, health };
   }
 
   async function disable({ purge = false } = {}) {
@@ -497,5 +459,5 @@ export function createManager(options = {}) {
     return { ok: checks.every((check) => check.ok), checks, status: currentStatus };
   }
 
-  return { paths: { installRoot, launcherPath, launchAgentPath, marketplaceRoot, marketplacePluginRoot }, installRuntime, installLaunchSupervisor, removeLaunchSupervisor, installCodexPlugin, removeCodexPlugin, runController, enable, disable, uninstall, status, doctor };
+  return { paths: { installRoot, launcherPath, launchAgentPath, marketplaceRoot, marketplacePluginRoot }, installRuntime, removeLaunchSupervisor, installCodexPlugin, removeCodexPlugin, runController, enable, disable, uninstall, status, doctor };
 }

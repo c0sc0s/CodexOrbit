@@ -26,7 +26,7 @@ Once published, onboarding is two steps:
    ```
 2. Open **Codex → Plugins → Codex Tags** and review/trust **SessionStart**, **UserPromptSubmit**, and **SessionEnd**.
 
-Keep using the official app entry. A per-user background helper detects fresh launches and may gracefully restart Codex once to activate Tags. The fallback launcher is optional. Naming is an agent instruction, not a guaranteed title rewrite.
+Open `~/Applications/Codex Tags.app` for Tags, and drag it to the Dock for quick access. It launches the official app with Tags enabled; it is not another Codex installation. The official entry stays unmodified. If Codex is already open without Tags, quit it first: there is no automatic restart or launch supervisor. Naming is an agent instruction, not a guaranteed title rewrite.
 
 **Try the candidate from source:**
 
@@ -38,7 +38,7 @@ npm run verify
 node bin/codex-tags.mjs install
 ```
 
-Then review the hooks as above. Installation may restart Codex; avoid important running tasks.
+Then review the hooks as above. Quit Codex before installation if it is open without Tags; installation never restarts it.
 
 ## Commands
 

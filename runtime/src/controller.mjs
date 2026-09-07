@@ -91,7 +91,6 @@ async function start() {
       await codexProcess.waitForCdp(() => targetRegistry.discover());
     } else {
       if (await codexProcess.portIsListening()) throw new Error(`端口 ${PORT} 已被其他进程占用；未退出或修改 Codex`);
-      await codexProcess.quitGracefully();
       await codexProcess.launchWithCdp(() => targetRegistry.discover());
     }
   }

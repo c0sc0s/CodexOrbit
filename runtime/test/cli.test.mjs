@@ -17,9 +17,10 @@ test("CLI defaults to two-step installation and rejects unsafe ambiguous argumen
 test("activation fails closed on absent, stale, partially injected or broken services", () => {
   const healthy = {
     runtime: { installed: true, cdp: true, controllerPid: 123, sourceVersion: "1", activeVersions: ["1"], activeWindows: [{ toolbar: true }], catalog: { complete: true }, tagSettings: { tags: [] }, searchIndex: { indexedSessions: 0 } },
-    plugin: { installed: true, enabled: true, payloadPresent: true }, supervisor: { loaded: true, pid: 456 },
+    plugin: { installed: true, enabled: true, payloadPresent: true }, supervisor: { loaded: false },
   };
   assert.equal(activationHealth(healthy).ok, true);
+  assert.equal(activationHealth({ ...healthy, supervisor: { loaded: true, pid: 456 } }).ok, false);
   for (const patch of [{ activeVersions: ["1", null] }, { activeVersions: ["0"] }, { tagSettings: undefined }, { tagSettingsError: "read failed" }, { controllerPid: null }, { searchIndex: { error: "corrupt" } }]) {
     assert.equal(activationHealth({ ...healthy, runtime: { ...healthy.runtime, ...patch } }).ok, false);
   }

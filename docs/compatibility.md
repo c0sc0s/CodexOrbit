@@ -31,7 +31,7 @@ Compatibility failures must never trigger edits to the official application bund
 | Source verification | Build, syntax, types and regression tests pass | Passed locally |
 | Packed npm consumer | CLI, standalone native SQLite and three skills load | Passed locally |
 | Already-open app | UI mounts; search, IME, menus and drafts stay stable | Passed locally |
-| Clean-account cold launch | Official entry activates once; no restart loop | Pending |
+| Clean-account cold launch | Dedicated launcher activates; running non-debuggable app is left untouched | Pending |
 | Manual hook trust | First new prompt gets current tags; resumed/later prompts do not | Pending real-app check |
 | Never-expanded navigation | Catalog result opens the correct session | Pending real-app check |
 | Lifecycle recovery | off/on/update/restore and both uninstall modes preserve unrelated data | Pending clean-account check |

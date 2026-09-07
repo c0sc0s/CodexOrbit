@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SessionRegistry } from "../src/injected/session-registry";
+import { selectVisibleEntries } from "../src/injected/search";
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -14,6 +15,17 @@ class MemoryStorage implements Storage {
 }
 
 describe("SessionRegistry", () => {
+  it("removes cached internal sessions from counts, search scope and stale search results", () => {
+    const storage = new MemoryStorage();
+    storage.setItem("sessions", JSON.stringify(["user", "child", "review"].map((id) => ({ key: `local:${id}`, threadId: `local:${id}`, raw: "Task", tag: "Bug" }))));
+    const registry = new SessionRegistry(storage, "sessions", (raw) => ({ raw, tag: "Bug", title: raw, time: "", color: "#123456", tagged: true }), () => "#123456");
+    registry.applyCatalog([{ threadId: "user", raw: "Task" }]);
+    expect(registry.size).toBe(1);
+    expect(registry.threadIds()).toEqual(["local:user"]);
+    expect(JSON.parse(storage.getItem("sessions")!).map((item: { key: string }) => item.key)).toEqual(["user"]);
+    const matches = new Map([["local:child", { threadId: "local:child", role: "Codex", snippet: "internal match", score: 1 }]]);
+    expect(selectVisibleEntries(registry.values(), { query: "internal", tag: "all", sort: "default" }, matches)).toEqual([]);
+  });
   it("merges legacy local-prefixed cache keys with authoritative catalog entries", () => {
     const storage = new MemoryStorage();
     storage.setItem("sessions", JSON.stringify([{ key: "local:123", threadId: "local:123", raw: "Old title", tag: "Bug", pinned: true, projectId: "project-1" }]));

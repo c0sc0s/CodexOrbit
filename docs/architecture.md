@@ -9,7 +9,7 @@ Codex Tags is a reversible enhancement, not a Codex fork.
 | Layer | Owns | Must not own |
 | --- | --- | --- |
 | CLI / manager | Installation, activation, removal, diagnostics | Session naming or UI behavior |
-| Supervisor | One activation attempt per official-app process run | Force-quitting or foreign processes |
+| Dedicated launcher | Explicitly start the official app with loopback debugging | Monitoring launches or restarting a running app |
 | Controller services | CDP targets, settings, catalog, search index | DOM selectors or UI state |
 | Injected UI | Presentation, interactions, reversible decoration | Filesystem access or durable settings |
 | Host adapter | Codex selectors and native row bindings | Classification policy |
@@ -31,7 +31,7 @@ The active local catalog is independent of sidebar expansion. Remote-only sessio
 ## Resource boundaries
 
 - **SettingsRepository:** normalization, migration, serialized atomic writes. Renderer storage is only a cache; concurrent windows currently use last-writer-wins.
-- **SessionCatalog:** read-only schema-checked metadata, changed snapshots about every 5 seconds.
+- **SessionCatalog:** read-only schema-checked metadata, changed snapshots about every 5 seconds. Excludes subagents and internal guardian reviews using `thread_source` and legacy `source` provenance; standalone agent-created tasks remain visible. Filtered snapshots prune cached local entries, keeping counts and search scope consistent.
 - **SessionRegistry:** joins metadata and temporary native bindings using canonical local IDs.
 - **SessionSearchIndex:** incremental FTS5 indexing, with discovery/refresh about every 30 seconds and bounded text extraction.
 - **CodexProcess / TargetRegistry:** process ownership, target discovery, versioned injection and client cleanup.
@@ -49,7 +49,7 @@ The dashboard mixes imperative controls and Preact rows. Migrate to a single Pre
 
 Native title DOM and listeners have restoration paths. Missing host capabilities should disable the enhancement without damaging native navigation. The signed bundle, session records and authentication data remain untouched.
 
-A LaunchAgent permits the official app entry, with one graceful restart if debugging is absent. Updates stop old code before replacing files and are retryable, not automatically rolled back.
+`Codex Tags.app` explicitly launches the official app with loopback debugging. If a non-debuggable Codex is already open, activation stops with instructions to quit it manually. No launch supervisor is installed; upgrades unload and remove the legacy LaunchAgent. Updates stop old code before replacing files and are retryable, not automatically rolled back.
 
 Private DOM/schema/CDP dependencies cannot be guaranteed across future Codex releases. Keep them at adapter/process/catalog boundaries and verify [compatibility](compatibility.md).
 

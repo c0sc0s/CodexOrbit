@@ -14,7 +14,7 @@ npm run verify
 node bin/codex-tags.mjs install
 ```
 
-Activation may restart Codex. Finish active tasks and obtain user approval before an agent activates or cold-starts it. Review the three hooks in Codex Plugins separately.
+Activation never restarts a running Codex. If the app is open without debugging, ask the user to quit it before launching `~/Applications/Codex Tags.app`. Review the three hooks in Codex Plugins separately.
 
 Edit this checkout, never installed files in Application Support or the plugin cache.
 
@@ -24,7 +24,7 @@ Edit this checkout, never installed files in Application Support or the plugin c
 npm run dev:apply
 ```
 
-This runs build → repository `install` → `apply` against an already debug-enabled app. No watcher/HMR is provided. Unlike public CLI installation, repository `node scripts/manage.mjs install` only refreshes files and the fallback launcher; it does not register/enable the plugin or supervisor.
+This runs build → repository `install` → `apply` against an already debug-enabled app. No watcher/HMR is provided. Unlike public CLI installation, repository `node scripts/manage.mjs install` only refreshes files and the dedicated launcher and removes the legacy supervisor; it does not register/enable the plugin or activate the UI.
 
 - Browser changes: bump `RUNTIME_VERSION` in `runtime/src/inject-expression.mjs`, then build/install/apply.
 - Controller changes: install/apply so the controller uses the updated installed modules.
@@ -37,7 +37,7 @@ This runs build → repository `install` → `apply` against an already debug-en
 | --- | --- |
 | CLI and installation | `bin/codex-tags.mjs`, `scripts/{cli-options,manager-core}.mjs` |
 | Readiness / mutation lock | `scripts/{health,lifecycle-lock}.mjs` |
-| App lifecycle / CDP | `runtime/src/{codex-process,launch-supervisor,cdp-client,runtime-target-registry}.mjs` |
+| App lifecycle / CDP | `runtime/src/{codex-process,cdp-client,runtime-target-registry}.mjs` |
 | Controller / bridge | `runtime/src/{controller,controller-router,protocol}.mjs` |
 | Catalog / search | `runtime/src/{session-catalog,content-index,search-index}.mjs` |
 | Saved definitions | `runtime/src/{settings-repository,tag-settings}.mjs` |
@@ -66,7 +66,7 @@ App QA requires an already injected app. It checks IME, search, menu persistence
 
 Start with `node bin/codex-tags.mjs doctor --json`.
 
-Logs under `~/Library/Application Support/Codex Sidebar Tags/`: `controller.log`, `supervisor.log`, `supervisor-launchd.log`, `launcher.log`. Installation metadata is in `install.json`. Never share credentials or conversation text in diagnostics.
+Logs under `~/Library/Application Support/Codex Sidebar Tags/`: `controller.log`, `launcher.log`. Installation metadata is in `install.json`. Never share credentials or conversation text in diagnostics.
 
 Renderer diagnostics: `window.__codexSidebarTags.status()`, `debug()`, `dispose()`.
 

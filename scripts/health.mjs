@@ -2,7 +2,7 @@ export function runtimeHealthChecks({ runtime = {}, plugin = {}, supervisor = {}
   const versions = runtime.activeVersions;
   return [
     { id: "runtime-installed", ok: runtime.installed === true, message: "Local runtime installed" },
-    { id: "launch-supervisor", ok: supervisor.loaded === true && Number.isSafeInteger(supervisor.pid) && supervisor.pid > 0, message: "Automatic launch supervisor running" },
+    { id: "legacy-supervisor-stopped", ok: supervisor.loaded !== true, message: "No automatic app takeover running" },
     { id: "plugin-installed", ok: plugin.installed === true && plugin.enabled === true && plugin.payloadPresent === true && !plugin.error, message: "Plugin installed and enabled" },
     { id: "cdp", ok: runtime.cdp === true, message: "Owned loopback connection active" },
     { id: "controller", ok: Number.isSafeInteger(runtime.controllerPid) && runtime.controllerPid > 0 && !runtime.error, message: "Local controller running" },

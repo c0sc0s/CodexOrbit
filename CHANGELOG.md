@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased — CLI release hardening
+## Unreleased
 
+- Use the dedicated Codex Tags.app launcher with its own icon; remove automatic launch takeover and clean up legacy LaunchAgents on installation. Running non-debuggable apps are left untouched.
+- Exclude subagent and guardian-review sessions from the active catalog, dashboard counts and search scope; retain standalone tasks and clean stale cached entries.
 - Add an original project logo, linked English/Chinese GitHub homepages and concise development, architecture and release documentation.
 - Merge legacy cached local IDs without duplicate sessions; index standard user message records and rebuild older extraction caches automatically.
 - Reject symlink installation destinations before lifecycle mutation and keep environment files out of package artifacts.
@@ -19,7 +21,7 @@ All notable changes to Codex Tags are documented here. Versions follow Semantic 
 - Reduced built-in tags to Feature, Bug, Design, and Research with English classification guidance; preserved saved user definitions and custom tags.
 - Replaced the management skill with three English user skills: Doctor, Initial, and Rename, using native Codex task tools for agent-driven classification and naming.
 - Standardized generated titles as `[Tag]Title` without date metadata while preserving legacy title parsing; shared live tag/description context between skills and first-prompt hooks and expanded the context budget for the full supported vocabulary.
-- Added a per-user macOS LaunchAgent that lets users keep opening the official Codex entry, with one activation attempt per app run, graceful takeover, foreign-port protection, and reversible lifecycle management.
+- Added a dedicated macOS launcher with foreign-port protection and reversible lifecycle management.
 - Added a publishable `@c0sc0s/codex-tags` CLI with one-command install, enable, disable, status, doctor, update, and reversible uninstall flows.
 - Delegated naming-hook registration to the official Codex Marketplace and Plugin CLI instead of mutating private configuration or trust records.
 - Replaced the AppleScript launcher compiler dependency with a minimal atomic macOS application bundle.

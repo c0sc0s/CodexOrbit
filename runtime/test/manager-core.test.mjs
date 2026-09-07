@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
@@ -55,8 +55,11 @@ test("installer creates a self-contained runtime and local Codex marketplace", a
 
   const installation = await manager.installRuntime();
   assert.equal(installation.status, "installed");
+  const installedState = await manager.status();
+  assert.equal(installedState.supervisor.installed, false);
+  assert.equal(installedState.supervisor.loaded, false);
   await access(join(manager.paths.installRoot, "app.mjs"));
-  await access(join(manager.paths.installRoot, "launch-supervisor.mjs"));
+  await assert.rejects(access(join(manager.paths.installRoot, "launch-supervisor.mjs")));
   await access(join(manager.paths.marketplacePluginRoot, "hooks", "hooks.json"));
   const skillsRoot = join(manager.paths.marketplacePluginRoot, "skills");
   const skillNames = [];
@@ -85,6 +88,8 @@ test("installer creates a self-contained runtime and local Codex marketplace", a
   const incomplete = await manager.enable();
   assert.equal(incomplete.status, "incomplete");
   assert.equal(incomplete.health.ok, false);
+  assert.equal(calls.some((args) => args[0] === "bootstrap"), false);
+  await access(join(manager.paths.launcherPath, "Contents", "Resources", "icon.icns"));
   const disabled = await manager.disable();
   assert.equal(disabled.status, "disabled");
   await access(join(manager.paths.installRoot, "settings.json"));
@@ -103,14 +108,13 @@ test("package exposes the public codex-tags executable", async () => {
   assert.equal(manifest.publishConfig.access, "public");
 });
 
-test("installs and removes the per-user launch supervisor", async (context) => {
+test("removes the legacy launch supervisor without registering a replacement", async (context) => {
   const root = await mkdtemp(join(tmpdir(), "codex-tags-launch-agent-"));
   context.after(() => rm(root, { recursive: true, force: true }));
-  let loaded = false;
+  let loaded = true;
   const run = async (file, args) => {
-    if (file === "/usr/bin/plutil") return { stdout: "OK\n", stderr: "" };
     assert.equal(file, "/bin/launchctl");
-    if (args[0] === "bootstrap") loaded = true;
+    assert.notEqual(args[0], "bootstrap");
     if (args[0] === "bootout") loaded = false;
     if (args[0] === "print") {
       if (!loaded) throw Object.assign(new Error("not loaded"), { code: 113 });
@@ -125,18 +129,17 @@ test("installs and removes the per-user launch supervisor", async (context) => {
     launchAgentsRoot: join(root, "LaunchAgents"),
     platform: "darwin",
     userId: 501,
-    nodePath: "/tmp/Node & Tools/node",
     run,
   });
 
-  const installed = await manager.installLaunchSupervisor();
-  assert.equal(installed.loaded, true);
-  assert.equal(installed.pid, 1234);
-  const plist = await readFile(manager.paths.launchAgentPath, "utf8");
-  assert.match(plist, /\/tmp\/Node &amp; Tools\/node/u);
-  assert.match(plist, /launch-supervisor\.mjs/u);
+  await mkdir(dirname(manager.paths.launchAgentPath), { recursive: true });
+  await mkdir(manager.paths.installRoot, { recursive: true });
+  await writeFile(manager.paths.launchAgentPath, "legacy");
+  await writeFile(join(manager.paths.installRoot, "launch-supervisor.mjs"), "legacy");
 
   const removed = await manager.removeLaunchSupervisor();
   assert.equal(removed.installed, false);
+  assert.equal(loaded, false);
+  await assert.rejects(access(join(manager.paths.installRoot, "launch-supervisor.mjs")));
   await assert.rejects(access(manager.paths.launchAgentPath));
 });

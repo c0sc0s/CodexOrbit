@@ -8,12 +8,12 @@ The npm package `@c0sc0s/codex-tags` carries the CLI, prebuilt UI bundle, local 
 
 After publication:
 
-1. Run `npx @c0sc0s/codex-tags@latest`; activation may gracefully restart Codex.
+1. Quit Codex if it is open without Tags, then run `npx @c0sc0s/codex-tags@latest`.
 2. In Codex Plugins, review/trust SessionStart, UserPromptSubmit and SessionEnd.
 
 The CLI uses official plugin commands, never private trust records or authorization bypasses. Installing only the plugin does not provide the native runtime needed for UI injection.
 
-The LaunchAgent waits for official-app launches rather than opening Codex at login. It attempts activation once per process run, never force-quits and leaves foreign CDP occupants alone. A fallback launcher is also installed. Keep the activation Node installation available; rerun the CLI after replacing Node versions.
+For future launches, open `~/Applications/Codex Tags.app` (pin it to the Dock). This small launcher starts the official app with loopback debugging; it never monitors or restarts a running app. If a non-debuggable Codex is open, it shows a prompt to quit it manually. The official entry is unmodified. The controller only maintains UI injection while the explicitly activated app runs; it does not relaunch Codex. Keep the activation Node installation available; rerun the CLI after replacing Node versions.
 
 ## Installed files
 
@@ -22,17 +22,16 @@ The LaunchAgent waits for official-app launches rather than opening Codex at log
 | `~/Library/Application Support/Codex Sidebar Tags/` | Runtime, UI bundle, SQLite dependency, settings, index, logs |
 | Its `plugin-marketplace/` directory | CLI-owned plugin snapshot and marketplace |
 | `~/Applications/Codex Tags.app` | Small shell launcher, not a second Codex app |
-| `~/Library/LaunchAgents/io.github.c0sc0s.codex-tags.supervisor.plist` | Per-user supervisor |
 | Codex plugin cache/data | Registered plugin payload and hook markers |
 
 The signed app, authentication data and transcript files are never patched. Search/catalog reads stay local; only bounded snippets enter the injected UI. CDP remains a powerful trusted-local-machine capability.
 
 ## Lifecycle
 
-- **install / on / enable:** preflight → stop old controller/supervisor → copy runtime/plugin → register → activate → verify.
+- **install / on / enable:** preflight → remove legacy supervisor → stop old controller → copy runtime/plugin → register → activate → verify.
 - **update:** same flow using the invoked package version. Use `npx …@latest update` to fetch the newest; an old globally installed CLI cannot self-upgrade.
-- **off / disable / restore:** stop supervisor/controller, restore UI and remove naming plugin; retain settings/index.
-- **uninstall:** remove owned runtime, plugin registration, launcher, supervisor, index and logs; retain settings.
+- **off / disable / restore:** stop controller and remove any legacy supervisor, restore UI and remove naming plugin; retain settings/index.
+- **uninstall:** remove owned runtime, plugin registration, launcher, legacy supervisor, index and logs; retain settings.
 - **uninstall --purge:** also remove settings, owned hook data and reachable renderer caches. Never deletes or renames Codex sessions.
 - **status / doctor:** read-only. Doctor exits nonzero when not ready; a closed app or disabled installation is expected to be non-ready.
 

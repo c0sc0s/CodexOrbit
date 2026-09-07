@@ -26,7 +26,7 @@
    ```
 2. 打开 **Codex → Plugins → Codex Tags**，检查并信任/启用 **SessionStart、UserPromptSubmit、SessionEnd**。
 
-之后继续使用官方 App 入口。用户级后台程序检测新启动的 Codex，必要时温和重启一次以激活 Tags；无需寻找备用启动器。命名依靠 Agent 遵循指令，不保证每次确定性改名。
+之后使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它带参数启动官方 App，不是第二套 Codex。官方入口保持原样，不会自动接管；如果官方 App 已打开但未启用 Tags，请先手动退出。不会安装启动守护进程或自动重启。命名依靠 Agent 遵循指令，不保证每次确定性改名。
 
 **现在从源码体验候选版：**
 
@@ -38,7 +38,7 @@ npm run verify
 node bin/codex-tags.mjs install
 ```
 
-随后按上面的步骤授权 Hook。安装可能重启 Codex，请避开重要任务。
+随后按上面的步骤授权 Hook。如果 Codex 已打开但未启用 Tags，请先手动退出；安装不会自动重启。
 
 ## 命令
 

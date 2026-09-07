@@ -38,15 +38,6 @@ export class CodexProcess {
     });
   }
 
-  async runIdentity() {
-    const { stdout } = await this.run("/bin/ps", ["-axo", "pid=,command="]);
-    for (const line of stdout.split("\n")) {
-      const match = /^\s*(\d+)\s+(.+)$/u.exec(line);
-      if (match && (match[2] === this.executable || match[2].startsWith(`${this.executable} `))) return match[1];
-    }
-    return null;
-  }
-
   async hasCdpLaunchArguments() {
     const { stdout } = await this.run("/bin/ps", ["-axo", "command="]);
     return stdout.split("\n").some((command) => {
@@ -112,18 +103,8 @@ export class CodexProcess {
     throw new Error("等待 Codex CDP 端口超时");
   }
 
-  async quitGracefully() {
-    if (!(await this.isRunning())) return;
-    await this.run("/usr/bin/osascript", ["-e", 'tell application id "com.openai.codex" to quit']);
-    const deadline = Date.now() + 30_000;
-    while (Date.now() < deadline) {
-      if (!(await this.isRunning())) return;
-      await wait(250);
-    }
-    throw new Error("Codex 未在 30 秒内正常退出；未强制结束进程");
-  }
-
   async launchWithCdp(discoverTargets) {
+    if (await this.isRunning()) throw new Error("Codex is already running without Tags. Quit Codex completely, then open Codex Tags.app. The running app was not restarted.");
     const child = this.spawn(this.executable, [
       "--remote-debugging-address=127.0.0.1",
       `--remote-debugging-port=${this.port}`,

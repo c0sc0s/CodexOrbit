@@ -43,7 +43,7 @@ function print(result) {
   if (json) return console.log(JSON.stringify(result, null, 2));
   if (result.status === "enabled") {
     console.log(`Codex Tags ${result.installation.pluginVersion} is enabled.`);
-    console.log("You can use the official Codex app entry; a fresh launch may restart once to activate Tags.");
+    console.log("Use ~/Applications/Codex Tags.app to launch with Tags; add it to your Dock. The official entry does not auto-activate Tags.");
     console.log("Next: open Codex → Plugins → Codex Tags and trust/enable all three hooks (SessionStart, UserPromptSubmit, SessionEnd).");
     console.log("New sessions can then use your tags automatically. Existing sessions are unchanged; the optional initial skill organizes them.");
   } else if (result.status === "incomplete") {
@@ -69,7 +69,7 @@ try {
   if (command === "version") console.log(packageJson.version);
   else if (command === "help") console.log(help);
   else if (["install", "enable", "on", "update"].includes(command)) {
-    if (!json) console.error("Installing Codex Tags. Codex may gracefully restart once; finish any running tasks first.");
+    if (!json) console.error("Installing Codex Tags. If Codex is already open without Tags, quit it first. No automatic restart will occur.");
     const result = await mutate(() => manager.enable());
     print(result);
     if (result.status !== "enabled") process.exitCode = 1;
