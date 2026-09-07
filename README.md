@@ -31,7 +31,7 @@ npx @c0sc0s/codex-tags@latest
 
 Open **Codex → Plugins → Codex Tags** and review/trust **SessionStart**, **UserPromptSubmit**, and **SessionEnd**.
 
-**Next time:** open `~/Applications/Codex Tags.app` and pin it to the Dock. It launches the official app, not a second Codex installation. No automatic restart or launch supervisor. Naming is agent-assisted, not a guaranteed title rewrite.
+**Next time:** open `~/Applications/Codex Tags.app` and pin it to the Dock. This is the Codex Plugin Loader entry: it starts the official app and loads configured modules, including Tags. The existing app path is retained for Dock compatibility. No automatic restart or launch supervisor. Naming is agent-assisted, not a guaranteed title rewrite.
 
 <details>
 <summary>Develop or install from source</summary>
@@ -85,3 +85,5 @@ The fast loop requires an already activated, debug-enabled app. No HMR server is
 - [Roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md)
 
 Not affiliated with or endorsed by OpenAI. No open-source license is currently granted (`UNLICENSED`).
+
+See [Codex Plugin Loader](docs/plugin-loader.md) for the independent package and module SDK: Loader manages CDP, isolated service processes and RPC/events; modules implement business behavior.

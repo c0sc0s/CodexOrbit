@@ -1,6 +1,6 @@
 import { normalizeTagDefinitions } from "../tag-settings.mjs";
 import { parseTitleMetadata } from "../title-format.mjs";
-import { RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "../protocol.mjs";
+import { createRuntimeMessage, RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "../protocol.mjs";
 import type { RuntimeMessage } from "../protocol.mjs";
 import {
   detectCodexCapabilities,
@@ -37,9 +37,9 @@ import { RuntimeStore } from "./store";
 import { buildRuntimeStyles } from "./styles";
 import { TitleDecorator } from "./title-decorator";
 
-export function installRuntime(input: unknown) {
+export function installRuntime(input: unknown, send: (message: RuntimeMessage) => Promise<unknown>) {
   const config = parseRuntimeConfig(input);
-  const { version, colorPresets, legacyToneColors, requestBinding } = config;
+  const { version, colorPresets, legacyToneColors } = config;
   const STYLE_ID = "codex-sidebar-tags-style";
   const TOOLBAR_ID = "codex-sidebar-tags-toolbar";
   const FILTER_BAR_ID = "codex-sidebar-tags-filter-bar";
@@ -90,9 +90,15 @@ export function installRuntime(input: unknown) {
   };
   let receiveRuntimeMessage: (message: RuntimeMessage) => boolean = () => false;
   const runtimeClient = new RuntimeClient(
-    requestBinding,
+    send,
     (message) => receiveRuntimeMessage(message),
     (reason) => trace("protocol-rejected", { reason }),
+    (request) => {
+      if (request.type === RuntimeMessageType.searchRequest) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.searchResult, {
+        query: request.payload.query, items: [], error: i18n.t("searchUnavailable"),
+      }, request.requestId));
+      if (request.type === RuntimeMessageType.settingsUpdate) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.settingsError));
+    },
   );
 
   const parse = (value: unknown): ParsedSessionTitle | null => {
@@ -306,12 +312,6 @@ export function installRuntime(input: unknown) {
     const requestId = activeSearchRequestId;
     searchRequestTimer = setTimeout(() => {
       searchRequestTimer = null;
-      if (!runtimeClient.connected) {
-        searchLoading = false;
-        searchError = i18n.t("searchUnavailable");
-        renderToolbar(entriesFrom(titleNodes()), "search-unavailable");
-        return;
-      }
       runtimeClient.send(RuntimeMessageType.searchRequest, {
         query,
         threadIds: entries.map(({ threadId }) => threadId).filter((threadId): threadId is string => Boolean(threadId)),
@@ -476,6 +476,7 @@ export function installRuntime(input: unknown) {
     }),
     debug: () => debugEvents.slice(),
     dispose: () => {
+      receiveRuntimeMessage = () => false;
       clearPendingSearch();
       stopLocaleObserver();
       hostLifecycle.dispose();

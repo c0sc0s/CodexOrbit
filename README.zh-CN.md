@@ -31,7 +31,7 @@ npx @c0sc0s/codex-tags@latest
 
 打开 **Codex → Plugins → Codex Tags**，检查并信任/启用 **SessionStart、UserPromptSubmit、SessionEnd**。
 
-**下次启动：** 使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它启动的是官方 App，不是第二套 Codex；不会自动重启或安装启动守护进程。命名由 Agent 辅助完成，不保证每次确定性改名。
+**下次启动：** 使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它是 Codex Plugin Loader 的入口：启动官方 App 后，由 Loader 加载 Tags 等已配置模块，保留原路径以兼容 Dock；不会自动重启或安装启动守护进程。命名由 Agent 辅助完成，不保证每次确定性改名。
 
 <details>
 <summary>从源码开发或安装</summary>
@@ -85,3 +85,5 @@ npm run test:package
 - [后续规划](docs/roadmap.md) · [更新记录](CHANGELOG.md)
 
 本项目独立开发，不隶属于 OpenAI，也未经其背书。目前没有开放源代码许可授权（`UNLICENSED`）。
+
+独立基础包与模块开发接口见 [Codex Plugin Loader](docs/plugin-loader.md)：Loader 管理 CDP、独立服务进程和 RPC/事件，业务模块通过 SDK 实现功能。

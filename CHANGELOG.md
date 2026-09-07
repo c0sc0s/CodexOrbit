@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add independently packable Codex Plugin Loader with desktop/CLI entry, per-module service processes, isolated renderer globals, scoped RPC/events and bounded cleanup.
+- Run Tags through the Loader SDK with local settings, catalog and search services.
+- Verify service crash containment, cancellation, multiple windows, reload and independent package consumption.
+
+## Unreleased
+
 - Scope sidebar tag counts to mounted rows so counts match the available sidebar filter; retain the complete catalog in the dashboard.
 
 - Filter every mounted sidebar row, including tasks absent from the local catalog and duplicate appearances.

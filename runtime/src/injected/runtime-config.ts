@@ -8,7 +8,6 @@ export interface RuntimeConfig {
   settingsSource: "repository" | "defaults";
   colorPresets: Array<{ name: string; color: string }>;
   legacyToneColors: Record<string, string> & { neutral: string; blue: string };
-  requestBinding: string;
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
@@ -22,7 +21,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfig {
   if (typeof value.version !== "string" || !value.version.trim()) throw new Error("Invalid Codex Tags runtime version");
   if (value.protocolVersion !== RUNTIME_PROTOCOL_VERSION) throw new Error(`Unsupported Codex Tags protocol ${String(value.protocolVersion)}`);
   if (value.settingsSource !== "repository" && value.settingsSource !== "defaults") throw new Error("Invalid Codex Tags settings source");
-  if (typeof value.requestBinding !== "string" || !/^__[A-Za-z0-9]+$/u.test(value.requestBinding)) throw new Error("Invalid Codex Tags runtime binding");
   if (!Array.isArray(value.tagDefinitions)) throw new Error("Invalid Codex Tags tag definitions");
 
   const colorPresets = Array.isArray(value.colorPresets)
@@ -45,6 +43,5 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfig {
     settingsSource: value.settingsSource,
     colorPresets,
     legacyToneColors: legacyToneColors as RuntimeConfig["legacyToneColors"],
-    requestBinding: value.requestBinding,
   };
 }

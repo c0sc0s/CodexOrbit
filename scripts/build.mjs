@@ -13,7 +13,7 @@ await build({
   outfile: join(outputDirectory, "injected.js"),
   bundle: true,
   format: "iife",
-  globalName: "CodexTagsInjected",
+  globalName: "CodexPlugin",
   platform: "browser",
   target: "chrome120",
   minify: false,

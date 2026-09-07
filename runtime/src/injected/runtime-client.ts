@@ -5,27 +5,20 @@ import {
   type RuntimeMessage,
 } from "../protocol.mjs";
 
-type RuntimeBinding = (serializedMessage: string) => void;
 
 export class RuntimeClient {
   readonly protocolVersion = RUNTIME_PROTOCOL_VERSION;
 
   constructor(
-    private readonly bindingName: string,
+    private readonly transport: (message: RuntimeMessage) => Promise<unknown>,
     private readonly onMessage: (message: RuntimeMessage) => boolean,
     private readonly onRejectedMessage: (reason: string) => void,
-    private readonly resolveBinding: (name: string) => unknown = (name) => (window as unknown as Record<string, unknown>)[name],
+    private readonly onTransportError: (message: RuntimeMessage) => void,
   ) {}
 
-  get connected(): boolean {
-    return typeof this.resolveBinding(this.bindingName) === "function";
-  }
-
-  send<TPayload extends Record<string, unknown>>(type: string, payload: TPayload, requestId?: number): boolean {
-    const binding = this.resolveBinding(this.bindingName);
-    if (typeof binding !== "function") return false;
-    (binding as RuntimeBinding)(JSON.stringify(createRuntimeMessage(type, payload, requestId)));
-    return true;
+  send<TPayload extends Record<string, unknown>>(type: string, payload: TPayload, requestId?: number): void {
+    const message = createRuntimeMessage(type, payload, requestId);
+    void Promise.resolve().then(() => this.transport(message)).catch(() => this.onTransportError(message));
   }
 
   handle(value: unknown): boolean {

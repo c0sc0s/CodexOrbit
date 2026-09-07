@@ -1,5 +1,5 @@
 "use strict";
-var CodexTagsInjected = (() => {
+var CodexPlugin = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -21,6 +21,7 @@ var CodexTagsInjected = (() => {
   // runtime/src/injected/entry.ts
   var entry_exports = {};
   __export(entry_exports, {
+    activate: () => activate,
     installRuntime: () => installRuntime
   });
 
@@ -2113,25 +2114,20 @@ var CodexTagsInjected = (() => {
 
   // runtime/src/injected/runtime-client.ts
   var RuntimeClient = class {
-    constructor(bindingName, onMessage, onRejectedMessage, resolveBinding = (name) => window[name]) {
-      this.bindingName = bindingName;
+    constructor(transport, onMessage, onRejectedMessage, onTransportError) {
+      this.transport = transport;
       this.onMessage = onMessage;
       this.onRejectedMessage = onRejectedMessage;
-      this.resolveBinding = resolveBinding;
+      this.onTransportError = onTransportError;
     }
-    bindingName;
+    transport;
     onMessage;
     onRejectedMessage;
-    resolveBinding;
+    onTransportError;
     protocolVersion = RUNTIME_PROTOCOL_VERSION;
-    get connected() {
-      return typeof this.resolveBinding(this.bindingName) === "function";
-    }
     send(type, payload, requestId) {
-      const binding = this.resolveBinding(this.bindingName);
-      if (typeof binding !== "function") return false;
-      binding(JSON.stringify(createRuntimeMessage(type, payload, requestId)));
-      return true;
+      const message = createRuntimeMessage(type, payload, requestId);
+      void Promise.resolve().then(() => this.transport(message)).catch(() => this.onTransportError(message));
     }
     handle(value) {
       const parsed = parseRuntimeMessage(value);
@@ -2153,7 +2149,6 @@ var CodexTagsInjected = (() => {
     if (typeof value.version !== "string" || !value.version.trim()) throw new Error("Invalid Codex Tags runtime version");
     if (value.protocolVersion !== RUNTIME_PROTOCOL_VERSION) throw new Error(`Unsupported Codex Tags protocol ${String(value.protocolVersion)}`);
     if (value.settingsSource !== "repository" && value.settingsSource !== "defaults") throw new Error("Invalid Codex Tags settings source");
-    if (typeof value.requestBinding !== "string" || !/^__[A-Za-z0-9]+$/u.test(value.requestBinding)) throw new Error("Invalid Codex Tags runtime binding");
     if (!Array.isArray(value.tagDefinitions)) throw new Error("Invalid Codex Tags tag definitions");
     const colorPresets = Array.isArray(value.colorPresets) ? value.colorPresets.flatMap((item) => {
       if (!isRecord(item) || typeof item.name !== "string" || typeof item.color !== "string" || !HEX_COLOR.test(item.color)) return [];
@@ -2171,8 +2166,7 @@ var CodexTagsInjected = (() => {
       tagDefinitions: normalizeTagDefinitions(value.tagDefinitions, []),
       settingsSource: value.settingsSource,
       colorPresets,
-      legacyToneColors,
-      requestBinding: value.requestBinding
+      legacyToneColors
     };
   }
 
@@ -2785,9 +2779,9 @@ var CodexTagsInjected = (() => {
   };
 
   // runtime/src/injected/runtime.ts
-  function installRuntime(input) {
+  function installRuntime(input, send) {
     const config = parseRuntimeConfig(input);
-    const { version, colorPresets, legacyToneColors, requestBinding } = config;
+    const { version, colorPresets, legacyToneColors } = config;
     const STYLE_ID = "codex-sidebar-tags-style";
     const TOOLBAR_ID = "codex-sidebar-tags-toolbar";
     const FILTER_BAR_ID = "codex-sidebar-tags-filter-bar";
@@ -2840,9 +2834,17 @@ var CodexTagsInjected = (() => {
     };
     let receiveRuntimeMessage = () => false;
     const runtimeClient = new RuntimeClient(
-      requestBinding,
+      send,
       (message) => receiveRuntimeMessage(message),
-      (reason) => trace("protocol-rejected", { reason })
+      (reason) => trace("protocol-rejected", { reason }),
+      (request) => {
+        if (request.type === RuntimeMessageType.searchRequest) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.searchResult, {
+          query: request.payload.query,
+          items: [],
+          error: i18n.t("searchUnavailable")
+        }, request.requestId));
+        if (request.type === RuntimeMessageType.settingsUpdate) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.settingsError));
+      }
     );
     const parse = (value) => {
       const raw = typeof value === "string" ? value.trim() : "";
@@ -3038,12 +3040,6 @@ var CodexTagsInjected = (() => {
       const requestId = activeSearchRequestId;
       searchRequestTimer = setTimeout(() => {
         searchRequestTimer = null;
-        if (!runtimeClient.connected) {
-          searchLoading = false;
-          searchError = i18n.t("searchUnavailable");
-          renderToolbar(entriesFrom(titleNodes()), "search-unavailable");
-          return;
-        }
         runtimeClient.send(RuntimeMessageType.searchRequest, {
           query,
           threadIds: entries.map(({ threadId }) => threadId).filter((threadId) => Boolean(threadId)),
@@ -3204,6 +3200,7 @@ var CodexTagsInjected = (() => {
       }),
       debug: () => debugEvents.slice(),
       dispose: () => {
+        receiveRuntimeMessage = () => false;
         clearPendingSearch();
         stopLocaleObserver();
         hostLifecycle.dispose();
@@ -3221,6 +3218,30 @@ var CodexTagsInjected = (() => {
     };
     window.__codexSidebarTags = runtime;
     return runtime.status();
+  }
+
+  // runtime/src/injected/entry.ts
+  async function activate(context) {
+    let tags = null;
+    try {
+      tags = JSON.parse(localStorage.getItem("codex-sidebar-tags-config-v1") ?? "null");
+    } catch {
+    }
+    const config = await context.rpc.call("bootstrap", { tags });
+    let runtime;
+    context.onDispose(() => {
+      runtime?.dispose?.();
+    });
+    context.events.subscribe("message", (message) => {
+      runtime?.handleMessage(message);
+    });
+    installRuntime(config, (message) => context.rpc.call("dispatch", message));
+    runtime = window.__codexSidebarTags;
+    return {
+      isActive: () => window.__codexSidebarTags === runtime,
+      status: () => runtime?.status(),
+      handleMessage: (message) => runtime?.handleMessage(message)
+    };
   }
   return __toCommonJS(entry_exports);
 })();

@@ -24,10 +24,11 @@ Edit this checkout, never installed files in Application Support or the plugin c
 npm run dev:apply
 ```
 
-This runs build → repository `install` → `apply` against an already debug-enabled app. No watcher/HMR is provided. Unlike public CLI installation, repository `node scripts/manage.mjs install` only refreshes files and the dedicated launcher and removes the legacy supervisor; it does not register/enable the plugin or activate the UI.
+This runs build → repository `install` → `apply` against an already debug-enabled app. No watcher/HMR is provided. Unlike public CLI installation, repository `node scripts/manage.mjs install` stops loaded code, refreshes files and the Loader launcher, and removes the legacy supervisor; it does not register/enable the plugin or activate the UI.
 
-- Browser changes: bump `RUNTIME_VERSION` in `runtime/src/inject-expression.mjs`, then build/install/apply.
-- Controller changes: install/apply so the controller uses the updated installed modules.
+- Browser changes: bump `RUNTIME_VERSION` in `runtime/src/tags-plugin.mjs`, then build/install/apply.
+- Loader kernel changes: bump `LOADER_VERSION` and its package version so the isolated-world bootstrap is replaced after unloading.
+- Service/Loader changes: install/apply to stop old modules before replacing files and start the updated Loader.
 - Hook/skill changes: refresh the plugin cachebuster and use the public installer; renewed hook review may be required.
 - Never edit `runtime/dist/injected.js` manually; commit the generated bundle with source changes.
 
@@ -37,8 +38,10 @@ This runs build → repository `install` → `apply` against an already debug-en
 | --- | --- |
 | CLI and installation | `bin/codex-tags.mjs`, `scripts/{cli-options,manager-core}.mjs` |
 | Readiness / mutation lock | `scripts/{health,lifecycle-lock}.mjs` |
-| App lifecycle / CDP | `runtime/src/{codex-process,cdp-client,runtime-target-registry}.mjs` |
-| Controller / bridge | `runtime/src/{controller,controller-router,protocol}.mjs` |
+| Independent loader / CDP | `runtime/src/plugin-loader/` (standalone npm package) |
+| Tags module metadata | `runtime/src/tags-plugin.mjs` |
+| Tags services / bridge | `runtime/src/{tags-service,controller-router,protocol}.mjs` |
+| Tags CLI compatibility | `runtime/src/controller.mjs` |
 | Catalog / search | `runtime/src/{session-catalog,content-index,search-index}.mjs` |
 | Saved definitions | `runtime/src/{settings-repository,tag-settings}.mjs` |
 | Host selectors | `runtime/src/injected/codex-dom-adapter.ts` |
@@ -66,9 +69,9 @@ App QA requires an already injected app. It checks IME, search, menu persistence
 
 Start with `node bin/codex-tags.mjs doctor --json`.
 
-Logs under `~/Library/Application Support/Codex Sidebar Tags/`: `controller.log`, `launcher.log`. Installation metadata is in `install.json`. Never share credentials or conversation text in diagnostics.
+Logs under `~/Library/Application Support/Codex Sidebar Tags/`: `.loader-<identity>/loader.log`, `launcher.log`. Installation metadata is in `install.json`. Never share credentials or conversation text in diagnostics.
 
-Renderer diagnostics: `window.__codexSidebarTags.status()`, `debug()`, `dispose()`.
+Renderer diagnostics in the `codex-plugin-loader` isolated world: `window.__codexSidebarTags.status()`, `debug()`, `dispose()`.
 
 | Symptom | Check |
 | --- | --- |
@@ -81,4 +84,8 @@ Renderer diagnostics: `window.__codexSidebarTags.status()`, `debug()`, `dispose(
 
 Testing overrides: `CODEX_TAGS_INSTALL_DIR` (runtime), `CODEX_TAGS_APPLICATIONS_DIR` (launcher), `CODEX_TAGS_CDP_PORT` (default 9341), `CODEX_HOME` (Codex data), `CODEX_TAGS_SETTINGS_PATH` (hook settings), `CODEX_TAGS_STATE_DIR` (hook markers). They do not isolate every macOS/plugin side effect; unit tests use injected fake process runners.
 
-Use `node bin/codex-tags.mjs off` to disable all components while keeping settings. Uninstall only with explicit user permission.
+Use `node bin/codex-tags.mjs off` to disable Tags while keeping settings and other Loader modules. Uninstall only with explicit user permission.
+
+## Loader development
+
+See [Loader architecture and entry](plugin-loader.md). The package under `runtime/src/plugin-loader` has no Tags or SQLite dependency. Changes there are copied by the repository installer and included in package smoke. Its Node tests run in `npm test`.

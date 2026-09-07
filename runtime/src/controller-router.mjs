@@ -22,12 +22,12 @@ export class ControllerRouter {
     ]);
   }
 
-  async handle(client, params) {
-    const parsed = parseRuntimeMessage(params.payload);
+  async handle(client, message) {
+    const parsed = parseRuntimeMessage(message);
     if (!parsed.ok) return false;
     const handler = this.handlers.get(parsed.message.type);
     if (!handler) return false;
-    await handler(client, parsed.message, params.executionContextId);
+    await handler(client, parsed.message);
     return true;
   }
 
@@ -35,32 +35,31 @@ export class ControllerRouter {
     this.latestSearchRequestIds.delete(targetId);
   }
 
-  async sendSettingsSnapshot(client, executionContextId) {
+  async sendSettingsSnapshot(client) {
     await this.send(
       client,
       createRuntimeMessage(RuntimeMessageType.settingsSnapshot, { settings: this.getSettings() }),
-      executionContextId,
     );
   }
 
-  async handleSettingsGet(client, _request, executionContextId) {
-    await this.sendSettingsSnapshot(client, executionContextId);
+  async handleSettingsGet(client, _request) {
+    await this.sendSettingsSnapshot(client);
   }
 
-  async handleSettingsUpdate(client, request, executionContextId) {
+  async handleSettingsUpdate(client, request) {
     try {
       if (!Array.isArray(request.payload.tags) || request.payload.tags.length > 32) throw new Error("Invalid tag definitions");
       const result = await this.settingsRepository.write(request.payload.tags);
       await this.onSettingsChanged(result.settings);
     } catch {
-      await this.sendSettingsSnapshot(client, executionContextId);
-      await this.send(client, createRuntimeMessage(RuntimeMessageType.settingsError, {}), executionContextId);
+      await this.sendSettingsSnapshot(client);
+      await this.send(client, createRuntimeMessage(RuntimeMessageType.settingsError, {}));
     }
   }
 
-  async handleSearchRequest(client, request, executionContextId) {
+  async handleSearchRequest(client, request) {
     if (!Number.isSafeInteger(request.requestId)) return;
-    const targetId = client.target.id;
+    const targetId = client.id;
     this.latestSearchRequestIds.set(targetId, request.requestId);
     await this.waitForIndex();
     if (this.latestSearchRequestIds.get(targetId) !== request.requestId) return;
@@ -71,14 +70,14 @@ export class ControllerRouter {
         query: request.payload.query,
         items,
         indexStatus: this.getIndexStatus(),
-      }, request.requestId), executionContextId);
+      }, request.requestId));
     } catch (error) {
       await this.send(client, createRuntimeMessage(RuntimeMessageType.searchResult, {
         query: request.payload.query,
         items: [],
         indexStatus: this.getIndexStatus(),
         error: error instanceof Error ? error.message : "Search failed",
-      }, request.requestId), executionContextId).catch(() => {});
+      }, request.requestId)).catch(() => {});
     }
   }
 }
