@@ -1,56 +1,32 @@
 # Architecture
 
-[Development](development.md) · [Protocol](protocol.md) · [Roadmap](roadmap.md)
+[Development](development.md) · [Protocol](protocol.md) · [Loader SDK](plugin-loader.md)
 
-Codex Tags is a reversible enhancement, not a Codex fork.
+The desktop launcher starts Codex Plugin Loader. Loader loads configured modules into the official Codex app without modifying its signed bundle.
 
-## Ownership
-
-| Layer | Owns | Must not own |
-| --- | --- | --- |
-| CLI / manager | Installation, activation, removal, diagnostics | Session naming or UI behavior |
-| Dedicated launcher | Explicitly start the official app with loopback debugging | Monitoring launches or restarting a running app |
-| Controller services | CDP targets, settings, catalog, search index | DOM selectors or UI state |
-| Injected UI | Presentation, interactions, reversible decoration | Filesystem access or durable settings |
-| Host adapter | Codex selectors and native row bindings | Classification policy |
-| Hooks / skills | Live classification guidance for the agent | Direct transcript/title database writes |
-
-## Data flow
+| Layer | Responsibility |
+| --- | --- |
+| Tags CLI / installer | Package installation, module configuration and diagnostics |
+| Desktop launcher | Invoke the standalone Loader CLI |
+| Loader | Owned CDP endpoint, isolated renderer world, per-plugin service processes, RPC/events, lifecycle and cleanup |
+| Tags service | Local settings, session catalog, search index and navigation validation |
+| Tags renderer | UI, interactions and reversible DOM decoration |
+| Codex DOM adapter | All private host selectors and native row bindings |
+| Hooks / skills | Agent naming guidance using the saved tag definitions |
 
 ```text
-Codex state database ──read-only──▶ SessionCatalog ──metadata──┐
-Codex session JSONL ──read-only──▶ SQLite FTS5 ──snippets──────┤
-                                                            ▼
-settings.json ◀── SettingsRepository ◀── ControllerRouter ⇄ injected UI
-     │                                                      │
-     └── hook / naming skills → Codex agent                  └── host adapter
+Desktop entry → Loader → Tags renderer ⇄ RPC/events ⇄ Tags service
+                              │                         ├─ settings.json
+                       Codex DOM adapter                ├─ read-only session catalog
+                                                        └─ local SQLite search index
 ```
 
-The active local catalog is independent of sidebar expansion. Remote-only sessions remain best-effort DOM discovery. Schema mismatch reports an incomplete catalog and falls back to visible/cached rows. Conversation text stays in the local index; only bounded matching snippets cross the bridge.
+`runtime/src/plugin-loader` is independently packable and has no Tags or SQLite dependency. Its public module contexts expose business RPC, events and resource lifecycle; business modules never construct CDP commands or injection expressions. Services run in separate Node processes. Renderer globals live in a named isolated world, sharing the app's DOM and renderer thread. See [Loader architecture](plugin-loader.md) for contracts and failure behavior.
 
-## Resource boundaries
+Tags registers `runtime/dist/injected.js` and `tags-service.mjs` in `loader.json`. On activation the renderer requests its configuration; after readiness the service sends settings/catalog snapshots. Each connected window has an instance identity, so replacement and reload cannot receive another instance's outstanding replies.
 
-- **SettingsRepository:** normalization, migration, serialized atomic writes. Renderer storage is only a cache; concurrent windows currently use last-writer-wins.
-- **SessionCatalog:** read-only schema-checked metadata, changed snapshots about every 5 seconds. Excludes subagents and internal guardian reviews using `thread_source` and legacy `source` provenance; standalone agent-created tasks remain visible. Filtered snapshots prune cached local entries, keeping counts and search scope consistent.
-- **SessionRegistry:** joins metadata and temporary native bindings using canonical local IDs.
-- **SessionSearchIndex:** incremental FTS5 indexing, with discovery/refresh about every 30 seconds and bounded text extraction.
-- **CodexProcess / TargetRegistry:** process ownership, target discovery, versioned injection and client cleanup.
-- **HostLifecycle:** coalesced native changes and pointer/input-safe refresh.
-- **DashboardView:** modal controls and interaction state; Preact result rows. Background updates preserve IME, menus, drafts and scroll.
-- **ControllerRouter:** validated intent-shaped messages. Navigation requires a UUID present in the current catalog.
+`SettingsRepository` normalizes and atomically serializes writes. Windows use last-writer-wins; localStorage is a cache. Hooks read the same settings file. `SessionCatalog` reads schema-checked local metadata independently of sidebar expansion; schema mismatch reports incompleteness. `SessionRegistry` joins that metadata with temporary DOM bindings. `SessionSearchIndex` refreshes about every 30 seconds; catalog snapshots refresh about every five seconds. Only metadata and bounded matching snippets enter the renderer, and conversation content stays local.
 
-## Stack and evolution
+`HostLifecycle` coalesces native changes. `DashboardView` combines imperative controls and Preact result rows, preserving input composition, drafts, menus and scroll during updates. `ControllerRouter` validates Tags message envelopes; navigation requires a UUID in the current catalog. Private selectors stay in `injected/codex-dom-adapter.ts`.
 
-Browser: strict TypeScript, Preact result components, bundled Motion, esbuild IIFE. Controller/CLI: Node ESM and better-sqlite3. No remotely loaded runtime scripts.
-
-The dashboard mixes imperative controls and Preact rows. Migrate to a single Preact root when interaction complexity justifies it; do not introduce a general framework solely for uniformity.
-
-## Safety
-
-Native title DOM and listeners have restoration paths. Missing host capabilities should disable the enhancement without damaging native navigation. The signed bundle, session records and authentication data remain untouched.
-
-`Codex Tags.app` explicitly launches the official app with loopback debugging. If a non-debuggable Codex is already open, activation stops with instructions to quit it manually. No launch supervisor is installed; upgrades unload and remove the legacy LaunchAgent. Updates stop old code before replacing files and are retryable, not automatically rolled back.
-
-Private DOM/schema/CDP dependencies cannot be guaranteed across future Codex releases. Keep them at adapter/process/catalog boundaries and verify [compatibility](compatibility.md).
-
-For every new capability, identify its owner, command/message, failure isolation, cleanup and tests. Reuse shared normalization; never add another settings store, selectors outside the adapter, or complete-transcript transfer.
+Browser code uses strict TypeScript, Preact, bundled Motion and an esbuild IIFE. Node services use ESM and better-sqlite3. Modules register cleanup as they acquire resources. The Loader contains service-process failures; renderer plugins remain trusted code sharing DOM and CPU. No remote runtime assets are loaded. Signed app files, sessions and authentication data remain untouched.

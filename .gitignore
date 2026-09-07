@@ -8,3 +8,6 @@ node_modules/
 .env.*
 !.env.example
 *.tgz
+
+.loader-*/
+module-data/

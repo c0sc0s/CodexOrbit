@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access, chmod, copyFile, cp, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, cp, lstat, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { createRequire } from "node:module";
 import { dirname, join, resolve, sep } from "node:path";
@@ -7,14 +7,22 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { activationHealth, runtimeHealthChecks } from "./health.mjs";
 import { findCodexApp } from "../runtime/src/codex-process.mjs";
+import { RUNTIME_VERSION } from "../runtime/src/tags-plugin.mjs";
+import { daemonPaths } from "../runtime/src/plugin-loader/daemon.mjs";
+import { createLauncher as createLoaderLauncher } from "../runtime/src/plugin-loader/launcher.mjs";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_MARKETPLACE = "codex-tags-cli";
 const PLUGIN_NAME = "codex-tags";
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+const loaderDirectory = join(packageRoot, "runtime", "src", "plugin-loader");
+const loaderFiles = (await readdir(loaderDirectory)).filter((file) => file.endsWith(".mjs") || file.endsWith(".d.mts") || file === "package.json");
 const runtimeFiles = new Map([
   ["controller.mjs", "app.mjs"],
+  ...loaderFiles.map((file) => [`plugin-loader/${file}`, `plugin-loader/${file}`]),
+  ["tags-plugin.mjs", "tags-plugin.mjs"],
+  ["tags-service.mjs", "tags-service.mjs"],
   ["codex-process.mjs", "codex-process.mjs"],
   ["controller-router.mjs", "controller-router.mjs"],
   ["cdp-client.mjs", "cdp-client.mjs"],
@@ -128,48 +136,12 @@ export function createManager(options = {}) {
 
   async function createLauncher() {
     if (platform !== "darwin") return null;
-    await checkLauncherOwnership();
-    await mkdir(applicationsRoot, { recursive: true });
-    const nextLauncherPath = join(applicationsRoot, `.Codex Tags-${process.pid}.app`);
-    const logPath = join(installRoot, "launcher.log");
-    const executableName = "codex-tags-launcher";
-    const executablePath = join(nextLauncherPath, "Contents", "MacOS", executableName);
-    const shellQuote = (value) => `'${value.replaceAll("'", `'"'"'`)}'`;
-    const script = [
-      "#!/bin/sh",
-      `if ! ${shellQuote(nodePath)} ${shellQuote(installedController)} start >> ${shellQuote(logPath)} 2>&1 </dev/null; then`,
-      `  /usr/bin/osascript -e 'display dialog "Tags could not start. If Codex is already open, quit it completely and reopen Codex Tags. Otherwise check launcher.log in Library/Application Support/Codex Sidebar Tags." with title "Codex Tags" buttons {"OK"} default button "OK"'`,
-      "  exit 1",
-      "fi",
-      "",
-    ].join("\n");
-    const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>CFBundleDisplayName</key><string>Codex Tags</string>
-<key>CFBundleExecutable</key><string>${executableName}</string>
-<key>CFBundleIdentifier</key><string>io.github.c0sc0s.codex-tags</string>
-<key>CFBundleName</key><string>Codex Tags</string>
-<key>CFBundleIconFile</key><string>icon.icns</string>
-<key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0</string>
-<key>LSUIElement</key><true/>
-</dict></plist>
-`;
-    try {
-      await rm(nextLauncherPath, { recursive: true, force: true });
-      await mkdir(dirname(executablePath), { recursive: true });
-      await mkdir(join(nextLauncherPath, "Contents", "Resources"), { recursive: true });
-      await copyFile(join(root, "assets", "icon.icns"), join(nextLauncherPath, "Contents", "Resources", "icon.icns"));
-      await writeFile(executablePath, script, { encoding: "utf8", mode: 0o755 });
-      await chmod(executablePath, 0o755);
-      await writeFile(join(nextLauncherPath, "Contents", "Info.plist"), infoPlist, { encoding: "utf8", mode: 0o644 });
-      await rm(launcherPath, { recursive: true, force: true });
-      await rename(nextLauncherPath, launcherPath);
-    } finally {
-      await rm(nextLauncherPath, { recursive: true, force: true });
-    }
-    return launcherPath;
+    return createLoaderLauncher({
+      launcherPath, nodePath, cliPath: join(installRoot, "plugin-loader", "cli.mjs"),
+      configPath: join(installRoot, "loader.json"), port: Number(process.env.CODEX_TAGS_CDP_PORT ?? 9341),
+      logPath: join(installRoot, "launcher.log"), iconPath: join(root, "assets", "icon.icns"),
+      bundleId: "io.github.c0sc0s.codex-tags",
+    });
   }
 
   async function supervisorStatus() {
@@ -273,11 +245,31 @@ export function createManager(options = {}) {
   async function installRuntime() {
     await checkOwnedDirectory();
     await removeLaunchSupervisor();
+    if (await pathExists(installedController)) await runController("restore");
+    if (await pathExists(join(installRoot, "plugin-loader", "daemon.mjs"))) {
+      await run(nodePath, [join(installRoot, "plugin-loader", "cli.mjs"), "stop", "--config", join(installRoot, "loader.json"), "--port", String(process.env.CODEX_TAGS_CDP_PORT ?? 9341)]);
+    }
     await mkdir(installRoot, { recursive: true });
     await chmod(installRoot, 0o700);
     for (const [sourceName, destinationName] of runtimeFiles) {
       await copyFileAtomically(join(root, "runtime", "src", sourceName), join(installRoot, destinationName));
     }
+    const loaderConfigPath = join(installRoot, "loader.json");
+    let loaderConfig = { apiVersion: 1, plugins: [] };
+    if (await pathExists(loaderConfigPath)) {
+      loaderConfig = JSON.parse(await readFile(loaderConfigPath, "utf8"));
+      if (loaderConfig.apiVersion !== 1 || !Array.isArray(loaderConfig.plugins)) throw new Error("Invalid existing Loader configuration");
+    }
+    const tagsEntry = { id: "codex-tags", entry: "dist/injected.js", service: "tags-service.mjs", version: RUNTIME_VERSION, config: { dataDirectory: installRoot } };
+    const existingTags = loaderConfig.plugins.find(({ id }) => id === tagsEntry.id);
+    if (existingTags) {
+      if (existingTags.host !== "tags-plugin.mjs" && existingTags.entry !== tagsEntry.entry) throw new Error("The codex-tags module ID is owned by another entry");
+      delete existingTags.host;
+      Object.assign(existingTags, { entry: tagsEntry.entry, service: tagsEntry.service, version: tagsEntry.version });
+      existingTags.enabled = true;
+      existingTags.config = { dataDirectory: installRoot, ...existingTags.config };
+    } else loaderConfig.plugins.push(tagsEntry);
+    await writeFile(loaderConfigPath, `${JSON.stringify(loaderConfig, null, 2)}\n`, { mode: 0o600 });
     await copyRuntimeDependency();
     await copyPluginSource();
     const pluginVersion = await readPluginVersion();
@@ -384,9 +376,6 @@ export function createManager(options = {}) {
     probe.exec("CREATE VIRTUAL TABLE check_fts USING fts5(content, tokenize='trigram')");
     probe.close();
     for (const source of runtimeFiles.keys()) await access(join(root, "runtime", "src", source));
-    // Stop old code before replacing its modules; a failed update stays disabled and retryable.
-    await removeLaunchSupervisor();
-    if (await pathExists(installedController)) await runController("restore");
     const installation = await installRuntime();
     const plugin = await installCodexPlugin();
     const controller = await runController("start");
@@ -407,12 +396,20 @@ export function createManager(options = {}) {
   async function uninstall({ purge = false } = {}) {
     await checkOwnedDirectory();
     await checkLauncherOwnership();
+    const loaderConfigPath = join(installRoot, "loader.json");
+    if (await pathExists(loaderConfigPath)) {
+      const config = JSON.parse(await readFile(loaderConfigPath, "utf8"));
+      if (config.plugins?.some(({ id }) => id !== "codex-tags")) throw new Error("Other modules use this Loader installation. Disable Tags instead of uninstalling the shared infrastructure.");
+    }
     const disabled = await disable({ purge });
+    if (await pathExists(join(installRoot, "plugin-loader", "cli.mjs"))) await run(nodePath, [join(installRoot, "plugin-loader", "cli.mjs"), "stop", "--config", loaderConfigPath, "--port", String(process.env.CODEX_TAGS_CDP_PORT ?? 9341)]);
     await removeCodexPlugin({ removeMarketplace: true });
     for (const destinationName of runtimeFiles.values()) await rm(join(installRoot, destinationName), { force: true });
     await rm(sqlitePackageDestination, { recursive: true, force: true });
     for (const databaseFile of searchDatabaseFiles) await rm(join(installRoot, databaseFile), { force: true });
     await rm(join(installRoot, "install.json"), { force: true });
+    await rm(daemonPaths(join(installRoot, "loader.json"), Number(process.env.CODEX_TAGS_CDP_PORT ?? 9341)).root, { recursive: true, force: true });
+    await rm(join(installRoot, "loader.json"), { force: true });
     await rm(marketplaceRoot, { recursive: true, force: true });
     await rm(launcherPath, { recursive: true, force: true });
     await rm(join(installRoot, "controller.pid"), { force: true });

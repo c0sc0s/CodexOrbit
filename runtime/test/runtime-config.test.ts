@@ -9,7 +9,6 @@ const validConfig = {
   settingsSource: "repository",
   colorPresets: [{ name: "珊瑚", color: "#D95C5C" }],
   legacyToneColors: { neutral: "#7C8798", blue: "#4F8FD7" },
-  requestBinding: "__codexTagsRequest",
 } as const;
 
 describe("parseRuntimeConfig", () => {
@@ -22,8 +21,8 @@ describe("parseRuntimeConfig", () => {
     }));
   });
 
-  it("fails closed for incompatible protocols and unsafe bindings", () => {
+  it("fails closed for incompatible protocols and invalid palettes", () => {
     expect(() => parseRuntimeConfig({ ...validConfig, protocolVersion: 2 })).toThrow(/Unsupported/u);
-    expect(() => parseRuntimeConfig({ ...validConfig, requestBinding: "window.alert" })).toThrow(/binding/u);
+    expect(() => parseRuntimeConfig({ ...validConfig, colorPresets: [] })).toThrow(/color presets/u);
   });
 });

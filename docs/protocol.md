@@ -14,7 +14,7 @@ New names contain one ASCII-bracketed tag and the title, with no date/time metad
 
 The plugin bundles `SessionStart`, `UserPromptSubmit`, and `SessionEnd` lifecycle hooks. A `startup` event arms one session ID, and the first prompt for that ID consumes the marker and receives a compact developer-context naming policy. Resumed sessions and later prompts receive no context. `SessionEnd` removes an unused marker.
 
-The hook never edits a transcript or session file. It instructs the Codex agent to use Codex's own task naming capability and select exactly one configured tag. The controller owns the versioned local `settings.json` file; renderers send updates through the local bridge and receive normalized snapshots. The hook reads that same file and falls back to the built-in definitions when it is unavailable.
+The hook never edits a transcript or session file. It instructs the Codex agent to use Codex's own task naming capability and select exactly one configured tag. The Tags service owns the versioned local `settings.json` file; renderers send updates through the local bridge and receive normalized snapshots. The hook reads that same file and falls back to the built-in definitions when it is unavailable.
 
 ```json
 {
@@ -63,7 +63,7 @@ interface RuntimeMessage {
 Current message families are:
 
 - `search.request` / `search.result`: asynchronous bounded local content search
-- `settings.get` / `settings.snapshot` / `settings.update`: controller-owned tag settings
+- `settings.get` / `settings.snapshot` / `settings.update`: service-owned tag settings
 - `settings.error`: failed persistence; the preceding snapshot restores saved settings
 - `catalog.snapshot`: active local metadata, completeness flag and bounded error message
 - Optional catalog pin/project metadata may be unavailable; `null` must not erase known native-row metadata.
@@ -82,8 +82,8 @@ The injected runtime exposes `window.__codexSidebarTags` as a deliberately small
 - `debug()`: return the bounded local interaction trace
 - `dispose()`: restore native DOM and remove injected UI and listeners
 
-The runtime sends serialized envelopes through one CDP `Runtime.addBinding` bridge. `ControllerRouter` validates and dispatches them to settings or search services, then returns envelopes through a bounded evaluated expression. Only matching snippets and normalized settings are transferred; full conversation bodies remain outside the renderer. The browser bundle is loaded from the installed runtime directory, and no remote script is fetched.
+The renderer obtains its initial configuration through Loader RPC `bootstrap`. Tags intents use RPC `dispatch`; snapshots/results use the module-local `message` event. `ControllerRouter` validates the Tags protocol independently of Loader's transport. Only metadata, matching snippets and normalized settings are transferred. `window.__codexSidebarTags` lives in Loader's isolated JavaScript world. No remote script is fetched. Loader API and Tags protocol versions are independent.
 
-`catalog.delta` remains planned; the current catalog uses changed snapshots. Protocol version and injected runtime version are independent: a protocol major changes only for an incompatible wire contract, while injected UI changes bump `RUNTIME_VERSION` so hot apply cannot retain old browser code.
+The catalog uses changed snapshots. Protocol version and injected runtime version are independent: a protocol major changes only for an incompatible wire contract, while injected UI changes bump `RUNTIME_VERSION` so hot apply cannot retain old browser code.
 
 `status()` also exposes `sidebarFilter` and `activeTag` so installation checks and real-app QA can verify the compact sidebar filter without inspecting private state.

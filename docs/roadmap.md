@@ -1,6 +1,6 @@
 # Roadmap
 
-The current design separates installation, lifecycle, local services, host adaptation and UI. Extend those boundaries without introducing a general extension framework.
+The current design separates the reusable Codex Plugin Loader from product services and UI. Loader provides desktop/CLI entry, isolated service processes and RPC/events and renderer-plugin lifecycle; Tags is its first configured renderer/service module. See [the loader contract](plugin-loader.md) for ownership and extension boundaries.
 
 ## Release blockers
 
@@ -20,7 +20,6 @@ Passing unit tests does not replace these gates. See [compatibility](compatibili
 | P1 | Versioned recoverable installation | Interrupted updates retain a known-good artifact with documented rollback |
 | P1 | Multi-window settings revisions | Conflicts detected without silent lost edits |
 | P2 | Single Preact dashboard root | IME, menus, drafts and scroll persist without imperative remount guards |
-| P2 | Isolated search scheduler | Cancellation and large-history failures are independently tested |
 | P2 | Compatibility manifest | Tested builds, hashes, schemas and per-feature state are recorded |
 | P2 | Search completeness/performance | Text caps, refresh delays and query latency are measured and visible |
 

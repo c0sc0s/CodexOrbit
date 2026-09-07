@@ -73,7 +73,12 @@ test("installer creates a self-contained runtime and local Codex marketplace", a
     join(manager.paths.marketplacePluginRoot, "hooks", "session-naming.mjs"), "--context",
   ], { env: { ...process.env, CODEX_TAGS_SETTINGS_PATH: settingsPath } });
   assert.deepEqual(JSON.parse(namingJson).tags, [{ name: "Example", description: "Example tasks" }]);
-  await access(join(manager.paths.launcherPath, "Contents", "MacOS", "codex-tags-launcher"));
+  const launcher = await readFile(join(manager.paths.launcherPath, "Contents", "MacOS", "codex-plugin-loader"), "utf8");
+  assert.match(launcher, /plugin-loader\/cli\.mjs/u);
+  assert.match(launcher, /loader\.json/u);
+  assert.doesNotMatch(launcher, /app\.mjs/u);
+  const loaderConfig = JSON.parse(await readFile(join(manager.paths.installRoot, "loader.json"), "utf8"));
+  assert.deepEqual(loaderConfig.plugins, [{ id: "codex-tags", entry: "dist/injected.js", service: "tags-service.mjs", version: "6.3.0", config: { dataDirectory: manager.paths.installRoot } }]);
   const marketplace = JSON.parse(await readFile(join(manager.paths.marketplaceRoot, ".agents", "plugins", "marketplace.json"), "utf8"));
   assert.equal(marketplace.name, "codex-tags-cli");
   assert.equal(marketplace.plugins[0].name, "codex-tags");

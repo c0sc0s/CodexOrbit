@@ -1,0 +1,24 @@
+{
+  "name": "@c0sc0s/codex-plugin-loader",
+  "version": "0.3.1",
+  "description": "Local renderer plugin lifecycle and explicit CDP entry for Codex desktop.",
+  "type": "module",
+  "exports": {
+    "types": "./index.d.mts",
+    "import": "./index.mjs"
+  },
+  "bin": {
+    "codex-plugin-loader": "./cli.mjs"
+  },
+  "files": [
+    "*.mjs",
+    "*.d.mts",
+    "examples",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "UNLICENSED",
+  "types": "./index.d.mts"
+}

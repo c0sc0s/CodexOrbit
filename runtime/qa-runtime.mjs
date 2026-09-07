@@ -6,10 +6,10 @@ import { RuntimeTargetRegistry } from "./src/runtime-target-registry.mjs";
 
 const processOwner = new CodexProcess();
 assert.ok(await processOwner.ownsCdpEndpoint(), "The owned Codex endpoint is required; QA never starts or restarts Codex.");
-const registry = new RuntimeTargetRegistry({ port: 9341 });
+const registry = new RuntimeTargetRegistry({ port: 9341, ownsEndpoint: () => processOwner.ownsCdpEndpoint() });
 let client;
 for (const target of await registry.discover()) {
-  const candidate = await CdpClient.connect(target);
+  const candidate = await registry.client(target);
   if (await candidate.evaluate("Boolean(document.querySelector('.codex-sidebar-dashboard-launcher'))")) { client = candidate; break; }
   candidate.close();
 }

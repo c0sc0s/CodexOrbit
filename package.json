@@ -25,7 +25,8 @@
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
-    "README.zh-CN.md"
+    "README.zh-CN.md",
+    "runtime/src/plugin-loader/"
   ],
   "publishConfig": {
     "access": "public",
@@ -40,12 +41,12 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
-    "test:package": "node scripts/test-package.mjs",
+    "test:package": "node scripts/test-package.mjs && node scripts/test-loader-package.mjs",
     "prepublishOnly": "npm run verify && npm run test:package",
     "dev:apply": "npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply",
     "qa:app": "node runtime/qa-runtime.mjs",
     "test": "node --test runtime/test/*.test.mjs && vitest run runtime/test/*.test.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.loader.json",
     "verify": "npm run build && npm run check && npm run typecheck && npm test"
   },
   "engines": {

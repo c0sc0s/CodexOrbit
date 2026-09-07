@@ -33,6 +33,8 @@ try {
     },
   });
   await manager.installRuntime();
+  await import(pathToFileURL(join(manager.paths.installRoot, "runtime-target-registry.mjs")).href);
+  await import(pathToFileURL(join(manager.paths.marketplacePluginRoot, "runtime", "src", "plugin-loader", "index.mjs")).href);
   const { SessionSearchIndex } = await import(pathToFileURL(join(manager.paths.installRoot, "search-index.mjs")).href);
   const index = new SessionSearchIndex(join(temporary, "probe.sqlite"));
   assert.equal(index.status().indexedSessions, 0);

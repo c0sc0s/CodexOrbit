@@ -1,0 +1,4 @@
+{
+  "apiVersion": 1,
+  "plugins": [{ "id": "hello", "version": "1.0.0", "entry": "hello.js", "config": { "text": "Codex Plugin Loader" } }]
+}
