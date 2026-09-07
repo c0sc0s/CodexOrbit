@@ -27,6 +27,44 @@ try {
     document.querySelector('.codex-sidebar-dashboard-launcher').click();
     return document.querySelector('.codex-sidebar-dashboard-dialog')?.getAttribute('role') === 'dialog';
   })()`);
+  await scenario("light and dark popup surfaces", `(() => {
+    const frame = document.createElement('iframe');
+    frame.hidden = true;
+    document.body.append(frame);
+    try {
+      const doc = frame.contentDocument;
+      const style = doc.createElement('style');
+      style.textContent = document.getElementById('codex-sidebar-tags-style').textContent;
+      doc.head.append(style);
+      doc.body.innerHTML = '<div class="codex-sidebar-dashboard-overlay"><div class="codex-sidebar-dashboard-dialog"><div class="codex-sidebar-sort-menu"></div><div class="codex-sidebar-result-group"></div><button class="codex-sidebar-dashboard-tab" aria-selected="true"></button><button class="codex-sidebar-filter-chip" aria-pressed="true"></button></div></div>';
+      const luminance = (color) => {
+        const channels = color.match(/[\\d.]+/g).slice(0, 3).map(Number).map(value => {
+          const channel = value / 255;
+          return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
+        });
+        return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+      };
+      for (const scheme of ['light', 'dark']) {
+        for (const tokens of ['current', 'legacy', 'fallback']) {
+          doc.documentElement.style.cssText = 'color-scheme: ' + scheme + '; color: CanvasText';
+          const surface = scheme === 'light' ? '#ffffff' : '#202020';
+          const names = tokens === 'current'
+            ? ['--color-background-elevated-primary-opaque', '--color-background-elevated-secondary-opaque']
+            : tokens === 'legacy' ? ['--color-background-elevated-base', '--color-background-elevated-high'] : [];
+          for (const name of names) doc.documentElement.style.setProperty(name, surface);
+          for (const element of doc.querySelectorAll('.codex-sidebar-dashboard-overlay > *, .codex-sidebar-dashboard-dialog > *')) {
+            const computed = frame.contentWindow.getComputedStyle(element);
+            const background = luminance(computed.backgroundColor);
+            const foreground = luminance(computed.color);
+            if ((scheme === 'light' ? background < .9 : background > .1)
+              || (element.matches('.codex-sidebar-dashboard-dialog, .codex-sidebar-sort-menu')
+                && (Math.max(background, foreground) + .05) / (Math.min(background, foreground) + .05) < 4.5)) return false;
+          }
+        }
+      }
+      return true;
+    } finally { frame.remove(); }
+  })()`);
   await scenario("Chinese input composition", `(() => {
     const input = document.querySelector('.codex-sidebar-search-input');
     input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));

@@ -70,13 +70,15 @@ export function buildRuntimeStyles({
     .codex-sidebar-dashboard-launcher:focus-visible { outline: 2px solid var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); outline-offset: -2px; }
 
     .codex-sidebar-dashboard-overlay {
+      --codex-sidebar-surface: var(--color-background-elevated-primary-opaque, var(--color-background-elevated-base, var(--color-token-dropdown-background, Canvas)));
+      --codex-sidebar-menu-surface: var(--color-background-elevated-secondary-opaque, var(--color-background-elevated-high, var(--color-token-dropdown-background, Canvas)));
       position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px;
       background: #0006; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
     }
     .codex-sidebar-dashboard-dialog {
       display: flex; width: min(680px, calc(100vw - 40px)); max-height: min(720px, calc(100vh - 48px)); flex-direction: column;
       border: 1px solid var(--color-border-light, var(--color-token-menu-border, #8884)); border-radius: 16px;
-      color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: var(--color-background-elevated-base, var(--color-token-menu-background, #181818));
+      color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); background: var(--codex-sidebar-surface);
       box-shadow: 0 24px 70px #0007, 0 4px 18px #0003; overflow: hidden; transform-origin: 50% 45%;
     }
     .codex-sidebar-dashboard-header { display: flex; align-items: center; gap: 12px; padding: 15px 16px 12px; border-bottom: 1px solid var(--color-border-light, var(--color-token-border-light, #8883)); }
@@ -84,7 +86,7 @@ export function buildRuntimeStyles({
     .codex-sidebar-dashboard-subtitle { color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; }
     .codex-sidebar-dashboard-tabs { display: flex; gap: 3px; margin-left: auto; padding: 3px; border-radius: 8px; background: var(--color-background-control, var(--color-token-input-background, #8881)); }
     .codex-sidebar-dashboard-tab { height: 29px; padding: 0 11px; border: 0; border-radius: 6px; color: var(--color-text-secondary, inherit); background: transparent; font: inherit; font-size: 12px; cursor: pointer; transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease, transform 100ms ease; }
-    .codex-sidebar-dashboard-tab[aria-selected="true"] { color: var(--color-text-foreground, inherit); background: var(--color-background-elevated-high, var(--color-token-list-active-selection-background, #8883)); box-shadow: 0 1px 2px #0002; }
+    .codex-sidebar-dashboard-tab[aria-selected="true"] { color: var(--color-text-foreground, inherit); background: var(--codex-sidebar-menu-surface); box-shadow: 0 1px 2px #0002; }
     .codex-sidebar-dashboard-tab:active, .codex-sidebar-dashboard-close:active, .codex-sidebar-sort-trigger:active, .codex-sidebar-tag-add:active, .codex-sidebar-tag-delete:active { transform: scale(.97); }
     .codex-sidebar-dashboard-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; font-size: 17px; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }
     .codex-sidebar-dashboard-close:hover { color: var(--color-text-foreground, inherit); background: var(--color-token-toolbar-hover-background, #8882); }
@@ -126,7 +128,7 @@ export function buildRuntimeStyles({
     .codex-sidebar-sort-menu {
       position: absolute; top: calc(100% + 5px); right: 0; z-index: 8; width: 144px; padding: 4px;
       border: 1px solid var(--color-border-light, var(--color-token-menu-border, #8884)); border-radius: 9px;
-      color: var(--color-text-foreground, var(--color-token-dropdown-foreground, inherit)); background: var(--color-background-elevated-high, var(--color-token-menu-background, #202020));
+      color: var(--color-text-foreground, var(--color-token-dropdown-foreground, inherit)); background: var(--codex-sidebar-menu-surface);
       box-shadow: 0 12px 32px #0006, 0 2px 8px #0003; transform-origin: top right;
     }
     .codex-sidebar-sort-option { display: flex; width: 100%; height: 32px; align-items: center; padding: 0 9px; border: 0; border-radius: 6px; color: inherit; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; transition: background 100ms ease; }
@@ -144,7 +146,7 @@ export function buildRuntimeStyles({
     .codex-sidebar-filter-chip[aria-pressed="true"] {
       color: var(--color-text-foreground, var(--color-token-list-active-selection-foreground, inherit));
       border-color: var(--color-border-light, var(--color-token-border-light, #8884));
-      background: var(--color-background-elevated-base, var(--color-token-list-active-selection-background, #8883)); box-shadow: 0 1px 2px #0001;
+      background: var(--codex-sidebar-surface); box-shadow: 0 1px 2px #0001;
     }
     .codex-sidebar-filter-count { margin-left: 4px; opacity: .62; font-variant-numeric: tabular-nums; }
     .codex-sidebar-results {
@@ -156,7 +158,7 @@ export function buildRuntimeStyles({
     .codex-sidebar-results-list { max-height: min(430px, calc(100vh - 250px)); overflow-y: auto; overscroll-behavior: contain; }
     .codex-sidebar-result-group {
       position: sticky; top: 0; z-index: 1; padding: 5px 7px 3px; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888));
-      background: var(--color-background-elevated-base, var(--color-token-menu-background, #181818)); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      background: var(--codex-sidebar-surface); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
     }
     .codex-sidebar-result {
       display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; min-height: 40px; padding: 8px;
