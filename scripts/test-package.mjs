@@ -22,7 +22,16 @@ try {
   assert.match(help.stdout, /install/u);
   await assert.rejects(run(process.execPath, [executable, "off", "--purge"]));
   const { createManager } = await import(pathToFileURL(join(packageRoot, "scripts", "manager-core.mjs")).href);
-  const manager = createManager({ packageRoot, home: temporary, installRoot: join(temporary, "runtime"), applicationsRoot: join(temporary, "Applications"), platform: "darwin" });
+  const manager = createManager({
+    packageRoot, home: temporary, installRoot: join(temporary, "runtime"),
+    applicationsRoot: join(temporary, "Applications"), platform: "darwin",
+    run: async (file, args) => {
+      assert.equal(file, "/bin/launchctl", "Package smoke must not invoke real app lifecycle commands");
+      if (args[0] === "print") throw Object.assign(new Error("No simulated launch agent"), { code: 113 });
+      assert.equal(args[0], "bootout");
+      return { stdout: "", stderr: "" };
+    },
+  });
   await manager.installRuntime();
   const { SessionSearchIndex } = await import(pathToFileURL(join(manager.paths.installRoot, "search-index.mjs")).href);
   const index = new SessionSearchIndex(join(temporary, "probe.sqlite"));

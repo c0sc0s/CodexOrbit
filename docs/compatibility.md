@@ -20,7 +20,7 @@ Compatibility failures must never trigger edits to the official application bund
 - Actual tarball installation and repeated source installation both reached healthy state without restarting the already-debuggable app.
 - Live UI checks passed: navigation/dialog, Chinese input composition, local search response, sort menu persistence/contrast, unsaved tag editor retention, and title highlighting.
 - Production dependency audit reported zero known vulnerabilities at verification time.
-- Pending: a clean-account cold launch from the official app entry, manual hook authorization and an actual first-turn naming check. Automated hook contract tests do not replace that permission boundary.
+- Pending: a clean-account cold launch from the dedicated Tags launcher, manual hook authorization and an actual first-turn naming check. Automated hook contract tests do not replace that permission boundary.
 
 `npm run qa:app` is a content-free, non-restarting smoke against an already injected app. It does not rename sessions or save tag edits. Broader cold-launch and rollback scenarios remain manual release gates.
 

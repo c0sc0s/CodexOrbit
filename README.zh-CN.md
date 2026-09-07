@@ -6,7 +6,7 @@
 
 **macOS · Node.js 22+ · 中英文界面**
 
-> **发布候选版** — 目前请使用下方源码安装。npm 正式 `latest` 入口仍待冷启动与 Hook 授权验收。
+> **早期版本** — 自动化检查已通过。全新账户冷启动及手动授权后的首次命名仍需完整端到端验收，详见[验证范围](docs/compatibility.md)。
 
 ## 功能
 
@@ -19,16 +19,12 @@
 
 ## 开始使用
 
-### 1. 从源码安装
+### 1. 安装 CLI 和插件
 
 先完成正在运行的任务。如果 Codex 已打开但未启用 Tags，请手动退出，再执行：
 
 ```bash
-git clone https://github.com/c0sc0s/codex-tags.git
-cd codex-tags
-npm ci
-npm run verify
-node bin/codex-tags.mjs install
+npx @c0sc0s/codex-tags@latest
 ```
 
 ### 2. 授权 Hook
@@ -38,10 +34,14 @@ node bin/codex-tags.mjs install
 **下次启动：** 使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它启动的是官方 App，不是第二套 Codex；不会自动重启或安装启动守护进程。命名由 Agent 辅助完成，不保证每次确定性改名。
 
 <details>
-<summary>一条命令安装 — npm 正式发布后可用</summary>
+<summary>从源码开发或安装</summary>
 
 ```bash
-npx @c0sc0s/codex-tags@latest
+git clone https://github.com/c0sc0s/codex-tags.git
+cd codex-tags
+npm ci
+npm run verify
+node bin/codex-tags.mjs install
 ```
 
 随后按上面的步骤授权三个 Hook。
@@ -50,7 +50,7 @@ npx @c0sc0s/codex-tags@latest
 
 ## 命令
 
-发布后：`npx @c0sc0s/codex-tags@latest <命令>`；源码安装：`node bin/codex-tags.mjs <命令>`。
+执行 `npx @c0sc0s/codex-tags@latest <命令>`；源码安装：`node bin/codex-tags.mjs <命令>`。
 
 | 命令 | 作用 |
 | --- | --- |

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-09-07
+
+Initial public early release. Automated verification and packed-consumer tests pass; clean-account GUI and hook-trust acceptance remain pending.
 
 - Use the dedicated Codex Tags.app launcher with its own icon; remove automatic launch takeover and clean up legacy LaunchAgents on installation. Running non-debuggable apps are left untouched.
 - Exclude subagent and guardian-review sessions from the active catalog, dashboard counts and search scope; retain standalone tasks and clean stale cached entries.
@@ -12,11 +14,11 @@
 - Check current UI versions, navigation availability, controller ownership, settings, catalog and index health using one readiness contract.
 - Read active local sessions independently of sidebar expansion, use actual update timestamps, and navigate catalog-only results through the app's thread links.
 - Add tag description/color editing, deletion confirmation/undo, reserved fallback handling and consistent 32-character names; protect settings inputs and menus from background refreshes.
-- Add packed-consumer/native-runtime smoke tests, dashboard interaction regression tests, and macOS CI. Clean-account real-app QA and authenticated npm publication remain release gates.
+- Add isolated packed-consumer/native-runtime smoke tests, dashboard interaction regression tests, and macOS CI.
 
 All notable changes to Codex Tags are documented here. Versions follow Semantic Versioning.
 
-## 0.5.0 — 2026-09-07
+### Included capabilities
 
 - Reduced built-in tags to Feature, Bug, Design, and Research with English classification guidance; preserved saved user definitions and custom tags.
 - Replaced the management skill with three English user skills: Doctor, Initial, and Rename, using native Codex task tools for agent-driven classification and naming.

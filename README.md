@@ -6,7 +6,7 @@ An independent, local-first enhancement for Codex: organize sessions with tags, 
 
 **macOS · Node.js 22+ · English / 简体中文**
 
-> **Release candidate** — Use the source installation below. Public npm `latest` awaits cold-start and hook-authorization acceptance.
+> **Early release** — Automated checks pass. Clean-account cold-start and manually trusted first-turn naming still need full end-to-end acceptance; see [verification coverage](docs/compatibility.md).
 
 ## Features
 
@@ -19,16 +19,12 @@ An independent, local-first enhancement for Codex: organize sessions with tags, 
 
 ## Get started
 
-### 1. Install from source
+### 1. Install the CLI and plugin
 
 Finish active tasks and quit Codex if it is open without Tags, then run:
 
 ```bash
-git clone https://github.com/c0sc0s/codex-tags.git
-cd codex-tags
-npm ci
-npm run verify
-node bin/codex-tags.mjs install
+npx @c0sc0s/codex-tags@latest
 ```
 
 ### 2. Authorize the hooks
@@ -38,10 +34,14 @@ Open **Codex → Plugins → Codex Tags** and review/trust **SessionStart**, **U
 **Next time:** open `~/Applications/Codex Tags.app` and pin it to the Dock. It launches the official app, not a second Codex installation. No automatic restart or launch supervisor. Naming is agent-assisted, not a guaranteed title rewrite.
 
 <details>
-<summary>One-command installation — available after npm publication</summary>
+<summary>Develop or install from source</summary>
 
 ```bash
-npx @c0sc0s/codex-tags@latest
+git clone https://github.com/c0sc0s/codex-tags.git
+cd codex-tags
+npm ci
+npm run verify
+node bin/codex-tags.mjs install
 ```
 
 Then authorize the same three hooks above.
@@ -50,7 +50,7 @@ Then authorize the same three hooks above.
 
 ## Commands
 
-After publication: `npx @c0sc0s/codex-tags@latest <command>`. From source: `node bin/codex-tags.mjs <command>`.
+Run `npx @c0sc0s/codex-tags@latest <command>`. From source: `node bin/codex-tags.mjs <command>`.
 
 | Command | Effect |
 | --- | --- |

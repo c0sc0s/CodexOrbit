@@ -6,7 +6,7 @@
 
 The npm package `@c0sc0s/codex-tags` carries the CLI, prebuilt UI bundle, local controller, naming hooks and three English skills. Its production dependency is native SQLite. Users need macOS, Node.js 22+, and the official Codex app with plugin support.
 
-After publication:
+Installation:
 
 1. Quit Codex if it is open without Tags, then run `npx @c0sc0s/codex-tags@latest`.
 2. In Codex Plugins, review/trust SessionStart, UserPromptSubmit and SessionEnd.
@@ -49,7 +49,7 @@ See [development](development.md) for the separate file-refresh/hot-apply flow.
 
 ## Publish checklist
 
-The current candidate is not yet accepted for `latest`. Restart-dependent checks require user approval.
+The first public release is an early release with pending manual acceptance explicitly documented. Restart-dependent checks require user approval; do not present package smoke as real-app acceptance.
 
 - [ ] Complete the clean-account [compatibility matrix](compatibility.md), including manually trusted first-turn naming.
 - [ ] Synchronize package/lockfile/changelog/plugin versions and review the final diff.
