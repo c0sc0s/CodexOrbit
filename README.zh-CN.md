@@ -1,11 +1,12 @@
-<p align="center"><img src="assets/logo.png" alt="Codex Tags 标识" width="128"></p>
-<h1 align="center">Codex Tags</h1>
-<p align="center">少翻列表，快速找到会话。</p>
+<p align="center"><img src="assets/banner.png" alt="Codex Tags — 少翻列表，快速找到会话。" width="100%"></p>
 <p align="center"><a href="README.md">English</a> · <b>简体中文</b></p>
+<p align="center"><a href="#开始使用">开始使用</a> · <a href="#命令">命令</a> · <a href="docs/development.md">本地开发</a> · <a href="docs/architecture.md">架构设计</a></p>
 
 为 Codex 提供本地会话管理增强：按标签整理会话、搜索正文，并让 Agent 按你的分类规则命名。
 
-> **发布候选版：** npm CLI 已准备好，正式 `latest` 入口仍待冷启动与 Hook 授权验收；发布前请使用下方源码流程。目前仅支持 macOS，需要 Node.js 22+。
+**macOS · Node.js 22+ · 中英文界面**
+
+> **发布候选版** — 目前请使用下方源码安装。npm 正式 `latest` 入口仍待冷启动与 Hook 授权验收。
 
 ## 功能
 
@@ -18,17 +19,9 @@
 
 ## 开始使用
 
-正式发布后，只需两步：
+### 1. 从源码安装
 
-1. 先完成正在运行的 Codex 任务，再执行：
-   ```bash
-   npx @c0sc0s/codex-tags@latest
-   ```
-2. 打开 **Codex → Plugins → Codex Tags**，检查并信任/启用 **SessionStart、UserPromptSubmit、SessionEnd**。
-
-之后使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它带参数启动官方 App，不是第二套 Codex。官方入口保持原样，不会自动接管；如果官方 App 已打开但未启用 Tags，请先手动退出。不会安装启动守护进程或自动重启。命名依靠 Agent 遵循指令，不保证每次确定性改名。
-
-**现在从源码体验候选版：**
+先完成正在运行的任务。如果 Codex 已打开但未启用 Tags，请手动退出，再执行：
 
 ```bash
 git clone https://github.com/c0sc0s/codex-tags.git
@@ -38,7 +31,22 @@ npm run verify
 node bin/codex-tags.mjs install
 ```
 
-随后按上面的步骤授权 Hook。如果 Codex 已打开但未启用 Tags，请先手动退出；安装不会自动重启。
+### 2. 授权 Hook
+
+打开 **Codex → Plugins → Codex Tags**，检查并信任/启用 **SessionStart、UserPromptSubmit、SessionEnd**。
+
+**下次启动：** 使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它启动的是官方 App，不是第二套 Codex；不会自动重启或安装启动守护进程。命名由 Agent 辅助完成，不保证每次确定性改名。
+
+<details>
+<summary>一条命令安装 — npm 正式发布后可用</summary>
+
+```bash
+npx @c0sc0s/codex-tags@latest
+```
+
+随后按上面的步骤授权三个 Hook。
+
+</details>
 
 ## 命令
 

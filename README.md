@@ -1,11 +1,12 @@
-<p align="center"><img src="assets/logo.png" alt="Codex Tags logo" width="128"></p>
-<h1 align="center">Codex Tags</h1>
-<p align="center">Less scrolling. More finding.</p>
+<p align="center"><img src="assets/banner.png" alt="Codex Tags — Less scrolling. More finding." width="100%"></p>
 <p align="center"><b>English</b> · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><a href="#get-started">Get started</a> · <a href="#commands">Commands</a> · <a href="docs/development.md">Development</a> · <a href="docs/architecture.md">Architecture</a></p>
 
 An independent, local-first enhancement for Codex: organize sessions with tags, search conversation text, and give the agent your classification rules.
 
-> **Release candidate:** the npm CLI is prepared, but public `latest` is pending cold-start and hook-authorization acceptance. Use the source workflow below until publication. macOS only; Node.js 22+ required.
+**macOS · Node.js 22+ · English / 简体中文**
+
+> **Release candidate** — Use the source installation below. Public npm `latest` awaits cold-start and hook-authorization acceptance.
 
 ## Features
 
@@ -18,17 +19,9 @@ An independent, local-first enhancement for Codex: organize sessions with tags, 
 
 ## Get started
 
-Once published, onboarding is two steps:
+### 1. Install from source
 
-1. Finish active Codex tasks, then run:
-   ```bash
-   npx @c0sc0s/codex-tags@latest
-   ```
-2. Open **Codex → Plugins → Codex Tags** and review/trust **SessionStart**, **UserPromptSubmit**, and **SessionEnd**.
-
-Open `~/Applications/Codex Tags.app` for Tags, and drag it to the Dock for quick access. It launches the official app with Tags enabled; it is not another Codex installation. The official entry stays unmodified. If Codex is already open without Tags, quit it first: there is no automatic restart or launch supervisor. Naming is an agent instruction, not a guaranteed title rewrite.
-
-**Try the candidate from source:**
+Finish active tasks and quit Codex if it is open without Tags, then run:
 
 ```bash
 git clone https://github.com/c0sc0s/codex-tags.git
@@ -38,7 +31,22 @@ npm run verify
 node bin/codex-tags.mjs install
 ```
 
-Then review the hooks as above. Quit Codex before installation if it is open without Tags; installation never restarts it.
+### 2. Authorize the hooks
+
+Open **Codex → Plugins → Codex Tags** and review/trust **SessionStart**, **UserPromptSubmit**, and **SessionEnd**.
+
+**Next time:** open `~/Applications/Codex Tags.app` and pin it to the Dock. It launches the official app, not a second Codex installation. No automatic restart or launch supervisor. Naming is agent-assisted, not a guaranteed title rewrite.
+
+<details>
+<summary>One-command installation — available after npm publication</summary>
+
+```bash
+npx @c0sc0s/codex-tags@latest
+```
+
+Then authorize the same three hooks above.
+
+</details>
 
 ## Commands
 
