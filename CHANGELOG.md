@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 — 2026-09-07
+
+- Fix Tags dialog, sort menu, selected tabs and result group backgrounds in light mode using current Codex theme colors and theme-aware fallbacks.
+- Verify light and dark popup surfaces with current, legacy and missing theme tokens.
+
 ## 0.6.0 — 2026-09-07
 
 - Add independently packable Codex Plugin Loader with desktop/CLI entry, per-module service processes, isolated renderer globals, scoped RPC/events and bounded cleanup.

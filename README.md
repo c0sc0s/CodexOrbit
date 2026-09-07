@@ -6,6 +6,8 @@ An independent, local-first enhancement for Codex: organize sessions with tags, 
 
 **macOS · Node.js 22+ · English / 简体中文**
 
+> **0.6.1** — Fix Tags popup backgrounds in light mode. Update with `npx @c0sc0s/codex-tags@latest update`.
+
 > **Early release** — Automated checks pass. Clean-account cold-start and manually trusted first-turn naming still need full end-to-end acceptance; see [verification coverage](docs/compatibility.md).
 
 ## Features

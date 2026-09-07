@@ -1,6 +1,6 @@
 {
   "name": "codex-tags",
-  "version": "0.6.0+codex.20260907114357",
+  "version": "0.6.1+codex.20260907123931",
   "description": "Add tag-aware session browsing and local content search to the Codex desktop sidebar.",
   "author": {
     "name": "Codex Tags contributors"

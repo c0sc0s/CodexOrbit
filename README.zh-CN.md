@@ -6,6 +6,8 @@
 
 **macOS · Node.js 22+ · 中英文界面**
 
+> **0.6.1** — 修复浅色模式下的 Tags 弹窗背景。运行 `npx @c0sc0s/codex-tags@latest update` 更新。
+
 > **早期版本** — 自动化检查已通过。全新账户冷启动及手动授权后的首次命名仍需完整端到端验收，详见[验证范围](docs/compatibility.md)。
 
 ## 功能

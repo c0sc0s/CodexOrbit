@@ -16,10 +16,10 @@ Compatibility failures must never trigger edits to the official application bund
 ## Candidate verification — 2026-09-07
 
 - Codex desktop: `26.901.51231` (build `8109`), macOS, bundle identifier `com.openai.codex`.
-- Runtime candidate: `6.3.1`; npm candidate: `@c0sc0s/codex-tags@0.6.0`; Loader: `0.3.1`.
+- Runtime candidate: `6.3.2`; npm candidate: `@c0sc0s/codex-tags@0.6.1`; Loader: `0.3.1`.
 - Actual tarball installation and repeated source installation both reached healthy state without restarting the already-debuggable app.
 - Loader checks passed: independent tarball consumption, service RPC, crash containment, scoped removal, two-window coexistence and isolated renderer globals.
-- Live UI checks passed: navigation/dialog, Chinese input composition, local search response, sort menu persistence/contrast, unsaved tag editor retention, and title highlighting.
+- Live UI checks passed: navigation/dialog, Chinese input composition, local search response, sort menu persistence/contrast, light/dark popup surfaces with current/legacy/missing theme tokens, unsaved tag editor retention, and title highlighting.
 - Production dependency audit reported zero known vulnerabilities at verification time.
 - Pending: a clean-account cold launch from the dedicated Tags launcher, manual hook authorization and an actual first-turn naming check. Automated hook contract tests do not replace that permission boundary.
 

@@ -1,6 +1,6 @@
 {
   "name": "@c0sc0s/codex-tags",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "One-command installer and lifecycle CLI for Codex Tags.",
   "type": "module",
   "bin": {
