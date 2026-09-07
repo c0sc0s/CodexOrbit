@@ -3,13 +3,18 @@ import test from "node:test";
 
 import { colorForTag, parseSidebarTitle, parseTitleMetadata } from "../src/title-format.mjs";
 
+test("title parser accepts the complete settings name length", () => {
+  assert.equal(parseTitleMetadata(`[${"a".repeat(32)}]Title`).tag.length, 32);
+  assert.equal(parseTitleMetadata(`[${"a".repeat(33)}]Title`), null);
+});
+
 test("parses tag, time, and title", () => {
   assert.deepEqual(parseSidebarTitle("[Pending][09-04] mac 键鼠信号迁移"), {
     raw: "[Pending][09-04] mac 键鼠信号迁移",
     tag: "Pending",
     time: "09-04",
     title: "mac 键鼠信号迁移",
-    color: "#c98b28",
+    color: "#7c8798",
   });
 });
 
@@ -29,7 +34,7 @@ test("supports Chinese brackets", () => {
     tag: "调研",
     time: "今天",
     title: "侧栏渲染",
-    color: "#956ad1",
+    color: "#7c8798",
   });
 });
 

@@ -20,15 +20,10 @@ export const LEGACY_TONE_COLORS = Object.freeze({
 });
 
 export const DEFAULT_TAG_DEFINITIONS = Object.freeze([
-  { name: "Pending", color: PRESET_COLORS["琥珀"], description: "尚未开始、等待处理或等待排期的任务" },
-  { name: "进行中", color: PRESET_COLORS["海蓝"], description: "已经开始处理且仍在推进中的任务" },
-  { name: "需求", color: PRESET_COLORS["海蓝"], description: "新增能力、产品需求或明确的功能改动" },
-  { name: "Feature", color: PRESET_COLORS["海蓝"], description: "新增功能、能力建设或产品增强" },
-  { name: "Bug", color: PRESET_COLORS["珊瑚"], description: "修复错误、异常行为、回归或稳定性问题" },
-  { name: "阻塞", color: PRESET_COLORS["珊瑚"], description: "当前无法继续，需要外部输入、权限或依赖解除" },
-  { name: "调研", color: PRESET_COLORS["鸢紫"], description: "分析现状、查找资料、定位原因或评估可行性" },
-  { name: "设计", color: PRESET_COLORS["鸢紫"], description: "交互、视觉、架构或技术方案设计" },
-  { name: "完成", color: PRESET_COLORS["松绿"], description: "目标已经完成，仅需记录、复盘或交付结果" },
+  { name: "Feature", color: PRESET_COLORS["海蓝"], description: "Build or extend functionality. Use when the main goal is to implement a new capability or improve existing behavior, rather than fix a defect." },
+  { name: "Bug", color: PRESET_COLORS["珊瑚"], description: "Diagnose and fix incorrect behavior, errors, or regressions. Use when the goal is to restore expected behavior, including investigation needed for the fix." },
+  { name: "Design", color: PRESET_COLORS["鸢紫"], description: "Define how a solution should look or work: UI, interactions, architecture, or technical plans. Use when the main deliverable is a design or specification." },
+  { name: "Research", color: PRESET_COLORS["松绿"], description: "Explore a topic, understand existing code, compare options, or assess feasibility. Use when the main deliverable is findings or an explanation, rather than a design or implementation." },
 ]);
 
 function normalizeColor(value, legacyTone, fallbackColor) {

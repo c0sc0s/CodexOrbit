@@ -12,6 +12,7 @@ interface SessionRegistryBindings {
 }
 
 export class SessionRegistry {
+  private catalogIds: Set<string> | null = null;
   private readonly entriesByKey = new Map<string, SessionEntry>();
   private persistedCacheJson: string | null = null;
 
@@ -32,13 +33,16 @@ export class SessionRegistry {
       const row = bindings.rowForTitle(node);
       row?.setAttribute(bindings.rowAttribute, "true");
       const threadId = bindings.threadIdForRow(row);
-      const key = threadId ?? `title:${raw}`;
+      const localId = threadId?.replace(/^local:/u, "");
+      const key = localId ?? `title:${raw}`;
+      if (this.catalogIds && localId && !localId.includes(":") && !this.catalogIds.has(localId)) return;
       const pinned = bindings.isPinnedRow(row);
       if (pinned) {
         const toggle = bindings.sectionToggleForRow(row);
         if (toggle) bindings.onPinnedToggle(toggle);
       }
       this.entriesByKey.set(key, {
+        ...this.entriesByKey.get(key),
         ...parsed,
         key,
         threadId,
@@ -59,6 +63,32 @@ export class SessionRegistry {
       node: entry.node?.isConnected ? entry.node : null,
       row: entry.row?.isConnected ? entry.row : null,
     }));
+  }
+
+  applyCatalog(items: unknown[]): void {
+    const ids = new Set<string>();
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const candidate = item as Record<string, unknown>;
+      if (typeof candidate.threadId !== "string" || typeof candidate.raw !== "string") continue;
+      const parsed = this.parseTitle(candidate.raw);
+      if (!parsed) continue;
+      const key = candidate.threadId;
+      ids.add(key);
+      this.entriesByKey.set(key, {
+        ...this.entriesByKey.get(key), ...parsed, key, threadId: this.entriesByKey.get(key)?.threadId ?? key,
+        updatedAt: typeof candidate.updatedAt === "number" && Number.isFinite(candidate.updatedAt) ? candidate.updatedAt : 0,
+        index: this.entriesByKey.get(key)?.index ?? ids.size,
+        pinned: typeof candidate.pinned === "boolean" ? candidate.pinned : this.entriesByKey.get(key)?.pinned ?? false,
+        projectId: typeof candidate.projectId === "string" ? candidate.projectId : this.entriesByKey.get(key)?.projectId ?? null,
+      });
+    }
+    this.catalogIds = ids;
+    for (const [key, entry] of this.entriesByKey) {
+      const localId = entry.threadId?.replace(/^local:/u, "");
+      if (localId && !localId.includes(":") && !ids.has(localId)) this.entriesByKey.delete(key);
+    }
+    this.persist();
   }
 
   updateColors(): void {
@@ -109,8 +139,10 @@ export class SessionRegistry {
         if (!candidate || typeof candidate !== "object") return;
         const entry = candidate as Partial<SessionEntry>;
         if (typeof entry.key !== "string" || typeof entry.raw !== "string" || typeof entry.tag !== "string") return;
-        this.entriesByKey.set(entry.key, {
+        const key = entry.threadId?.replace(/^local:/u, "") ?? entry.key;
+        this.entriesByKey.set(key, {
           ...entry,
+          key,
           color: this.colorForTag(entry.tag),
           node: null,
           row: null,

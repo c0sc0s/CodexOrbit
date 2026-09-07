@@ -7,7 +7,10 @@ export const RuntimeMessageType = Object.freeze({
   settingsGet: "settings.get",
   settingsSnapshot: "settings.snapshot",
   settingsUpdate: "settings.update",
+  settingsError: "settings.error",
   runtimeStatus: "runtime.status",
+  catalogSnapshot: "catalog.snapshot",
+  navigationOpen: "navigation.open",
 });
 
 export function createRuntimeMessage(type, payload = {}, requestId) {

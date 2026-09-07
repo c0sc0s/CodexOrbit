@@ -1,14 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createTagSettings, normalizeTagDefinitions } from "../src/tag-settings.mjs";
+import { createTagSettings, DEFAULT_TAG_DEFINITIONS, normalizeTagDefinitions } from "../src/tag-settings.mjs";
 
 test("migrates legacy tone settings and supplies default descriptions", () => {
   assert.deepEqual(normalizeTagDefinitions([{ name: "Bug", tone: "red" }]), [{
     name: "Bug",
     color: "#d95c5c",
-    description: "修复错误、异常行为、回归或稳定性问题",
+    description: DEFAULT_TAG_DEFINITIONS.find(({ name }) => name === "Bug").description,
   }]);
+});
+
+test("seeds four English defaults without replacing saved user definitions", () => {
+  const defaults = createTagSettings(undefined).tags;
+  assert.deepEqual(defaults.map(({ name }) => name), ["Feature", "Bug", "Design", "Research"]);
+  for (const { description } of defaults) {
+    assert.ok(description.length > 0 && description.length <= 240);
+    assert.match(description, /^[\x20-\x7e]+$/u);
+  }
+  const saved = [
+    { name: "Pending", color: "#123456", description: "My custom category" },
+    { name: "Bug", color: "#654321", description: "My own definition" },
+  ];
+  assert.deepEqual(createTagSettings(saved).tags, saved);
+  assert.deepEqual(createTagSettings([]).tags, []);
 });
 
 test("normalizes custom colors and optional descriptions into schema v2", () => {

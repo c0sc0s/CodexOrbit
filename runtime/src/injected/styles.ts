@@ -214,7 +214,9 @@ export function buildRuntimeStyles({
     .codex-sidebar-tag-config-row { min-height: 40px; border-top: 1px solid var(--color-border-light, var(--color-token-border-light, #8882)); background: transparent; transition: background 100ms ease; }
     .codex-sidebar-tag-config-row:hover { background: var(--color-token-list-hover-background, #8881); }
     .codex-sidebar-tag-config-swatch { width: 9px; height: 9px; border-radius: 3px; background: var(--codex-sidebar-tag-color); box-shadow: inset 0 0 0 1px #fff3; }
-    .codex-sidebar-tag-config-name { min-width: 0; color: var(--color-text-foreground, inherit); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .codex-sidebar-tag-config-name { min-width: 0; color: var(--color-text-foreground, inherit); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+    .codex-sidebar-tag-config-name:hover { text-decoration: underline; }
+    .codex-sidebar-tag-delete[data-confirm="true"] { width: auto; font-size: 10px; }
     .codex-sidebar-tag-config-description { min-width: 0; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .codex-sidebar-tag-config-description[data-empty="true"] { opacity: .6; font-style: italic; }
     .codex-sidebar-tag-delete { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }

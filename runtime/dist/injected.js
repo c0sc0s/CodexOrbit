@@ -43,15 +43,10 @@ var CodexTagsInjected = (() => {
     neutral: PRESET_COLORS["\u96FE\u7070"]
   });
   var DEFAULT_TAG_DEFINITIONS = Object.freeze([
-    { name: "Pending", color: PRESET_COLORS["\u7425\u73C0"], description: "\u5C1A\u672A\u5F00\u59CB\u3001\u7B49\u5F85\u5904\u7406\u6216\u7B49\u5F85\u6392\u671F\u7684\u4EFB\u52A1" },
-    { name: "\u8FDB\u884C\u4E2D", color: PRESET_COLORS["\u6D77\u84DD"], description: "\u5DF2\u7ECF\u5F00\u59CB\u5904\u7406\u4E14\u4ECD\u5728\u63A8\u8FDB\u4E2D\u7684\u4EFB\u52A1" },
-    { name: "\u9700\u6C42", color: PRESET_COLORS["\u6D77\u84DD"], description: "\u65B0\u589E\u80FD\u529B\u3001\u4EA7\u54C1\u9700\u6C42\u6216\u660E\u786E\u7684\u529F\u80FD\u6539\u52A8" },
-    { name: "Feature", color: PRESET_COLORS["\u6D77\u84DD"], description: "\u65B0\u589E\u529F\u80FD\u3001\u80FD\u529B\u5EFA\u8BBE\u6216\u4EA7\u54C1\u589E\u5F3A" },
-    { name: "Bug", color: PRESET_COLORS["\u73CA\u745A"], description: "\u4FEE\u590D\u9519\u8BEF\u3001\u5F02\u5E38\u884C\u4E3A\u3001\u56DE\u5F52\u6216\u7A33\u5B9A\u6027\u95EE\u9898" },
-    { name: "\u963B\u585E", color: PRESET_COLORS["\u73CA\u745A"], description: "\u5F53\u524D\u65E0\u6CD5\u7EE7\u7EED\uFF0C\u9700\u8981\u5916\u90E8\u8F93\u5165\u3001\u6743\u9650\u6216\u4F9D\u8D56\u89E3\u9664" },
-    { name: "\u8C03\u7814", color: PRESET_COLORS["\u9E22\u7D2B"], description: "\u5206\u6790\u73B0\u72B6\u3001\u67E5\u627E\u8D44\u6599\u3001\u5B9A\u4F4D\u539F\u56E0\u6216\u8BC4\u4F30\u53EF\u884C\u6027" },
-    { name: "\u8BBE\u8BA1", color: PRESET_COLORS["\u9E22\u7D2B"], description: "\u4EA4\u4E92\u3001\u89C6\u89C9\u3001\u67B6\u6784\u6216\u6280\u672F\u65B9\u6848\u8BBE\u8BA1" },
-    { name: "\u5B8C\u6210", color: PRESET_COLORS["\u677E\u7EFF"], description: "\u76EE\u6807\u5DF2\u7ECF\u5B8C\u6210\uFF0C\u4EC5\u9700\u8BB0\u5F55\u3001\u590D\u76D8\u6216\u4EA4\u4ED8\u7ED3\u679C" }
+    { name: "Feature", color: PRESET_COLORS["\u6D77\u84DD"], description: "Build or extend functionality. Use when the main goal is to implement a new capability or improve existing behavior, rather than fix a defect." },
+    { name: "Bug", color: PRESET_COLORS["\u73CA\u745A"], description: "Diagnose and fix incorrect behavior, errors, or regressions. Use when the goal is to restore expected behavior, including investigation needed for the fix." },
+    { name: "Design", color: PRESET_COLORS["\u9E22\u7D2B"], description: "Define how a solution should look or work: UI, interactions, architecture, or technical plans. Use when the main deliverable is a design or specification." },
+    { name: "Research", color: PRESET_COLORS["\u677E\u7EFF"], description: "Explore a topic, understand existing code, compare options, or assess feasibility. Use when the main deliverable is findings or an explanation, rather than a design or implementation." }
   ]);
   function normalizeColor(value, legacyTone, fallbackColor) {
     if (typeof value === "string" && /^#[0-9a-f]{6}$/iu.test(value.trim())) return value.trim().toLocaleLowerCase();
@@ -83,9 +78,9 @@ var CodexTagsInjected = (() => {
   }
 
   // runtime/src/title-format.mjs
-  var MAX_TAG_LENGTH = 20;
+  var MAX_TAG_LENGTH = 32;
   var MAX_TIME_LENGTH = 32;
-  var BRACKETED_TITLE = /^(?:\[([^\]\r\n]{1,20})\]|【([^】\r\n]{1,20})】)(?:(?:\[([^\]\r\n]{1,32})\]|【([^】\r\n]{1,32})】))?\s*(.+)$/u;
+  var BRACKETED_TITLE = /^(?:\[([^\]\r\n]{1,32})\]|【([^】\r\n]{1,32})】)(?:(?:\[([^\]\r\n]{1,32})\]|【([^】\r\n]{1,32})】))?\s*(.+)$/u;
   var TAG_COLORS = new Map(DEFAULT_TAG_DEFINITIONS.map(({ name, color }) => [name.toLocaleLowerCase(), color]));
   function parseTitleMetadata(value) {
     if (typeof value !== "string") return null;
@@ -109,7 +104,10 @@ var CodexTagsInjected = (() => {
     settingsGet: "settings.get",
     settingsSnapshot: "settings.snapshot",
     settingsUpdate: "settings.update",
-    runtimeStatus: "runtime.status"
+    settingsError: "settings.error",
+    runtimeStatus: "runtime.status",
+    catalogSnapshot: "catalog.snapshot",
+    navigationOpen: "navigation.open"
   });
   function createRuntimeMessage(type, payload = {}, requestId) {
     if (typeof type !== "string" || !type) throw new TypeError("Runtime message type must be a non-empty string");
@@ -1235,10 +1233,6 @@ var CodexTagsInjected = (() => {
   }
 
   // runtime/src/injected/search.ts
-  function timeRank(value) {
-    const match = /^(\d{1,2})[-/.](\d{1,2})$/.exec(value);
-    return match ? Number(match[1]) * 100 + Number(match[2]) : -1;
-  }
   function selectVisibleEntries(entries, state, contentMatches) {
     const query = state.query.trim().toLocaleLowerCase();
     const filtered = entries.flatMap((entry) => {
@@ -1251,7 +1245,7 @@ var CodexTagsInjected = (() => {
       if (!contentMatch) return [];
       return [{ ...entry, matchType: "content", snippet: `${contentMatch.role}\uFF1A${contentMatch.snippet}` }];
     });
-    if (state.sort === "time") return filtered.sort((left, right) => timeRank(right.time) - timeRank(left.time) || left.index - right.index);
+    if (state.sort === "time") return filtered.sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0) || left.index - right.index);
     if (state.sort === "tag") return filtered.sort((left, right) => left.tag.localeCompare(right.tag, "zh-CN") || left.title.localeCompare(right.title, "zh-CN"));
     if (state.sort === "title") return filtered.sort((left, right) => left.title.localeCompare(right.title, "zh-CN", { numeric: true }));
     return filtered.sort((left, right) => left.index - right.index);
@@ -1266,6 +1260,8 @@ var CodexTagsInjected = (() => {
     options;
     modal = null;
     closing = false;
+    deletedDefinition = null;
+    composing = false;
     get isClosing() {
       return this.closing;
     }
@@ -1309,6 +1305,9 @@ var CodexTagsInjected = (() => {
         requestRender
       } = this.options;
       if (this.closing && state.open) return;
+      const backgroundUpdate = ["catalog-snapshot", "settings-snapshot", "search-result"].includes(reason);
+      if (backgroundUpdate && this.modal && (state.view === "settings" || state.sortOpen || this.composing)) return;
+      const previousScroll = this.modal?.querySelector(".codex-sidebar-results-list")?.scrollTop ?? 0;
       const toolbar = ensureToolbar(entries.map((entry2) => entry2.node).filter((node) => Boolean(node)));
       if (!toolbar) return;
       const activeInput = document.activeElement instanceof HTMLInputElement && document.activeElement.matches(".codex-sidebar-search-input, .codex-sidebar-tag-input, .codex-sidebar-tag-description") ? document.activeElement : null;
@@ -1416,6 +1415,10 @@ var CodexTagsInjected = (() => {
       });
       this.modal = overlay;
       document.body.appendChild(overlay);
+      if (backgroundUpdate) {
+        const list = overlay.querySelector(".codex-sidebar-results-list");
+        if (list) list.scrollTop = previousScroll;
+      }
       if (reason === "open-dashboard") enterDashboard(overlay, dialog);
       if (reason === "dashboard-tab") enterDashboardContent(body);
       const sortMenuElement = dialog.querySelector(".codex-sidebar-sort-menu");
@@ -1434,6 +1437,7 @@ var CodexTagsInjected = (() => {
       this.modal?.remove();
       this.modal = null;
       this.closing = false;
+      this.composing = false;
     }
     renderSessions(body, entries, searchState) {
       const { state, store, i18n, getEntries, scheduleContentSearch, requestRender, trace, onOpenEntry } = this.options;
@@ -1454,9 +1458,11 @@ var CodexTagsInjected = (() => {
       let composing = false;
       input.addEventListener("compositionstart", () => {
         composing = true;
+        this.composing = true;
       });
       input.addEventListener("compositionend", (event) => {
         composing = false;
+        this.composing = false;
         store.dispatch({ type: "query.set", value: event.currentTarget.value });
         const currentEntries = getEntries();
         scheduleContentSearch(currentEntries);
@@ -1598,6 +1604,28 @@ var CodexTagsInjected = (() => {
       const note = document.createElement("p");
       note.className = "codex-sidebar-tag-settings-note";
       note.appendChild(document.createTextNode(i18n.t("settingsNote")));
+      const settingsError = this.options.getSearchState().error;
+      if (settingsError) {
+        const alert = document.createElement("p");
+        alert.setAttribute("role", "alert");
+        alert.textContent = settingsError;
+        note.append(alert);
+      }
+      if (this.deletedDefinition) {
+        const deleted = this.deletedDefinition;
+        const undo = this.button("codex-sidebar-tag-add", i18n.t("undoDelete", { name: deleted.name }));
+        undo.addEventListener("click", () => {
+          const current = getTagDefinitions();
+          if (current.length >= 32) {
+            undo.textContent = i18n.t("tagLimit");
+            return;
+          }
+          if (!current.some((item) => item.name.toLowerCase() === deleted.name.toLowerCase())) onTagDefinitionsChanged([...current, deleted]);
+          this.deletedDefinition = null;
+          requestRender("tag-config-undo");
+        });
+        note.append(undo);
+      }
       if (detected.length) {
         const unconfigured = document.createElement("span");
         unconfigured.className = "codex-sidebar-tag-settings-unconfigured";
@@ -1616,7 +1644,7 @@ var CodexTagsInjected = (() => {
       const tagInput = document.createElement("input");
       tagInput.className = "codex-sidebar-tag-input";
       tagInput.placeholder = i18n.t("tagNamePlaceholder");
-      tagInput.maxLength = 20;
+      tagInput.maxLength = 32;
       tagInput.setAttribute("aria-label", i18n.t("newTagName"));
       nameField.append(nameLabel, tagInput);
       const descriptionField = document.createElement("label");
@@ -1683,19 +1711,30 @@ var CodexTagsInjected = (() => {
       error.className = "codex-sidebar-tag-error";
       error.textContent = state.tagError === "invalid-name" ? i18n.t("invalidTagName") : state.tagError === "duplicate" ? i18n.t("duplicateTag") : "";
       const add = this.button("codex-sidebar-tag-add", i18n.t("add"));
+      let editingName = null;
+      const cancel = this.button("codex-sidebar-tag-delete", i18n.t("cancel"));
+      cancel.hidden = true;
+      cancel.addEventListener("click", () => requestRender("tag-edit-cancel"));
       add.type = "submit";
-      formRow.append(nameField, descriptionField, add);
+      formRow.append(nameField, descriptionField, add, cancel);
       form.append(formRow, colorField, error);
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const name = tagInput.value.trim();
         const description = descriptionInput.value.replace(/\s+/gu, " ").trim();
-        if (!name || /[\[\]【】]/u.test(name)) {
-          store.dispatch({ type: "tag-error.set", value: "invalid-name" });
-        } else if (tagDefinitions.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
-          store.dispatch({ type: "tag-error.set", value: "duplicate" });
+        const current = getTagDefinitions();
+        if (!name || name.length > 32 || /[\[\]【】\r\n]/u.test(name) || name.toLowerCase() === "uncategorized") {
+          error.textContent = i18n.t("invalidTagName");
+          return;
+        } else if (!editingName && current.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+          error.textContent = i18n.t("duplicateTag");
+          return;
+        } else if (!editingName && current.length >= 32) {
+          error.textContent = i18n.t("tagLimit");
+          return;
         } else {
-          onTagDefinitionsChanged([...tagDefinitions, { name, color: selectedColor, description }]);
+          const updated = { name, color: selectedColor, description };
+          onTagDefinitionsChanged(editingName ? current.map((item) => item.name === editingName ? updated : item) : [...current, updated]);
           store.dispatch({ type: "tag-error.set", value: "" });
         }
         requestRender("tag-config-add");
@@ -1718,10 +1757,22 @@ var CodexTagsInjected = (() => {
         const swatch = document.createElement("span");
         swatch.className = "codex-sidebar-tag-config-swatch";
         swatch.style.setProperty("--codex-sidebar-tag-color", definition.color);
-        const name = document.createElement("span");
+        const name = this.button("codex-sidebar-tag-config-name", definition.name);
         name.className = "codex-sidebar-tag-config-name";
         name.style.setProperty("--codex-sidebar-tag-color", definition.color);
         name.textContent = definition.name;
+        name.title = i18n.t("editTag", { name: definition.name });
+        name.setAttribute("aria-label", name.title);
+        name.addEventListener("click", () => {
+          editingName = definition.name;
+          tagInput.value = definition.name;
+          tagInput.readOnly = true;
+          descriptionInput.value = definition.description;
+          updateColor(definition.color);
+          add.textContent = i18n.t("save");
+          cancel.hidden = false;
+          descriptionInput.focus();
+        });
         const description = document.createElement("span");
         description.className = "codex-sidebar-tag-config-description";
         description.dataset.empty = String(!definition.description);
@@ -1731,7 +1782,15 @@ var CodexTagsInjected = (() => {
         remove.title = i18n.t("deleteTag", { name: definition.name });
         remove.setAttribute("aria-label", i18n.t("deleteTag", { name: definition.name }));
         remove.addEventListener("click", () => {
-          onTagDefinitionsChanged(tagDefinitions.filter((item) => item.name.toLocaleLowerCase() !== definition.name.toLocaleLowerCase()));
+          if (remove.dataset.confirm !== "true") {
+            remove.dataset.confirm = "true";
+            remove.textContent = i18n.t("confirmDelete");
+            remove.title = i18n.t("deleteImpact", { count: entries.filter((entry) => entry.tag.toLowerCase() === definition.name.toLowerCase()).length });
+            remove.setAttribute("aria-label", remove.title);
+            return;
+          }
+          onTagDefinitionsChanged(getTagDefinitions().filter((item) => item.name !== definition.name));
+          this.deletedDefinition = definition;
           requestRender("tag-config-delete");
         });
         row.append(swatch, name, description, remove);
@@ -1858,6 +1917,15 @@ var CodexTagsInjected = (() => {
   // runtime/src/injected/i18n.ts
   var zhCN = {
     add: () => "\u6DFB\u52A0",
+    cancel: () => "\u53D6\u6D88",
+    save: () => "\u4FDD\u5B58",
+    editTag: ({ name }) => `\u7F16\u8F91 ${name} \u7684\u989C\u8272\u548C\u63CF\u8FF0`,
+    confirmDelete: () => "\u786E\u8BA4\u5220\u9664",
+    deleteImpact: ({ count }) => `\u5DF2\u53D1\u73B0 ${count} \u4E2A\u4F1A\u8BDD\u4F7F\u7528\u6B64\u6807\u7B7E\uFF1B\u53EA\u5220\u9664\u914D\u7F6E\uFF0C\u4E0D\u4FEE\u6539\u4F1A\u8BDD\u6807\u9898\u3002\u518D\u6B21\u70B9\u51FB\u786E\u8BA4\u3002`,
+    undoDelete: ({ name }) => `\u64A4\u9500\u5220\u9664 ${name}`,
+    tagLimit: () => "\u6700\u591A\u652F\u6301 32 \u4E2A\u6807\u7B7E",
+    settingsSaveFailed: () => "\u6807\u7B7E\u4FDD\u5B58\u5931\u8D25\uFF0C\u5DF2\u6062\u590D\u5DF2\u4FDD\u5B58\u7684\u914D\u7F6E\u3002\u8BF7\u8FD0\u884C CLI doctor \u68C0\u67E5\u3002",
+    catalogUnavailable: () => "\u672C\u5730\u4F1A\u8BDD\u76EE\u5F55\u6682\u4E0D\u53EF\u7528\uFF0C\u5F53\u524D\u4EC5\u5C55\u793A\u4FA7\u8FB9\u680F\u5DF2\u53D1\u73B0\u7684\u4F1A\u8BDD\u3002",
     all: () => "\u5168\u90E8",
     classificationDescription: () => "\u5206\u7C7B\u63CF\u8FF0",
     classificationDescriptionOptional: () => "\u5206\u7C7B\u63CF\u8FF0\uFF08\u53EF\u9009\uFF09",
@@ -1874,7 +1942,7 @@ var CodexTagsInjected = (() => {
     filterSidebarByTag: () => "\u6309\u6807\u7B7E\u7B5B\u9009\u4FA7\u8FB9\u680F\u4F1A\u8BDD",
     indexOnDemand: ({ count }) => `${count} \u4E2A\u4F1A\u8BDD \xB7 \u672C\u5730\u7D22\u5F15\u6309\u9700\u52A0\u8F7D`,
     indexReady: ({ count }) => `${count} \u4E2A\u4F1A\u8BDD \xB7 \u672C\u5730\u7D22\u5F15\u5DF2\u5C31\u7EEA`,
-    invalidTagName: () => "\u8BF7\u8F93\u5165 1\u201320 \u4E2A\u5B57\u7B26\uFF0C\u4E14\u4E0D\u8981\u5305\u542B\u62EC\u53F7",
+    invalidTagName: () => "\u8BF7\u8F93\u5165 1\u201332 \u4E2A\u5B57\u7B26\uFF0C\u4E0D\u542B\u62EC\u53F7\uFF1BUncategorized \u4E3A\u4FDD\u7559\u540D\u79F0",
     launcherLabel: () => "\u6253\u5F00 Tags",
     nameAndContent: () => "\u540D\u79F0\u4E0E\u6B63\u6587",
     newTagName: () => "\u65B0\u6807\u7B7E\u540D\u79F0",
@@ -1893,7 +1961,7 @@ var CodexTagsInjected = (() => {
     settingsNote: () => "\u63CF\u8FF0\u5E2E\u52A9 AI \u5728\u9996\u6B21\u547D\u540D\u65F6\u9009\u62E9\u6807\u7B7E\uFF1B\u989C\u8272\u4EC5\u7528\u4E8E\u663E\u793A\u3002",
     sort: () => "\u6392\u5E8F",
     sortAria: () => "\u4F1A\u8BDD\u6392\u5E8F",
-    sortDateDescending: () => "\u65E5\u671F\u2193",
+    sortDateDescending: () => "\u6700\u8FD1\u66F4\u65B0",
     sortDefault: () => "\u9ED8\u8BA4",
     sortTag: () => "\u6807\u7B7E",
     sortTitle: () => "\u6807\u9898",
@@ -1909,6 +1977,15 @@ var CodexTagsInjected = (() => {
   };
   var enUS = {
     add: () => "Add tag",
+    cancel: () => "Cancel",
+    save: () => "Save",
+    editTag: ({ name }) => `Edit color and description for ${name}`,
+    confirmDelete: () => "Confirm",
+    deleteImpact: ({ count }) => `${count} known sessions use this tag. Only the configuration is removed; titles are unchanged. Click again to confirm.`,
+    undoDelete: ({ name }) => `Undo deletion of ${name}`,
+    tagLimit: () => "Up to 32 tags are supported",
+    settingsSaveFailed: () => "Tags could not be saved. Saved settings were restored. Run CLI doctor to investigate.",
+    catalogUnavailable: () => "Local catalog unavailable. Results currently include only sessions discovered in the sidebar.",
     all: () => "All",
     classificationDescription: () => "Classification description",
     classificationDescriptionOptional: () => "Classification description (optional)",
@@ -1925,7 +2002,7 @@ var CodexTagsInjected = (() => {
     filterSidebarByTag: () => "Filter sidebar sessions by tag",
     indexOnDemand: ({ count }) => `${count} ${Number(count) === 1 ? "session" : "sessions"} \xB7 Index loads on demand`,
     indexReady: ({ count }) => `${count} ${Number(count) === 1 ? "session" : "sessions"} \xB7 Local index ready`,
-    invalidTagName: () => "Enter 1\u201320 characters without brackets",
+    invalidTagName: () => "Enter 1\u201332 characters without brackets; Uncategorized is reserved",
     launcherLabel: () => "Open Tags",
     nameAndContent: () => "Title and content",
     newTagName: () => "New tag name",
@@ -1944,7 +2021,7 @@ var CodexTagsInjected = (() => {
     settingsNote: () => "Descriptions help AI choose a tag when first naming a session; colors only affect display.",
     sort: () => "Sort",
     sortAria: () => "Sort sessions",
-    sortDateDescending: () => "Newest",
+    sortDateDescending: () => "Recently updated",
     sortDefault: () => "Default",
     sortTag: () => "Tag",
     sortTitle: () => "Title",
@@ -2093,6 +2170,7 @@ var CodexTagsInjected = (() => {
     cacheKey;
     parseTitle;
     colorForTag;
+    catalogIds = null;
     entriesByKey = /* @__PURE__ */ new Map();
     persistedCacheJson = null;
     ingest(nodes, bindings) {
@@ -2103,13 +2181,16 @@ var CodexTagsInjected = (() => {
         const row = bindings.rowForTitle(node);
         row?.setAttribute(bindings.rowAttribute, "true");
         const threadId = bindings.threadIdForRow(row);
-        const key = threadId ?? `title:${raw}`;
+        const localId = threadId?.replace(/^local:/u, "");
+        const key = localId ?? `title:${raw}`;
+        if (this.catalogIds && localId && !localId.includes(":") && !this.catalogIds.has(localId)) return;
         const pinned = bindings.isPinnedRow(row);
         if (pinned) {
           const toggle = bindings.sectionToggleForRow(row);
           if (toggle) bindings.onPinnedToggle(toggle);
         }
         this.entriesByKey.set(key, {
+          ...this.entriesByKey.get(key),
           ...parsed,
           key,
           threadId,
@@ -2129,6 +2210,34 @@ var CodexTagsInjected = (() => {
         node: entry.node?.isConnected ? entry.node : null,
         row: entry.row?.isConnected ? entry.row : null
       }));
+    }
+    applyCatalog(items) {
+      const ids = /* @__PURE__ */ new Set();
+      for (const item of items) {
+        if (!item || typeof item !== "object") continue;
+        const candidate = item;
+        if (typeof candidate.threadId !== "string" || typeof candidate.raw !== "string") continue;
+        const parsed = this.parseTitle(candidate.raw);
+        if (!parsed) continue;
+        const key = candidate.threadId;
+        ids.add(key);
+        this.entriesByKey.set(key, {
+          ...this.entriesByKey.get(key),
+          ...parsed,
+          key,
+          threadId: this.entriesByKey.get(key)?.threadId ?? key,
+          updatedAt: typeof candidate.updatedAt === "number" && Number.isFinite(candidate.updatedAt) ? candidate.updatedAt : 0,
+          index: this.entriesByKey.get(key)?.index ?? ids.size,
+          pinned: typeof candidate.pinned === "boolean" ? candidate.pinned : this.entriesByKey.get(key)?.pinned ?? false,
+          projectId: typeof candidate.projectId === "string" ? candidate.projectId : this.entriesByKey.get(key)?.projectId ?? null
+        });
+      }
+      this.catalogIds = ids;
+      for (const [key, entry] of this.entriesByKey) {
+        const localId = entry.threadId?.replace(/^local:/u, "");
+        if (localId && !localId.includes(":") && !ids.has(localId)) this.entriesByKey.delete(key);
+      }
+      this.persist();
     }
     updateColors() {
       this.entriesByKey.forEach((entry) => {
@@ -2170,8 +2279,10 @@ var CodexTagsInjected = (() => {
           if (!candidate || typeof candidate !== "object") return;
           const entry = candidate;
           if (typeof entry.key !== "string" || typeof entry.raw !== "string" || typeof entry.tag !== "string") return;
-          this.entriesByKey.set(entry.key, {
+          const key = entry.threadId?.replace(/^local:/u, "") ?? entry.key;
+          this.entriesByKey.set(key, {
             ...entry,
+            key,
             color: this.colorForTag(entry.tag),
             node: null,
             row: null
@@ -2524,7 +2635,9 @@ var CodexTagsInjected = (() => {
     .codex-sidebar-tag-config-row { min-height: 40px; border-top: 1px solid var(--color-border-light, var(--color-token-border-light, #8882)); background: transparent; transition: background 100ms ease; }
     .codex-sidebar-tag-config-row:hover { background: var(--color-token-list-hover-background, #8881); }
     .codex-sidebar-tag-config-swatch { width: 9px; height: 9px; border-radius: 3px; background: var(--codex-sidebar-tag-color); box-shadow: inset 0 0 0 1px #fff3; }
-    .codex-sidebar-tag-config-name { min-width: 0; color: var(--color-text-foreground, inherit); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .codex-sidebar-tag-config-name { min-width: 0; color: var(--color-text-foreground, inherit); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+    .codex-sidebar-tag-config-name:hover { text-decoration: underline; }
+    .codex-sidebar-tag-delete[data-confirm="true"] { width: auto; font-size: 10px; }
     .codex-sidebar-tag-config-description { min-width: 0; color: var(--color-text-tertiary, var(--color-token-text-tertiary, #888)); font-size: 12px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .codex-sidebar-tag-config-description[data-empty="true"] { opacity: .6; font-style: italic; }
     .codex-sidebar-tag-delete { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-text-tertiary, inherit); background: transparent; font: inherit; cursor: pointer; transition: color 100ms ease, background 100ms ease, transform 100ms ease; }
@@ -2652,6 +2765,7 @@ var CodexTagsInjected = (() => {
     let activeSearchRequestId = 0;
     let searchLoading = false;
     let searchError = "";
+    let catalogError = "";
     let searchIndexStatus = { phase: "idle", completed: 0, total: 0 };
     const runtimeStore = new RuntimeStore();
     const state = runtimeStore.state;
@@ -2683,6 +2797,7 @@ var CodexTagsInjected = (() => {
       const raw = typeof value === "string" ? value.trim() : "";
       const parsed = parseTitleMetadata(raw);
       if (!parsed) return raw ? { raw, tag: i18n.t("uncategorized"), time: "", title: raw, color: legacyToneColors.neutral, tagged: false } : null;
+      if (parsed.tag.toLowerCase() === "uncategorized") return { ...parsed, tag: i18n.t("uncategorized"), color: legacyToneColors.neutral, tagged: false };
       return { ...parsed, color: tagColors.get(parsed.tag.toLocaleLowerCase()) ?? legacyToneColors.neutral, tagged: true };
     };
     const titleDecorator = new TitleDecorator({
@@ -2843,8 +2958,7 @@ var CodexTagsInjected = (() => {
         row.scrollIntoView({ block: "nearest" });
         row.click();
       } else {
-        sessionRegistry.delete(entry.key);
-        renderToolbar(entriesFrom(titleNodes()));
+        if (entry.threadId) runtimeClient.send(RuntimeMessageType.navigationOpen, { threadId: entry.threadId });
       }
     };
     const indexSignature = (entries) => entries.map((entry) => [entry.key, entry.raw, entry.pinned, entry.projectId].join("")).join("");
@@ -2888,7 +3002,7 @@ var CodexTagsInjected = (() => {
       getTagDefinitions: () => tagDefinitions,
       getSearchState: () => ({
         loading: searchLoading,
-        error: searchError,
+        error: searchError || catalogError,
         indexStatus: searchIndexStatus,
         contentMatches
       }),
@@ -2967,10 +3081,27 @@ var CodexTagsInjected = (() => {
       return true;
     };
     const handleRuntimeMessage = (message) => {
+      if (message.type === RuntimeMessageType.settingsError) {
+        searchError = i18n.t("settingsSaveFailed");
+        renderToolbar(entriesFrom(titleNodes()), "settings-error");
+        return true;
+      }
+      if (message.type === RuntimeMessageType.catalogSnapshot) {
+        catalogError = message.payload.complete === true ? "" : i18n.t("catalogUnavailable");
+        if (message.payload.complete === true && Array.isArray(message.payload.items)) {
+          sessionRegistry.applyCatalog(message.payload.items);
+          const entries = entriesFrom(titleNodes());
+          if (state.query.trim()) scheduleContentSearch(entries);
+          renderToolbar(entries, "catalog-snapshot");
+        }
+        if (catalogError && state.open) renderToolbar(entriesFrom(titleNodes()), "catalog-snapshot");
+        return true;
+      }
       if (message.type === RuntimeMessageType.searchResult) {
         return applySearchResult({ type: "searchResult", requestId: message.requestId, ...message.payload });
       }
       if (message.type === RuntimeMessageType.settingsSnapshot) {
+        if (searchError === i18n.t("settingsSaveFailed")) searchError = "";
         const settings = isRecord2(message.payload.settings) ? message.payload.settings : null;
         const nextDefinitions = normalizeTagDefinitions(settings?.tags, defaultDefinitions);
         tagDefinitions = nextDefinitions;
@@ -2999,7 +3130,7 @@ var CodexTagsInjected = (() => {
         searchResults: contentMatches.size,
         searchIndexStatus,
         capabilities: detectCodexCapabilities(),
-        lastError: searchError || null,
+        lastError: searchError || catalogError || null,
         toolbar: Boolean(document.getElementById(TOOLBAR_ID)),
         sidebarFilter: Boolean(document.getElementById(FILTER_BAR_ID)),
         activeTag: state.tag,

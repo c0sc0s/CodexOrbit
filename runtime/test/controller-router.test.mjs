@@ -6,6 +6,22 @@ import { createRuntimeMessage, RuntimeMessageType } from "../src/protocol.mjs";
 
 const client = { target: { id: "target-1" } };
 
+test("navigation normalizes local IDs and rejects remote or malformed targets", async () => {
+  const opened = [];
+  const { router } = createRouter({ openSession: async (id) => opened.push(id) });
+  const id = "12345678-1234-1234-1234-123456789abc";
+  for (const threadId of [id, `local:${id}`, `remote:${id}`, "-".repeat(36), "file:///tmp/session"]) {
+    await router.handle(client, { payload: JSON.stringify(createRuntimeMessage(RuntimeMessageType.navigationOpen, { threadId })) });
+  }
+  assert.deepEqual(opened, [id, id]);
+});
+
+test("failed settings writes return saved configuration and an explicit error", async () => {
+  const { router, sent } = createRouter({ settingsRepository: { write: async () => { throw new Error("disk full"); } } });
+  await router.handle(client, { payload: JSON.stringify(createRuntimeMessage(RuntimeMessageType.settingsUpdate, { tags: [] })) });
+  assert.deepEqual(sent.map(({ message }) => message.type), [RuntimeMessageType.settingsSnapshot, RuntimeMessageType.settingsError]);
+});
+
 function createRouter(overrides = {}) {
   const sent = [];
   let settings = { schemaVersion: 2, tags: [{ name: "Bug", color: "#d95c5c", description: "" }] };

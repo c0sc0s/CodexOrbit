@@ -4,3 +4,7 @@ coverage/
 node_modules/
 *.log
 *.pid
+.env
+.env.*
+!.env.example
+*.tgz

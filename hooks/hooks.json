@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/session-naming.mjs",
+            "command": "node \"${PLUGIN_ROOT}/hooks/session-naming.mjs\"",
             "timeout": 5
           }
         ]
@@ -18,9 +18,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/session-naming.mjs",
+            "command": "node \"${PLUGIN_ROOT}/hooks/session-naming.mjs\"",
             "timeout": 5,
-            "additionalContextLimit": 8000
+            "additionalContextLimit": 65536
           }
         ]
       }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/session-naming.mjs",
+            "command": "node \"${PLUGIN_ROOT}/hooks/session-naming.mjs\"",
             "timeout": 3
           }
         ]

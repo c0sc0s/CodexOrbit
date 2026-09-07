@@ -63,6 +63,7 @@ export function installRuntime(input: unknown) {
   let activeSearchRequestId = 0;
   let searchLoading = false;
   let searchError = "";
+  let catalogError = "";
   let searchIndexStatus: Record<string, unknown> & { phase: string } = { phase: "idle", completed: 0, total: 0 };
   const runtimeStore = new RuntimeStore();
   const state = runtimeStore.state;
@@ -96,6 +97,7 @@ export function installRuntime(input: unknown) {
     const raw = typeof value === "string" ? value.trim() : "";
     const parsed = parseTitleMetadata(raw);
     if (!parsed) return raw ? { raw, tag: i18n.t("uncategorized"), time: "", title: raw, color: legacyToneColors.neutral, tagged: false } : null;
+    if (parsed.tag.toLowerCase() === "uncategorized") return { ...parsed, tag: i18n.t("uncategorized"), color: legacyToneColors.neutral, tagged: false };
     return { ...parsed, color: tagColors.get(parsed.tag.toLocaleLowerCase()) ?? legacyToneColors.neutral, tagged: true };
   };
   const titleDecorator = new TitleDecorator({
@@ -270,8 +272,7 @@ export function installRuntime(input: unknown) {
       row.scrollIntoView({ block: "nearest" });
       row.click();
     } else {
-      sessionRegistry.delete(entry.key);
-      renderToolbar(entriesFrom(titleNodes()));
+      if (entry.threadId) runtimeClient.send(RuntimeMessageType.navigationOpen, { threadId: entry.threadId });
     }
   };
 
@@ -320,7 +321,7 @@ export function installRuntime(input: unknown) {
     getTagDefinitions: () => tagDefinitions,
     getSearchState: () => ({
       loading: searchLoading,
-      error: searchError,
+      error: searchError || catalogError,
       indexStatus: searchIndexStatus,
       contentMatches,
     }),
@@ -401,10 +402,27 @@ export function installRuntime(input: unknown) {
   };
 
   const handleRuntimeMessage = (message: RuntimeMessage): boolean => {
+    if (message.type === RuntimeMessageType.settingsError) {
+      searchError = i18n.t("settingsSaveFailed");
+      renderToolbar(entriesFrom(titleNodes()), "settings-error");
+      return true;
+    }
+    if (message.type === RuntimeMessageType.catalogSnapshot) {
+      catalogError = message.payload.complete === true ? "" : i18n.t("catalogUnavailable");
+      if (message.payload.complete === true && Array.isArray(message.payload.items)) {
+        sessionRegistry.applyCatalog(message.payload.items);
+        const entries = entriesFrom(titleNodes());
+        if (state.query.trim()) scheduleContentSearch(entries);
+        renderToolbar(entries, "catalog-snapshot");
+      }
+      if (catalogError && state.open) renderToolbar(entriesFrom(titleNodes()), "catalog-snapshot");
+      return true;
+    }
     if (message.type === RuntimeMessageType.searchResult) {
       return applySearchResult({ type: "searchResult", requestId: message.requestId, ...message.payload });
     }
     if (message.type === RuntimeMessageType.settingsSnapshot) {
+      if (searchError === i18n.t("settingsSaveFailed")) searchError = "";
       const settings = isRecord(message.payload.settings) ? message.payload.settings : null;
       const nextDefinitions = normalizeTagDefinitions(settings?.tags, defaultDefinitions);
       tagDefinitions = nextDefinitions;
@@ -434,7 +452,7 @@ export function installRuntime(input: unknown) {
       searchResults: contentMatches.size,
       searchIndexStatus,
       capabilities: detectCodexCapabilities(),
-      lastError: searchError || null,
+      lastError: searchError || catalogError || null,
       toolbar: Boolean(document.getElementById(TOOLBAR_ID)),
       sidebarFilter: Boolean(document.getElementById(FILTER_BAR_ID)),
       activeTag: state.tag,

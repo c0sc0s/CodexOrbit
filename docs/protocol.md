@@ -5,10 +5,10 @@
 The portable fallback metadata lives in the session title:
 
 ```text
-[Tag][Optional time]Title
+[Tag]Title
 ```
 
-Both ASCII and Chinese brackets are accepted. Tags are case-insensitive for color lookup but retain their original display spelling.
+New names contain one ASCII-bracketed tag and the title, with no date/time metadata. Legacy date-bearing titles and Chinese brackets remain readable. Tags are case-insensitive for color lookup but retain their original display spelling. `Uncategorized` is the reserved fallback when no configured tag fits; user tag data is not translated.
 
 ## New-session naming hook
 
@@ -23,7 +23,7 @@ The hook never edits a transcript or session file. It instructs the Codex agent 
     {
       "name": "Bug",
       "color": "#d95c5c",
-      "description": "修复错误、异常行为、回归或稳定性问题"
+      "description": "Diagnose and fix incorrect behavior, errors, or regressions."
     },
     {
       "name": "Review",
@@ -39,9 +39,13 @@ The hook never edits a transcript or session file. It instructs the Codex agent 
 The first-prompt context contains classification data in this shape and deliberately excludes colors:
 
 ```text
-- [Bug]: 修复错误、异常行为、回归或稳定性问题
+- [Bug]: Diagnose and fix incorrect behavior, errors, or regressions.
 - [Review]
 ```
+
+The hook and the `initial`/`rename` skills share `readNamingContext` and `buildNamingContext` in `hooks/session-naming.mjs`. Running that script with `--context` prints a read-only JSON snapshot containing `settingsPath`, `source` (`settings` or `defaults`), `error`, `titleFormat`, `fallbackTag`, `tags` (names/descriptions only), and `policy`. Skills surface invalid settings before making changes; the automatic hook retains the existing built-in fallback behavior.
+
+Settings are read at the first `UserPromptSubmit`, not cached at `SessionStart` or bundled at install time. Saved edits made between startup and the first prompt are included. Later turns do not receive repeated automatic naming instructions; invoking a naming skill reads fresh settings again. The supported vocabulary is at most 32 normalized tags, names up to 32 characters and descriptions up to 240 characters. The hook's 65,536-unit context allowance covers the complete maximum vocabulary even when measured in UTF-8 bytes. All configured tags are included, regardless of the current sidebar filter.
 
 ## Controller/runtime protocol
 
@@ -60,6 +64,10 @@ Current message families are:
 
 - `search.request` / `search.result`: asynchronous bounded local content search
 - `settings.get` / `settings.snapshot` / `settings.update`: controller-owned tag settings
+- `settings.error`: failed persistence; the preceding snapshot restores saved settings
+- `catalog.snapshot`: active local metadata, completeness flag and bounded error message
+- Optional catalog pin/project metadata may be unavailable; `null` must not erase known native-row metadata.
+- `navigation.open`: open a UUID only if present in the controller's current catalog
 - `hello` and `runtime.status`: reserved protocol-v1 capability/status families
 
 Unknown message types are ignored. Malformed envelopes and unsupported protocol majors fail closed. Search request IDs make stale responses safe to ignore.
@@ -76,6 +84,6 @@ The injected runtime exposes `window.__codexSidebarTags` as a deliberately small
 
 The runtime sends serialized envelopes through one CDP `Runtime.addBinding` bridge. `ControllerRouter` validates and dispatches them to settings or search services, then returns envelopes through a bounded evaluated expression. Only matching snippets and normalized settings are transferred; full conversation bodies remain outside the renderer. The browser bundle is loaded from the installed runtime directory, and no remote script is fetched.
 
-Planned message families are `catalog.snapshot`, `catalog.delta`, and `navigation.open`. Protocol version and injected runtime version are independent: a protocol major changes only for an incompatible wire contract, while injected UI changes bump `RUNTIME_VERSION` so hot apply cannot retain old browser code.
+`catalog.delta` remains planned; the current catalog uses changed snapshots. Protocol version and injected runtime version are independent: a protocol major changes only for an incompatible wire contract, while injected UI changes bump `RUNTIME_VERSION` so hot apply cannot retain old browser code.
 
 `status()` also exposes `sidebarFilter` and `activeTag` so installation checks and real-app QA can verify the compact sidebar filter without inspecting private state.

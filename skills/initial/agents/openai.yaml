@@ -1,0 +1,4 @@
+interface:
+  display_name: "Initial"
+  short_description: "Tag existing active Codex sessions using my settings"
+  default_prompt: "Use $initial to tag my active Codex sessions using my configured tags."

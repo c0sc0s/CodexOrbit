@@ -4,8 +4,8 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 const SESSION_ROOTS = [
-  join(homedir(), ".codex", "sessions"),
-  join(homedir(), ".codex", "archived_sessions"),
+  join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "sessions"),
+  join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "archived_sessions"),
 ];
 const TEXT_FIELD = '"text":"';
 const MAX_FIELD_LENGTH = 24_000;
@@ -126,6 +126,7 @@ export async function extractConversationText(path) {
       if (!eligible) {
         if (prefix.length < 4096) prefix += segment.slice(0, 4096 - prefix.length);
         if (prefix.includes('"type":"UserMessage"')) { eligible = true; role = "你"; }
+        else if (prefix.includes('"type":"response_item"') && prefix.includes('"role":"user"')) { eligible = true; role = "你"; }
         else if (prefix.includes('"type":"response_item"') && prefix.includes('"role":"assistant"')) { eligible = true; role = "Codex"; }
       }
       if (eligible) scanEligibleSegment(segment);

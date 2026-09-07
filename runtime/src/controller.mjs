@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { CdpClient } from "./cdp-client.mjs";
-import { CodexProcess } from "./codex-process.mjs";
+import { CodexProcess, findCodexApp } from "./codex-process.mjs";
 import { ControllerRouter } from "./controller-router.mjs";
 import { buildRuntimeMessageExpression, RUNTIME_BINDING, RUNTIME_VERSION } from "./inject-expression.mjs";
 import { isOwnedControllerCommand, parseControllerPid } from "./controller-state.mjs";
 import { createRuntimeMessage, RuntimeMessageType } from "./protocol.mjs";
 import { SessionSearchIndex } from "./search-index.mjs";
+import { SessionCatalog } from "./session-catalog.mjs";
 import { SettingsRepository } from "./settings-repository.mjs";
 import { RuntimeTargetRegistry } from "./runtime-target-registry.mjs";
 
@@ -65,6 +66,7 @@ async function stopController() {
     try { process.kill(pid, "SIGTERM"); } catch {}
     const deadline = Date.now() + 3000;
     while (Date.now() < deadline && await isOwnedController(pid)) await wait(50);
+    if (await isOwnedController(pid)) throw new Error("The controller did not stop. No files were removed; retry after it exits.");
   }
   await rm(PID_PATH, { force: true });
 }
@@ -81,12 +83,17 @@ async function spawnController() {
 }
 
 async function start() {
+  if (!findCodexApp()) throw new Error("Install the official Codex desktop app before activating Tags.");
   await mkdir(STATE_DIR, { recursive: true });
   await stopController();
   if (!(await codexProcess.cdpIsReady(() => targetRegistry.discover()))) {
-    if (await codexProcess.portIsListening()) throw new Error(`端口 ${PORT} 已被其他进程占用；未退出或修改 Codex`);
-    await codexProcess.quitGracefully();
-    await codexProcess.launchWithCdp(() => targetRegistry.discover());
+    if (await codexProcess.ownsCdpEndpoint() || await codexProcess.hasCdpLaunchArguments()) {
+      await codexProcess.waitForCdp(() => targetRegistry.discover());
+    } else {
+      if (await codexProcess.portIsListening()) throw new Error(`端口 ${PORT} 已被其他进程占用；未退出或修改 Codex`);
+      await codexProcess.quitGracefully();
+      await codexProcess.launchWithCdp(() => targetRegistry.discover());
+    }
   }
   const results = await apply();
   await spawnController();
@@ -109,6 +116,10 @@ async function watch() {
   console.log(`${new Date().toISOString()} watching ${RUNTIME_VERSION}`);
   let misses = 0;
   const searchIndex = new SessionSearchIndex(SEARCH_DATABASE_PATH);
+  const catalog = new SessionCatalog();
+  let catalogState = await catalog.read();
+  let catalogSignature = JSON.stringify(catalogState);
+  let nextCatalogRefreshAt = 0;
   const runtimeClients = new Map();
   let indexStatus = { phase: "indexing", completed: 0, total: 0, changed: 0 };
   let indexRefresh = Promise.resolve();
@@ -154,6 +165,9 @@ async function watch() {
     waitForIndex: () => indexRefresh,
     getIndexStatus: () => indexStatus,
     send: sendRuntimeMessage,
+    openSession: async (threadId) => {
+      if (catalogState.items.some((item) => item.threadId === threadId)) await run("/usr/bin/open", [`codex://threads/${threadId}`]);
+    },
   });
 
   const ensureRuntimeClient = async (target) => {
@@ -164,6 +178,7 @@ async function watch() {
     await client.addBinding(RUNTIME_BINDING, (params) => router.handle(client, params));
     runtimeClients.set(target.id, client);
     await router.sendSettingsSnapshot(client);
+    await sendRuntimeMessage(client, createRuntimeMessage(RuntimeMessageType.catalogSnapshot, catalogState));
     return client;
   };
 
@@ -196,6 +211,15 @@ async function watch() {
           await syncTagSettings(target);
         }
         if (Date.now() >= nextIndexRefreshAt) scheduleIndexRefresh();
+        if (Date.now() >= nextCatalogRefreshAt) {
+          catalogState = await catalog.read();
+          const signature = JSON.stringify(catalogState);
+          if (signature !== catalogSignature) {
+            catalogSignature = signature;
+            await Promise.allSettled([...runtimeClients.values()].map((client) => sendRuntimeMessage(client, createRuntimeMessage(RuntimeMessageType.catalogSnapshot, catalogState))));
+          }
+          nextCatalogRefreshAt = Date.now() + 5000;
+        }
         misses = 0;
       } catch (error) {
         misses += 1;
@@ -215,14 +239,31 @@ async function restore() {
   console.log("侧栏标题增强已移除；Codex 安装包没有被修改。");
 }
 
+async function purge() {
+  await stopController();
+  if (await codexProcess.cdpIsReady(() => targetRegistry.discover())) {
+    for (const target of await targetRegistry.discover()) {
+      await targetRegistry.evaluate(target, `
+        localStorage.removeItem("codex-sidebar-tags-config-v1");
+        localStorage.removeItem("codex-sidebar-tags-index-v1");
+      `);
+    }
+    await targetRegistry.removeInjection();
+  }
+  console.log("侧栏增强及其浏览器缓存已移除；Codex 会话没有被修改。");
+}
+
 async function status() {
   const ready = await codexProcess.cdpIsReady(() => targetRegistry.discover());
-  const controllerPid = await readControllerPid();
+  const storedPid = await readControllerPid();
+  const controllerPid = storedPid !== null && await isOwnedController(storedPid) ? storedPid : null;
   const codexRunning = await codexProcess.isRunning();
   const activeVersions = [];
+  const activeWindows = [];
   if (ready) {
     for (const target of await targetRegistry.discover()) {
       activeVersions.push(await targetRegistry.evaluate(target, "window.__codexSidebarTags?.version ?? null"));
+      activeWindows.push(await targetRegistry.evaluate(target, "window.__codexSidebarTags?.status?.() ?? null"));
     }
   }
   let searchIndex = null;
@@ -235,13 +276,16 @@ async function status() {
   }
   const tagSettingsState = await settingsRepository.read();
   const tagSettings = tagSettingsState.exists ? tagSettingsState.settings : null;
-  console.log(JSON.stringify({ codexRunning, cdp: ready, controllerPid, sourceVersion: RUNTIME_VERSION, activeVersions, searchIndex, tagSettings, tagSettingsError: tagSettingsState.error }, null, 2));
+  const catalogState = await new SessionCatalog().read();
+  const catalog = { complete: catalogState.complete, count: catalogState.items.length, error: catalogState.error };
+  console.log(JSON.stringify({ codexRunning, cdp: ready, controllerPid, sourceVersion: RUNTIME_VERSION, activeVersions, activeWindows, searchIndex, catalog, tagSettings, tagSettingsError: tagSettingsState.error }, null, 2));
 }
 
 const command = process.argv[2] ?? "start";
 if (command === "start") await start();
 else if (command === "apply") console.log(await hotApply());
 else if (command === "restore") await restore();
+else if (command === "purge") await purge();
 else if (command === "status") await status();
 else if (command === "watch") await watch();
 else throw new Error(`未知命令：${command}`);

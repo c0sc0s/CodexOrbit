@@ -33,6 +33,8 @@ interface DashboardViewOptions {
 export class DashboardView {
   private modal: HTMLElement | null = null;
   private closing = false;
+  private deletedDefinition: TagDefinition | null = null;
+  private composing = false;
 
   constructor(private readonly options: DashboardViewOptions) {
     // Codex can replace the renderer execution context while preserving host DOM.
@@ -88,6 +90,9 @@ export class DashboardView {
       requestRender,
     } = this.options;
     if (this.closing && state.open) return;
+    const backgroundUpdate = ["catalog-snapshot", "settings-snapshot", "search-result"].includes(reason);
+    if (backgroundUpdate && this.modal && (state.view === "settings" || state.sortOpen || this.composing)) return;
+    const previousScroll = this.modal?.querySelector(".codex-sidebar-results-list")?.scrollTop ?? 0;
     const toolbar = ensureToolbar(entries.map((entry) => entry.node).filter((node): node is HTMLElement => Boolean(node)));
     if (!toolbar) return;
     const activeInput = document.activeElement instanceof HTMLInputElement
@@ -202,6 +207,10 @@ export class DashboardView {
     });
     this.modal = overlay;
     document.body.appendChild(overlay);
+    if (backgroundUpdate) {
+      const list = overlay.querySelector(".codex-sidebar-results-list");
+      if (list) list.scrollTop = previousScroll;
+    }
 
     if (reason === "open-dashboard") enterDashboard(overlay, dialog);
     if (reason === "dashboard-tab") enterDashboardContent(body);
@@ -224,6 +233,7 @@ export class DashboardView {
     this.modal?.remove();
     this.modal = null;
     this.closing = false;
+    this.composing = false;
   }
 
   private renderSessions(body: HTMLElement, entries: SessionEntry[], searchState: DashboardSearchState): void {
@@ -243,9 +253,10 @@ export class DashboardView {
     input.value = state.query;
     input.setAttribute("aria-label", i18n.t("searchLabel"));
     let composing = false;
-    input.addEventListener("compositionstart", () => { composing = true; });
+    input.addEventListener("compositionstart", () => { composing = true; this.composing = true; });
     input.addEventListener("compositionend", (event) => {
       composing = false;
+      this.composing = false;
       store.dispatch({ type: "query.set", value: (event.currentTarget as HTMLInputElement).value });
       const currentEntries = getEntries();
       scheduleContentSearch(currentEntries);
@@ -397,6 +408,25 @@ export class DashboardView {
     const note = document.createElement("p");
     note.className = "codex-sidebar-tag-settings-note";
     note.appendChild(document.createTextNode(i18n.t("settingsNote")));
+    const settingsError = this.options.getSearchState().error;
+    if (settingsError) {
+      const alert = document.createElement("p");
+      alert.setAttribute("role", "alert");
+      alert.textContent = settingsError;
+      note.append(alert);
+    }
+    if (this.deletedDefinition) {
+      const deleted = this.deletedDefinition;
+      const undo = this.button("codex-sidebar-tag-add", i18n.t("undoDelete", { name: deleted.name }));
+      undo.addEventListener("click", () => {
+        const current = getTagDefinitions();
+        if (current.length >= 32) { undo.textContent = i18n.t("tagLimit"); return; }
+        if (!current.some((item) => item.name.toLowerCase() === deleted.name.toLowerCase())) onTagDefinitionsChanged([...current, deleted]);
+        this.deletedDefinition = null;
+        requestRender("tag-config-undo");
+      });
+      note.append(undo);
+    }
     if (detected.length) {
       const unconfigured = document.createElement("span");
       unconfigured.className = "codex-sidebar-tag-settings-unconfigured";
@@ -415,7 +445,7 @@ export class DashboardView {
     const tagInput = document.createElement("input");
     tagInput.className = "codex-sidebar-tag-input";
     tagInput.placeholder = i18n.t("tagNamePlaceholder");
-    tagInput.maxLength = 20;
+    tagInput.maxLength = 32;
     tagInput.setAttribute("aria-label", i18n.t("newTagName"));
     nameField.append(nameLabel, tagInput);
 
@@ -488,19 +518,30 @@ export class DashboardView {
         ? i18n.t("duplicateTag")
         : "";
     const add = this.button("codex-sidebar-tag-add", i18n.t("add"));
+    let editingName: string | null = null;
+    const cancel = this.button("codex-sidebar-tag-delete", i18n.t("cancel"));
+    cancel.hidden = true;
+    cancel.addEventListener("click", () => requestRender("tag-edit-cancel"));
     add.type = "submit";
-    formRow.append(nameField, descriptionField, add);
+    formRow.append(nameField, descriptionField, add, cancel);
     form.append(formRow, colorField, error);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const name = tagInput.value.trim();
       const description = descriptionInput.value.replace(/\s+/gu, " ").trim();
-      if (!name || /[\[\]【】]/u.test(name)) {
-        store.dispatch({ type: "tag-error.set", value: "invalid-name" });
-      } else if (tagDefinitions.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
-        store.dispatch({ type: "tag-error.set", value: "duplicate" });
+      const current = getTagDefinitions();
+      if (!name || name.length > 32 || /[\[\]【】\r\n]/u.test(name) || name.toLowerCase() === "uncategorized") {
+        error.textContent = i18n.t("invalidTagName");
+        return;
+      } else if (!editingName && current.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+        error.textContent = i18n.t("duplicateTag");
+        return;
+      } else if (!editingName && current.length >= 32) {
+        error.textContent = i18n.t("tagLimit");
+        return;
       } else {
-        onTagDefinitionsChanged([...tagDefinitions, { name, color: selectedColor, description }]);
+        const updated = { name, color: selectedColor, description };
+        onTagDefinitionsChanged(editingName ? current.map((item) => item.name === editingName ? updated : item) : [...current, updated]);
         store.dispatch({ type: "tag-error.set", value: "" });
       }
       requestRender("tag-config-add");
@@ -523,10 +564,22 @@ export class DashboardView {
       const swatch = document.createElement("span");
       swatch.className = "codex-sidebar-tag-config-swatch";
       swatch.style.setProperty("--codex-sidebar-tag-color", definition.color);
-      const name = document.createElement("span");
+      const name = this.button("codex-sidebar-tag-config-name", definition.name);
       name.className = "codex-sidebar-tag-config-name";
       name.style.setProperty("--codex-sidebar-tag-color", definition.color);
       name.textContent = definition.name;
+      name.title = i18n.t("editTag", { name: definition.name });
+      name.setAttribute("aria-label", name.title);
+      name.addEventListener("click", () => {
+        editingName = definition.name;
+        tagInput.value = definition.name;
+        tagInput.readOnly = true;
+        descriptionInput.value = definition.description;
+        updateColor(definition.color);
+        add.textContent = i18n.t("save");
+        cancel.hidden = false;
+        descriptionInput.focus();
+      });
       const description = document.createElement("span");
       description.className = "codex-sidebar-tag-config-description";
       description.dataset.empty = String(!definition.description);
@@ -536,7 +589,15 @@ export class DashboardView {
       remove.title = i18n.t("deleteTag", { name: definition.name });
       remove.setAttribute("aria-label", i18n.t("deleteTag", { name: definition.name }));
       remove.addEventListener("click", () => {
-        onTagDefinitionsChanged(tagDefinitions.filter((item) => item.name.toLocaleLowerCase() !== definition.name.toLocaleLowerCase()));
+        if (remove.dataset.confirm !== "true") {
+          remove.dataset.confirm = "true";
+          remove.textContent = i18n.t("confirmDelete");
+          remove.title = i18n.t("deleteImpact", { count: entries.filter((entry) => entry.tag.toLowerCase() === definition.name.toLowerCase()).length });
+          remove.setAttribute("aria-label", remove.title);
+          return;
+        }
+        onTagDefinitionsChanged(getTagDefinitions().filter((item) => item.name !== definition.name));
+        this.deletedDefinition = definition;
         requestRender("tag-config-delete");
       });
       row.append(swatch, name, description, remove);

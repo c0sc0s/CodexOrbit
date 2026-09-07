@@ -1,9 +1,9 @@
 import { DEFAULT_TAG_DEFINITIONS, LEGACY_TONE_COLORS } from "./tag-settings.mjs";
 
-const MAX_TAG_LENGTH = 20;
+const MAX_TAG_LENGTH = 32;
 const MAX_TIME_LENGTH = 32;
 
-const BRACKETED_TITLE = /^(?:\[([^\]\r\n]{1,20})\]|【([^】\r\n]{1,20})】)(?:(?:\[([^\]\r\n]{1,32})\]|【([^】\r\n]{1,32})】))?\s*(.+)$/u;
+const BRACKETED_TITLE = /^(?:\[([^\]\r\n]{1,32})\]|【([^】\r\n]{1,32})】)(?:(?:\[([^\]\r\n]{1,32})\]|【([^】\r\n]{1,32})】))?\s*(.+)$/u;
 
 const TAG_COLORS = new Map(DEFAULT_TAG_DEFINITIONS.map(({ name, color }) => [name.toLocaleLowerCase(), color]));
 

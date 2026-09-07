@@ -13,6 +13,7 @@ test("indexes only user and assistant conversation text", async () => {
     { type: "session_meta", payload: { base_instructions: { text: "不要索引系统说明" } } },
     { type: "event_msg", payload: { type: "item_completed", item: { type: "UserMessage", content: [{ type: "text", text: "包装说明 ## My request: 搜索正文关键词" }] } } },
     { type: "response_item", payload: { type: "message", role: "assistant", content: [{ type: "output_text", text: "这是助手回复" }] } },
+    { type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "标准用户消息" }] } },
     { type: "response_item", payload: { type: "function_call_output", output: { text: "不要索引工具输出" } } },
   ];
   await writeFile(path, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`, "utf8");
@@ -20,6 +21,7 @@ test("indexes only user and assistant conversation text", async () => {
     assert.deepEqual(await extractConversationText(path), [
       { role: "你", text: "搜索正文关键词" },
       { role: "Codex", text: "这是助手回复" },
+      { role: "你", text: "标准用户消息" },
     ]);
   } finally {
     await rm(directory, { recursive: true, force: true });

@@ -7,7 +7,10 @@ export const RuntimeMessageType: Readonly<{
   settingsGet: "settings.get";
   settingsSnapshot: "settings.snapshot";
   settingsUpdate: "settings.update";
+  settingsError: "settings.error";
   runtimeStatus: "runtime.status";
+  catalogSnapshot: "catalog.snapshot";
+  navigationOpen: "navigation.open";
 }>;
 
 export interface RuntimeMessage<TType extends string = string, TPayload extends Record<string, unknown> = Record<string, unknown>> {

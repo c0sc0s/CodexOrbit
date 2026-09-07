@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rename"
+  short_description: "Name this session using my configured tags"
+  default_prompt: "Use $rename to name this session with the best matching configured tag."

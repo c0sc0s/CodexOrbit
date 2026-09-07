@@ -1,9 +1,29 @@
 # Changelog
 
+## Unreleased — CLI release hardening
+
+- Add an original project logo, linked English/Chinese GitHub homepages and concise development, architecture and release documentation.
+- Merge legacy cached local IDs without duplicate sessions; index standard user message records and rebuild older extraction caches automatically.
+- Reject symlink installation destinations before lifecycle mutation and keep environment files out of package artifacts.
+- Default the public CLI to installation, with explicit three-hook authorization guidance and nonzero exit status for incomplete activation.
+- Validate arguments, serialize public lifecycle mutations, resolve hoisted npm dependencies, stop old runtime code before updating, and preserve unrelated launchers and marketplaces.
+- Check current UI versions, navigation availability, controller ownership, settings, catalog and index health using one readiness contract.
+- Read active local sessions independently of sidebar expansion, use actual update timestamps, and navigate catalog-only results through the app's thread links.
+- Add tag description/color editing, deletion confirmation/undo, reserved fallback handling and consistent 32-character names; protect settings inputs and menus from background refreshes.
+- Add packed-consumer/native-runtime smoke tests, dashboard interaction regression tests, and macOS CI. Clean-account real-app QA and authenticated npm publication remain release gates.
+
 All notable changes to Codex Tags are documented here. Versions follow Semantic Versioning.
 
-## Unreleased
+## 0.5.0 — 2026-09-07
 
+- Reduced built-in tags to Feature, Bug, Design, and Research with English classification guidance; preserved saved user definitions and custom tags.
+- Replaced the management skill with three English user skills: Doctor, Initial, and Rename, using native Codex task tools for agent-driven classification and naming.
+- Standardized generated titles as `[Tag]Title` without date metadata while preserving legacy title parsing; shared live tag/description context between skills and first-prompt hooks and expanded the context budget for the full supported vocabulary.
+- Added a per-user macOS LaunchAgent that lets users keep opening the official Codex entry, with one activation attempt per app run, graceful takeover, foreign-port protection, and reversible lifecycle management.
+- Added a publishable `@c0sc0s/codex-tags` CLI with one-command install, enable, disable, status, doctor, update, and reversible uninstall flows.
+- Delegated naming-hook registration to the official Codex Marketplace and Plugin CLI instead of mutating private configuration or trust records.
+- Replaced the AppleScript launcher compiler dependency with a minimal atomic macOS application bundle.
+- Made clean-machine testing deterministic by removing Codex Tags renderer caches and hook markers during explicit `uninstall --purge`.
 - Added a native-aligned Tags rail above Pinned for filtering visible sidebar sessions without opening the dashboard.
 - Kept the compact rail and dashboard on one filter state while preserving focus, horizontal position, collapsed-group indexing, and reversible native row visibility.
 - Added optional classification descriptions and arbitrary six-digit colors to tag definitions.

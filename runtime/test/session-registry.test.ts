@@ -14,6 +14,27 @@ class MemoryStorage implements Storage {
 }
 
 describe("SessionRegistry", () => {
+  it("merges legacy local-prefixed cache keys with authoritative catalog entries", () => {
+    const storage = new MemoryStorage();
+    storage.setItem("sessions", JSON.stringify([{ key: "local:123", threadId: "local:123", raw: "Old title", tag: "Bug", pinned: true, projectId: "project-1" }]));
+    const registry = new SessionRegistry(storage, "sessions", (raw) => ({ raw, tag: "Bug", title: raw, time: "", color: "#123456", tagged: true }), () => "#123456");
+    registry.applyCatalog([{ threadId: "123", raw: "New title", updatedAt: 100 }]);
+    expect(registry.values()).toHaveLength(1);
+    expect(registry.values()[0].title).toBe("New title");
+    expect(registry.values()[0].pinned).toBe(true);
+    expect(registry.values()[0].projectId).toBe("project-1");
+    registry.applyCatalog([]);
+    expect(registry.values()).toHaveLength(0);
+  });
+  it("accepts never-mounted sessions and removes archived entries on the next catalog", () => {
+    const storage = new MemoryStorage();
+    const registry = new SessionRegistry(storage, "sessions", (raw) => ({ raw, tag: "Bug", title: raw, time: "", color: "#123456", tagged: true }), () => "#123456");
+    registry.applyCatalog([{ threadId: "1", raw: "[Bug]Never expanded", updatedAt: 100 }]);
+    expect(registry.values()[0].updatedAt).toBe(100);
+    expect(registry.values()[0].node).toBeNull();
+    registry.applyCatalog([]);
+    expect(registry.values()).toHaveLength(0);
+  });
   it("restores serializable records without stale DOM bindings", () => {
     const storage = new MemoryStorage();
     storage.setItem("sessions", JSON.stringify([{

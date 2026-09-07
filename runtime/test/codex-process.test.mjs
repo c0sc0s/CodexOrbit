@@ -11,6 +11,15 @@ test("detects only the configured Codex executable", async () => {
   assert.equal(await process.isRunning(), true);
 });
 
+test("recognizes the configured CDP launch arguments", async () => {
+  const process = new CodexProcess({
+    appPath: "/Applications/Test Codex.app",
+    port: 9341,
+    run: async () => ({ stdout: "/Applications/Test Codex.app/Contents/MacOS/ChatGPT --remote-debugging-port=9341\n" }),
+  });
+  assert.equal(await process.hasCdpLaunchArguments(), true);
+});
+
 test("verifies CDP ownership through the listener process ancestry", async () => {
   const process = new CodexProcess({
     appPath: "/Applications/Test Codex.app",

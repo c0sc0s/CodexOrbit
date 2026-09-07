@@ -1,11 +1,47 @@
 {
-  "name": "codex-tags",
-  "version": "0.4.0",
-  "private": true,
+  "name": "@c0sc0s/codex-tags",
+  "version": "0.5.0",
+  "description": "One-command installer and lifecycle CLI for Codex Tags.",
   "type": "module",
+  "bin": {
+    "codex-tags": "bin/codex-tags.mjs"
+  },
+  "files": [
+    ".codex-plugin/",
+    "assets/",
+    "bin/",
+    "docs/",
+    "hooks/",
+    "runtime/dist/",
+    "runtime/src/*.d.mts",
+    "runtime/src/*.mjs",
+    "scripts/manage.mjs",
+    "scripts/manager-core.mjs",
+    "scripts/health.mjs",
+    "scripts/cli-options.mjs",
+    "scripts/lifecycle-lock.mjs",
+    "skills/",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c0sc0s/codex-tags.git"
+  },
+  "homepage": "https://github.com/c0sc0s/codex-tags#readme",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node --check runtime/src/controller.mjs && node --check runtime/src/cdp-client.mjs && node --check runtime/src/codex-process.mjs && node --check runtime/src/controller-router.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check runtime/src/protocol.mjs && node --check runtime/src/runtime-target-registry.mjs && node --check runtime/src/search-index.mjs && node --check runtime/src/settings-repository.mjs && node --check runtime/src/tag-settings.mjs && node --check runtime/src/title-format.mjs && node --check hooks/session-naming.mjs && node --check scripts/manage.mjs",
+    "check": "node scripts/check.mjs",
+    "test:package": "node scripts/test-package.mjs",
+    "prepublishOnly": "npm run verify && npm run test:package",
     "dev:apply": "npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply",
     "qa:app": "node runtime/qa-runtime.mjs",
     "test": "node --test runtime/test/*.test.mjs && vitest run runtime/test/*.test.ts",
@@ -16,12 +52,13 @@
     "node": ">=22"
   },
   "dependencies": {
-    "better-sqlite3": "13.0.3",
-    "motion": "13.1.0",
-    "preact": "10.29.8"
+    "better-sqlite3": "13.0.3"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
+    "happy-dom": "20.14.0",
+    "motion": "13.1.0",
+    "preact": "10.29.8",
     "typescript": "7.0.2",
     "vitest": "5.0.0"
   }

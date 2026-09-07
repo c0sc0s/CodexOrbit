@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doctor"
+  short_description: "Check Codex Tags health and diagnose problems"
+  default_prompt: "Use $doctor to check whether Codex Tags is healthy."

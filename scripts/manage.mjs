@@ -1,164 +1,19 @@
 #!/usr/bin/env node
-import { execFile } from "node:child_process";
-import { access, chmod, copyFile, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { basename } from "node:path";
 
-const run = promisify(execFile);
-const pluginRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const runtimeSource = join(pluginRoot, "runtime", "src");
-const installRoot = process.env.CODEX_TAGS_INSTALL_DIR
-  ?? join(homedir(), "Library", "Application Support", "Codex Sidebar Tags");
-const applicationsRoot = process.env.CODEX_TAGS_APPLICATIONS_DIR ?? join(homedir(), "Applications");
-const launcherPath = join(applicationsRoot, "Codex Tags.app");
-const installedController = join(installRoot, "app.mjs");
-const sqlitePackageSource = join(pluginRoot, "node_modules", "better-sqlite3");
-const sqlitePackageDestination = join(installRoot, "node_modules", "better-sqlite3");
-const sqlitePrebuildName = `${process.platform}-${process.arch}.node`;
-const searchDatabaseFiles = ["search.sqlite", "search.sqlite-wal", "search.sqlite-shm"];
-const runtimeFiles = new Map([
-  ["controller.mjs", "app.mjs"],
-  ["codex-process.mjs", "codex-process.mjs"],
-  ["controller-router.mjs", "controller-router.mjs"],
-  ["cdp-client.mjs", "cdp-client.mjs"],
-  ["controller-state.mjs", "controller-state.mjs"],
-  ["content-index.mjs", "content-index.mjs"],
-  ["inject-expression.mjs", "inject-expression.mjs"],
-  ["search-index.mjs", "search-index.mjs"],
-  ["protocol.mjs", "protocol.mjs"],
-  ["settings-repository.mjs", "settings-repository.mjs"],
-  ["runtime-target-registry.mjs", "runtime-target-registry.mjs"],
-  ["title-format.mjs", "title-format.mjs"],
-  ["tag-settings.mjs", "tag-settings.mjs"],
-  ["../dist/injected.js", "dist/injected.js"],
-]);
+import { createManager } from "./manager-core.mjs";
 
-async function pathExists(path) {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function copyFileAtomically(source, destination) {
-  await mkdir(dirname(destination), { recursive: true });
-  const temporaryPath = `${destination}.next-${process.pid}`;
-  await copyFile(source, temporaryPath);
-  await chmod(temporaryPath, 0o644);
-  await rename(temporaryPath, destination);
-}
-
-async function readPluginVersion() {
-  const manifest = JSON.parse(await readFile(join(pluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
-  return manifest.version;
-}
-
-async function createLauncher() {
-  if (process.platform !== "darwin") return null;
-  await mkdir(applicationsRoot, { recursive: true });
-  const sourcePath = join(installRoot, `.launcher-${process.pid}.applescript`);
-  const nextLauncherPath = join(applicationsRoot, `.Codex Tags-${process.pid}.app`);
-  const logPath = join(installRoot, "launcher.log");
-  const quoteAppleScript = (value) => value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  const script = [
-    "on run",
-    `  set nodePath to "${quoteAppleScript(process.execPath)}"`,
-    `  set toolPath to "${quoteAppleScript(installedController)}"`,
-    `  set logPath to "${quoteAppleScript(logPath)}"`,
-    '  do shell script "nohup " & quoted form of nodePath & " " & quoted form of toolPath & " start >> " & quoted form of logPath & " 2>&1 </dev/null &"',
-    "end run",
-    "",
-  ].join("\n");
-  await writeFile(sourcePath, script, { encoding: "utf8", mode: 0o600 });
-  try {
-    await rm(nextLauncherPath, { recursive: true, force: true });
-    await run("/usr/bin/osacompile", ["-o", nextLauncherPath, sourcePath]);
-    await rm(launcherPath, { recursive: true, force: true });
-    await rename(nextLauncherPath, launcherPath);
-  } finally {
-    await rm(sourcePath, { force: true });
-    await rm(nextLauncherPath, { recursive: true, force: true });
-  }
-  return launcherPath;
-}
-
-async function install() {
-  if (!(await pathExists(join(sqlitePackageSource, "package.json")))) {
-    throw new Error("Runtime dependency better-sqlite3 is missing. Run `npm ci` before installing.");
-  }
-  await mkdir(installRoot, { recursive: true });
-  await chmod(installRoot, 0o700);
-  for (const [sourceName, destinationName] of runtimeFiles) {
-    await copyFileAtomically(join(runtimeSource, sourceName), join(installRoot, destinationName));
-  }
-  const nextSqlitePackage = `${sqlitePackageDestination}.next-${process.pid}`;
-  await mkdir(dirname(nextSqlitePackage), { recursive: true });
-  await rm(nextSqlitePackage, { recursive: true, force: true });
-  await cp(sqlitePackageSource, nextSqlitePackage, {
-    recursive: true,
-    filter: (source) => {
-      const relative = source.slice(sqlitePackageSource.length).replace(/^\//, "");
-      return !relative || relative === "package.json" || relative === "LICENSE" || relative === "lib" || relative.startsWith("lib/") || relative === "prebuilds" || relative === `prebuilds/${sqlitePrebuildName}`;
-    },
-  });
-  await rm(sqlitePackageDestination, { recursive: true, force: true });
-  await mkdir(dirname(sqlitePackageDestination), { recursive: true });
-  await rename(nextSqlitePackage, sqlitePackageDestination);
-  const pluginVersion = await readPluginVersion();
-  const installation = {
-    schemaVersion: 1,
-    pluginVersion,
-    installedAt: new Date().toISOString(),
-    pluginRoot,
-    runtimeFiles: [...runtimeFiles.values()],
-    runtimeDependencies: ["better-sqlite3"],
-  };
-  await writeFile(join(installRoot, "install.json"), `${JSON.stringify(installation, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  const launcher = await createLauncher();
-  return { status: "installed", pluginVersion, installRoot, launcher };
-}
-
-async function runController(command) {
-  if (!(await pathExists(installedController))) throw new Error("Codex Tags is not installed. Run the install command first.");
-  const { stdout, stderr } = await run(process.execPath, [installedController, command], { maxBuffer: 20 * 1024 * 1024 });
-  if (stderr.trim()) process.stderr.write(stderr);
-  if (stdout.trim()) process.stdout.write(stdout);
-}
-
-async function status() {
-  const installed = await pathExists(installedController);
-  if (!installed) {
-    console.log(JSON.stringify({ installed: false, pluginRoot, installRoot }, null, 2));
-    return;
-  }
-  await runController("status");
-}
-
-async function uninstall() {
-  if (await pathExists(installedController)) {
-    try {
-      await runController("restore");
-    } catch (error) {
-      console.error(`Restore warning: ${error.message}`);
-    }
-  }
-  for (const destinationName of runtimeFiles.values()) await rm(join(installRoot, destinationName), { force: true });
-  await rm(sqlitePackageDestination, { recursive: true, force: true });
-  for (const databaseFile of searchDatabaseFiles) await rm(join(installRoot, databaseFile), { force: true });
-  await rm(join(installRoot, "install.json"), { force: true });
-  await rm(launcherPath, { recursive: true, force: true });
-  console.log(JSON.stringify({ status: "uninstalled", installRoot, launcherPath }, null, 2));
-}
-
+const manager = createManager();
 const command = process.argv[2] ?? "status";
-if (command === "install") console.log(JSON.stringify(await install(), null, 2));
-else if (command === "status") await status();
-else if (command === "enable") { await install(); await runController("start"); }
-else if (command === "apply") await runController("apply");
-else if (command === "restore") await runController("restore");
-else if (command === "uninstall") await uninstall();
+let result;
+
+if (command === "install") result = await manager.installRuntime();
+else if (command === "status") result = await manager.status();
+else if (command === "enable" || command === "on" || command === "update") result = await manager.enable();
+else if (command === "apply") result = await manager.runController("apply");
+else if (command === "restore" || command === "disable" || command === "off") result = await manager.disable();
+else if (command === "doctor") result = await manager.doctor();
+else if (command === "uninstall") result = await manager.uninstall({ purge: process.argv.includes("--purge") });
 else throw new Error(`Unknown command: ${basename(command)}`);
+
+console.log(JSON.stringify(result, null, 2));

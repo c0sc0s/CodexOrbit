@@ -10,6 +10,10 @@ const entries: SessionEntry[] = [
 ];
 
 describe("selectVisibleEntries", () => {
+  it("sorts by actual update timestamps instead of legacy title dates", () => {
+    const dated = entries.map((entry, index) => ({ ...entry, updatedAt: index === 0 ? 200 : 100 }));
+    expect(selectVisibleEntries(dated, { ...createInitialState(), sort: "time" }, new Map()).map(({ key }) => key)).toEqual(["1", "2"]);
+  });
   it("searches titles and preserves sidebar order", () => {
     const state = { ...createInitialState(), query: "高价值" };
     expect(selectVisibleEntries(entries, state, new Map()).map(({ key }) => key)).toEqual(["2"]);

@@ -6,6 +6,7 @@ import { discoverSessionFiles, extractConversationText } from "./content-index.m
 
 const defaultResultLimit = 50;
 const maximumResultLimit = 100;
+const extractionVersion = 1;
 
 function localThreadIdFor(threadId) {
   return threadId.includes(":") ? threadId.slice(threadId.lastIndexOf(":") + 1) : threadId;
@@ -50,6 +51,13 @@ export class SessionSearchIndex {
       );
     `);
     if (!this.readOnly) {
+      // Cached file timestamps cannot detect changes to the transcript extractor.
+      if (this.database.pragma("user_version", { simple: true }) < extractionVersion) {
+        this.database.transaction(() => {
+          this.database.exec("DELETE FROM session_messages; DELETE FROM indexed_sessions;");
+          this.database.pragma(`user_version = ${extractionVersion}`);
+        })();
+      }
       for (const path of [databasePath, `${databasePath}-wal`, `${databasePath}-shm`]) {
         if (existsSync(path)) chmodSync(path, 0o600);
       }
@@ -157,10 +165,9 @@ export class SessionSearchIndex {
     }
     const localThreadIds = [...originalIdByLocalId.keys()];
     if (localThreadIds.length === 0) return [];
-    const candidateLimit = Math.min(maximumResultLimit * 5, boundedLimit * 5);
     const rows = [...normalizedQuery].length < 3
-      ? this.searchShortQuery.all(normalizedQuery, JSON.stringify(localThreadIds), candidateLimit)
-      : this.searchFts.all(quotedFtsQuery(normalizedQuery), JSON.stringify(localThreadIds), candidateLimit);
+      ? this.searchShortQuery.iterate(normalizedQuery, JSON.stringify(localThreadIds), -1)
+      : this.searchFts.iterate(quotedFtsQuery(normalizedQuery), JSON.stringify(localThreadIds), -1);
     const results = [];
     const seenThreadIds = new Set();
     for (const row of rows) {

@@ -8,6 +8,25 @@ import { SessionSearchIndex } from "../src/search-index.mjs";
 
 const threadId = "12345678-1234-1234-1234-123456789abc";
 
+test("rebuilds stale extraction caches even when transcript timestamps are unchanged", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "codex-tags-reindex-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const sessionPath = join(directory, "session.jsonl");
+  const databasePath = join(directory, "search.sqlite");
+  const options = { discoverFiles: async () => new Map([[threadId, sessionPath]]) };
+  await writeFile(sessionPath, JSON.stringify({ type: "response_item", payload: { role: "user", content: [{ text: "previously missing user text" }] } }));
+  const previous = new SessionSearchIndex(databasePath, options);
+  await previous.refresh();
+  previous.database.exec("DELETE FROM session_messages; PRAGMA user_version = 0;");
+  previous.close();
+  const current = new SessionSearchIndex(databasePath, options);
+  try {
+    assert.equal((await current.refresh()).changed, 1);
+    assert.equal(current.search({ query: "missing", threadIds: [threadId] }).length, 1);
+    assert.equal((await current.refresh()).changed, 0);
+  } finally { current.close(); }
+});
+
 test("builds an incremental on-disk index and returns bounded snippets", async () => {
   const directory = await mkdtemp(join(tmpdir(), "codex-tags-search-index-"));
   const sessionPath = join(directory, `${threadId}.jsonl`);

@@ -9,11 +9,16 @@ export class ControllerRouter {
     this.waitForIndex = options.waitForIndex;
     this.getIndexStatus = options.getIndexStatus;
     this.send = options.send;
+    this.openSession = options.openSession;
     this.latestSearchRequestIds = new Map();
     this.handlers = new Map([
       [RuntimeMessageType.settingsGet, this.handleSettingsGet.bind(this)],
       [RuntimeMessageType.settingsUpdate, this.handleSettingsUpdate.bind(this)],
       [RuntimeMessageType.searchRequest, this.handleSearchRequest.bind(this)],
+      [RuntimeMessageType.navigationOpen, async (_client, request) => {
+        const threadId = typeof request.payload.threadId === "string" ? request.payload.threadId.replace(/^local:/u, "") : "";
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(threadId)) await this.openSession?.(threadId);
+      }],
     ]);
   }
 
@@ -42,9 +47,15 @@ export class ControllerRouter {
     await this.sendSettingsSnapshot(client, executionContextId);
   }
 
-  async handleSettingsUpdate(_client, request) {
-    const result = await this.settingsRepository.write(request.payload.tags);
-    await this.onSettingsChanged(result.settings);
+  async handleSettingsUpdate(client, request, executionContextId) {
+    try {
+      if (!Array.isArray(request.payload.tags) || request.payload.tags.length > 32) throw new Error("Invalid tag definitions");
+      const result = await this.settingsRepository.write(request.payload.tags);
+      await this.onSettingsChanged(result.settings);
+    } catch {
+      await this.sendSettingsSnapshot(client, executionContextId);
+      await this.send(client, createRuntimeMessage(RuntimeMessageType.settingsError, {}), executionContextId);
+    }
   }
 
   async handleSearchRequest(client, request, executionContextId) {

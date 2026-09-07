@@ -1,114 +1,66 @@
-# Distribution and installation
+# Installation and release
 
-This document distinguishes the distribution method that works today from the intended public Codex Plugin experience.
+[English home](../README.md) · [中文首页](../README.zh-CN.md)
 
-## What is distributed
+## Contract
 
-Codex Tags contains two related deliverables:
+The npm package `@c0sc0s/codex-tags` carries the CLI, prebuilt UI bundle, local controller, naming hooks and three English skills. Its production dependency is native SQLite. Users need macOS, Node.js 22+, and the official Codex app with plugin support.
 
-1. A Codex Plugin manifest and management skill, which let Codex understand installation, status, update, restore, and uninstall operations.
-2. A self-contained local runtime, which launches the official Codex app with loopback CDP and injects the Tags UI.
+After publication:
 
-The browser code is prebuilt as `runtime/dist/injected.js`. It bundles Preact and does not download code at runtime. Installation never patches `/Applications/ChatGPT.app`, `app.asar`, the app signature, user sessions, or authentication data.
+1. Run `npx @c0sc0s/codex-tags@latest`; activation may gracefully restart Codex.
+2. In Codex Plugins, review/trust SessionStart, UserPromptSubmit and SessionEnd.
 
-## Supported distribution today: GitHub source release
+The CLI uses official plugin commands, never private trust records or authorization bypasses. Installing only the plugin does not provide the native runtime needed for UI injection.
 
-Current releases are macOS previews distributed from the GitHub repository. A new user needs:
+The LaunchAgent waits for official-app launches rather than opening Codex at login. It attempts activation once per process run, never force-quits and leaves foreign CDP occupants alone. A fallback launcher is also installed. Keep the activation Node installation available; rerun the CLI after replacing Node versions.
 
-- the official Codex desktop app installed at `/Applications/ChatGPT.app`
-- Node.js 22 or newer
-- Git
-- npm access during installation, for the packaged SQLite runtime dependency
+## Installed files
 
-Install:
+| Location | Contents |
+| --- | --- |
+| `~/Library/Application Support/Codex Sidebar Tags/` | Runtime, UI bundle, SQLite dependency, settings, index, logs |
+| Its `plugin-marketplace/` directory | CLI-owned plugin snapshot and marketplace |
+| `~/Applications/Codex Tags.app` | Small shell launcher, not a second Codex app |
+| `~/Library/LaunchAgents/io.github.c0sc0s.codex-tags.supervisor.plist` | Per-user supervisor |
+| Codex plugin cache/data | Registered plugin payload and hook markers |
+
+The signed app, authentication data and transcript files are never patched. Search/catalog reads stay local; only bounded snippets enter the injected UI. CDP remains a powerful trusted-local-machine capability.
+
+## Lifecycle
+
+- **install / on / enable:** preflight → stop old controller/supervisor → copy runtime/plugin → register → activate → verify.
+- **update:** same flow using the invoked package version. Use `npx …@latest update` to fetch the newest; an old globally installed CLI cannot self-upgrade.
+- **off / disable / restore:** stop supervisor/controller, restore UI and remove naming plugin; retain settings/index.
+- **uninstall:** remove owned runtime, plugin registration, launcher, supervisor, index and logs; retain settings.
+- **uninstall --purge:** also remove settings, owned hook data and reachable renderer caches. Never deletes or renames Codex sessions.
+- **status / doctor:** read-only. Doctor exits nonzero when not ready; a closed app or disabled installation is expected to be non-ready.
+
+Mutations are serialized. Failed updates are retryable, **not transactional rollbacks**. Unrelated launcher/marketplace conflicts require explicit resolution. Installation health does not verify hook trust.
+
+## Source candidate
 
 ```bash
-git clone https://github.com/c0sc0s/codex-tags.git
-cd codex-tags
 npm ci
-node scripts/manage.mjs enable
+npm run verify
+node bin/codex-tags.mjs install
 ```
 
-No browser build step is required for a released revision because the injected bundle is committed. `npm ci` installs the native SQLite runtime that the installer copies into Application Support.
+See [development](development.md) for the separate file-refresh/hot-apply flow.
 
-`enable` performs these actions:
+## Publish checklist
 
-1. Copies only the installed runtime files to `~/Library/Application Support/Codex Sidebar Tags`.
-2. Creates `~/Applications/Codex Tags.app`.
-3. Starts or reconnects the local controller.
-4. If necessary, gracefully relaunches the official Codex app with CDP bound to `127.0.0.1:9341`.
-5. Injects the versioned UI and incrementally indexes user/assistant text in a local SQLite FTS5 database.
+The current candidate is not yet accepted for `latest`. Restart-dependent checks require user approval.
 
-When the repository is installed as a Codex Plugin, it also provides a new-session naming hook. Codex requires the user to review and trust this hook before it runs. The hook adds the current tag vocabulary as developer context on the first prompt; it does not modify session storage itself.
+- [ ] Complete the clean-account [compatibility matrix](compatibility.md), including manually trusted first-turn naming.
+- [ ] Synchronize package/lockfile/changelog/plugin versions and review the final diff.
+- [ ] Bump `RUNTIME_VERSION` for browser changes; replace the plugin `+codex.<cachebuster>` suffix for changed payloads.
+- [ ] Run `npm run verify`, `npm run test:package`, app QA and `git diff --check`.
+- [ ] Inspect the tarball: no `.env`, credentials, transcripts, local databases, logs or test fixtures.
+- [ ] Verify npm ownership for `@c0sc0s`; keep credentials outside Git and the package.
+- [ ] Publish the verified commit: `npm publish --access public --registry=https://registry.npmjs.org`.
+- [ ] Verify the published version and exact `npx @c0sc0s/codex-tags@latest` onboarding; update both README release notices.
 
-After installation, users should launch `Codex Tags.app`. Opening the original Codex entry directly does not guarantee the required CDP endpoint is enabled.
+`prepublishOnly` runs source verification and package smoke. macOS CI checks Node 22/24 and bundle drift; it cannot replace GUI/hook acceptance. Use a configured trusted CI publisher if provenance is needed.
 
-Check installation:
-
-```bash
-node scripts/manage.mjs status
-```
-
-Restore the native UI without deleting installed files:
-
-```bash
-node scripts/manage.mjs restore
-```
-
-Remove Codex Tags and its launcher:
-
-```bash
-node scripts/manage.mjs uninstall
-```
-
-Uninstall removes only files owned by Codex Tags. It does not delete or rename Codex sessions.
-
-## Updating a GitHub installation
-
-```bash
-cd codex-tags
-git pull --ff-only
-node scripts/manage.mjs install
-node scripts/manage.mjs apply
-```
-
-If `status` reports `cdp: false`, use `enable` instead of `apply`; this may relaunch Codex.
-
-## Plugin installation status
-
-The repository root is already a valid plugin source through `.codex-plugin/plugin.json`, but the GitHub repository is not yet a public Codex Marketplace. The developer's `personal` marketplace is machine-local and must not be presented as an installation path for other users.
-
-Therefore, do not currently advertise a command such as `codex plugin add codex-tags@personal` to new users. It only works on a machine whose personal marketplace already points to this checkout.
-
-## Target public distribution
-
-The intended release flow is:
-
-```text
-Public Codex Marketplace
-        ↓
-install Codex Tags plugin
-        ↓
-plugin management skill installs the versioned local runtime on request
-        ↓
-Codex Tags launcher starts the official app and injects the UI
-```
-
-To reach that state, a release must add or select a public marketplace, publish immutable versioned plugin artifacts, document integrity/provenance, and test a clean-machine install. The public package should exclude development-only `node_modules`, local logs, PID files, previews, `.git`, and machine-specific marketplace configuration.
-
-Even when distributed through a Codex Plugin, the sidebar feature still relies on local CDP because Codex does not currently expose a documented native sidebar extension API. The plugin is the trusted installation and management surface; it is not a replacement renderer API.
-
-## Release checklist
-
-1. Update `CHANGELOG.md` and the semantic base version when appropriate.
-2. Increment `RUNTIME_VERSION` for injected behavior or protocol changes.
-3. Run the full gate in `docs/development.md`, including real-app QA.
-4. Validate `.codex-plugin/plugin.json` with the Codex plugin validator.
-5. Generate one fresh `+codex.<cachebuster>` suffix; replace the previous suffix instead of appending another.
-6. Reinstall the local candidate and verify the plugin is enabled.
-7. Review and trust the bundled hook, then verify a new session receives the naming policy exactly once and a resumed session does not.
-8. Package without `node_modules`, `.git`, logs, PID files, screenshots generated by QA, or machine-local configuration.
-9. Test install, update, restore, and uninstall from a clean macOS user account.
-10. Publish the Git tag/release and, when available, the public marketplace entry.
-
-See `docs/compatibility.md` for the required Codex-version smoke matrix.
+No open-source license is currently granted (`UNLICENSED`). Public distribution alone does not grant one; the owner must choose a license if open-source distribution is intended.

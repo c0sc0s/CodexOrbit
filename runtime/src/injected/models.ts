@@ -20,6 +20,7 @@ export interface ParsedSessionTitle {
 }
 
 export interface SessionRecord {
+  updatedAt?: number;
   raw: string;
   tag: string;
   time: string;

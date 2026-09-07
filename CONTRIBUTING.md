@@ -2,8 +2,8 @@
 
 ## Development loop
 
-1. Change source only under `runtime/src/`, `scripts/`, or `skills/`.
-2. Run `npm run build`, `npm run typecheck`, and `npm test`.
+1. Edit repository source, never generated bundles or installed plugin/runtime files.
+2. Run `npm run verify` and `npm run test:package`.
 3. Commit `runtime/dist/injected.js` with the source that produced it.
 4. Install the candidate runtime with `node scripts/manage.mjs install`.
 5. Hot-apply only when `node scripts/manage.mjs status` reports an active Codex CDP endpoint.
@@ -11,6 +11,8 @@
 7. Update `CHANGELOG.md` for user-visible, protocol, installer, or compatibility changes.
 
 ## Release rules
+
+See [development](docs/development.md) for setup and hot-apply, and [distribution](docs/distribution.md) for release acceptance. Keep [English](README.md) and [Chinese](README.zh-CN.md) READMEs synchronized. Never commit `.env` or tokens.
 
 - Increment the plugin version for every published package.
 - Increment the injected runtime version for every runtime behavior change.

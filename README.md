@@ -1,49 +1,79 @@
-# Codex Tags
+<p align="center"><img src="assets/logo.png" alt="Codex Tags logo" width="128"></p>
+<h1 align="center">Codex Tags</h1>
+<p align="center">Less scrolling. More finding.</p>
+<p align="center"><b>English</b> · <a href="README.zh-CN.md">简体中文</a></p>
 
-Codex Tags is a reversible local enhancement for the official Codex desktop app. It recognizes structured session names such as `[Bug][09-04] Fix sidebar`, renders the tag separately, adds a lightweight Tags filter above Pinned, and provides a dashboard for sorting and local conversation search.
+An independent, local-first enhancement for Codex: organize sessions with tags, search conversation text, and give the agent your classification rules.
 
-It does not modify the signed Codex application bundle or `app.asar`. A small local controller starts Codex with a loopback-only Chrome DevTools Protocol endpoint and injects a self-contained UI runtime into the active renderer.
+> **Release candidate:** the npm CLI is prepared, but public `latest` is pending cold-start and hook-authorization acceptance. Use the source workflow below until publication. macOS only; Node.js 22+ required.
 
-## Status
+## Features
 
-The current release is a macOS productization preview. The plugin packages installation and management workflows; Codex does not currently expose a documented native-sidebar extension API, so the sidebar UI still uses a local CDP adapter.
+- **Native-aligned sidebar:** tag filtering, quiet title labels, and a Tags dashboard.
+- **Local search:** titles and indexed user/assistant text, with highlighted matches.
+- **Your vocabulary:** Feature, Bug, Design, Research defaults; custom colors and optional classification descriptions.
+- **Agent-assisted naming:** `[Tag]Title`, without dates. First prompts receive current classification guidance.
+- **Three plugin skills:** `doctor` checks health; `initial` classifies existing active sessions; `rename` names the current session.
+- **English and Chinese UI:** follows Codex's language without translating user-defined tags.
 
-## Naming protocol
+## Get started
 
-```text
-[Tag][Time]Title
-[Tag]Title
-【Tag】【Time】Title
-```
+Once published, onboarding is two steps:
 
-`Time` is optional. Untagged sessions remain visible as uncategorized sessions.
+1. Finish active Codex tasks, then run:
+   ```bash
+   npx @c0sc0s/codex-tags@latest
+   ```
+2. Open **Codex → Plugins → Codex Tags** and review/trust **SessionStart**, **UserPromptSubmit**, and **SessionEnd**.
 
-Each tag has a name, a freely selected color, and an optional classification description. The settings view offers six curated color presets plus the system color picker. For newly created sessions, the plugin's lifecycle hook supplies every configured tag name and non-empty description to the Codex agent on the first prompt. Colors remain UI-only; the hook does not rename sessions or edit transcript files itself.
+Keep using the official app entry. A per-user background helper detects fresh launches and may gracefully restart Codex once to activate Tags. The fallback launcher is optional. Naming is an agent instruction, not a guaranteed title rewrite.
 
-The injected interface supports English and Simplified Chinese and follows the language selected in Codex, including live language changes. User-created tag names, descriptions, session titles, and conversation content are data and are never translated automatically.
-
-## Documentation
-
-- [Local development and debugging](docs/development.md)
-- [Distribution and user installation](docs/distribution.md)
-- [Architecture](docs/architecture.md)
-- [Architecture roadmap and engineering TODO](docs/roadmap.md)
-- [Runtime protocol](docs/protocol.md)
-- [Compatibility policy](docs/compatibility.md)
-
-## Local development
+**Try the candidate from source:**
 
 ```bash
+git clone https://github.com/c0sc0s/codex-tags.git
+cd codex-tags
 npm ci
 npm run verify
-node scripts/manage.mjs install
-node scripts/manage.mjs status
-node scripts/manage.mjs enable
-node scripts/manage.mjs restore
+node bin/codex-tags.mjs install
 ```
 
-During UI development, `npm run dev:apply` performs build → atomic install → hot apply against an already debuggable Codex process. `npm run qa:app` runs the named real-app smoke scenarios and writes screenshots to the private Application Support preview directory.
+Then review the hooks as above. Installation may restart Codex; avoid important running tasks.
 
-The injected UI is authored in TypeScript and Preact, then bundled into a single browser IIFE. Conversation bodies are incrementally indexed in a local SQLite FTS5 database and searched asynchronously; only bounded matching snippets enter the renderer. `install` writes the checked-in browser artifact and SQLite runtime into the user Application Support directory and creates the launcher. `enable` applies it to an already debuggable Codex process; if Codex needs to be relaunched with CDP, the command performs a graceful quit and relaunch.
+## Commands
 
-For the complete edit-and-preview loop and real-app QA, follow [Local development and debugging](docs/development.md). For current and future installation channels, follow [Distribution and user installation](docs/distribution.md).
+After publication: `npx @c0sc0s/codex-tags@latest <command>`. From source: `node bin/codex-tags.mjs <command>`.
+
+| Command | Effect |
+| --- | --- |
+| `install`, `on`, `enable` | Install this package version and activate all components |
+| `off`, `restore`, `disable` | Stop injection and remove the naming plugin; keep data |
+| `status` / `doctor` | Inspect state / diagnose readiness without changes |
+| `update` | Install the invoked version; use `@latest` to fetch the newest |
+| `uninstall` | Remove owned components and index; keep tag settings |
+| `uninstall --purge` | Also remove settings and owned caches |
+
+Operational commands support `--json`. Hook trust remains a manual Codex security decision.
+
+## Privacy and compatibility
+
+The CLI installs local code and registers the plugin through Codex's plugin commands. It does **not** patch the signed app, edit transcripts, or change authentication data. A local SQLite index supplies bounded matching snippets to the UI.
+
+Injection relies on a loopback debugging endpoint and private Codex DOM/database interfaces—not an official sidebar extension API. Future Codex updates can require adapter changes. Debugging access is powerful; use only on a trusted machine. See [verified coverage and limitations](docs/compatibility.md).
+
+## Development
+
+```bash
+npm run dev:apply   # build → refresh installed files → hot-apply
+npm run verify     # build, syntax, types, regression tests
+npm run test:package
+```
+
+The fast loop requires an already activated, debug-enabled app. No HMR server is used.
+
+- [Development and debugging](docs/development.md)
+- [Installation and release](docs/distribution.md)
+- [Architecture](docs/architecture.md) · [Data and naming protocol](docs/protocol.md)
+- [Roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md)
+
+Not affiliated with or endorsed by OpenAI. No open-source license is currently granted (`UNLICENSED`).

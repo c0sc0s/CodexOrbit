@@ -1,149 +1,84 @@
-# Local development and debugging
+# Development and debugging
 
-This document is the operational entry point for humans and coding agents working on Codex Tags.
+[English home](../README.md) · [中文首页](../README.zh-CN.md)
 
-## Prerequisites
+## Setup
 
-- macOS with the official Codex desktop app at `/Applications/ChatGPT.app`
-- Node.js 22 or newer
-- A local checkout of this repository
-
-Do not develop against files under `~/Library/Application Support/Codex Sidebar Tags`. That directory is an installation output and is overwritten by `install`.
-
-## Initial setup
+Use macOS, Node.js 22+, and the official Codex desktop app. The installer verifies its bundle identity, not just its filename.
 
 ```bash
 git clone https://github.com/c0sc0s/codex-tags.git
 cd codex-tags
 npm ci
 npm run verify
+node bin/codex-tags.mjs install
 ```
 
-The repository commits `runtime/dist/injected.js`, so end users do not need npm dependencies. Contributors must rebuild it whenever files under `runtime/src/injected/` change.
+Activation may restart Codex. Finish active tasks and obtain user approval before an agent activates or cold-starts it. Review the three hooks in Codex Plugins separately.
 
-## Code map
+Edit this checkout, never installed files in Application Support or the plugin cache.
 
-| Change | Primary location |
-| --- | --- |
-| Dashboard results and highlighting | `runtime/src/injected/components/` |
-| Dashboard shell, search/sort controls, and tag editor | `runtime/src/injected/dashboard-view.ts` |
-| Result merging, filtering, and sorting | `runtime/src/injected/search.ts` |
-| Domain/host record types and explicit UI actions | `runtime/src/injected/models.ts`, `store.ts` |
-| Codex private selectors and native-row discovery | `runtime/src/injected/codex-dom-adapter.ts` |
-| Reversible title decoration | `runtime/src/injected/title-decorator.ts` |
-| Compact sidebar filtering | `runtime/src/injected/sidebar-tag-filter.ts` |
-| Observer and focus/pointer-safe refresh lifecycle | `runtime/src/injected/host-lifecycle.ts` |
-| Injected configuration and controller client | `runtime/src/injected/runtime-config.ts`, `runtime-client.ts` |
-| Browser-runtime composition, search orchestration, status, and cleanup | `runtime/src/injected/runtime.ts` |
-| Session JSONL parsing and discovery | `runtime/src/content-index.mjs` |
-| Incremental SQLite FTS5 search | `runtime/src/search-index.mjs` |
-| Persistent CDP transport | `runtime/src/cdp-client.mjs` |
-| Codex process and renderer target ownership | `runtime/src/codex-process.mjs`, `runtime-target-registry.mjs` |
-| Durable settings and versioned message dispatch | `runtime/src/settings-repository.mjs`, `controller-router.mjs` |
-| Controller composition, indexing schedule, and health loop | `runtime/src/controller.mjs` |
-| Installed-file and launcher management | `scripts/manage.mjs` |
-| Browser bundle generation | `scripts/build.mjs` |
-
-All injected source is checked under strict TypeScript. Private, version-dependent Codex DOM knowledge belongs in the adapter and host-lifecycle boundary; do not reintroduce `@ts-nocheck` in the composition root.
-
-## Start Codex for development
-
-Check the current state first:
-
-```bash
-node scripts/manage.mjs status
-```
-
-For the first setup, or when `status` reports `cdp: false`, run:
-
-```bash
-node scripts/manage.mjs enable
-```
-
-`enable` installs the runtime and may gracefully quit and relaunch Codex with the local CDP endpoint on `127.0.0.1:9341`. A running task can be interrupted, so an agent must warn the user before invoking it.
-
-The installation also creates `~/Applications/Codex Tags.app`. Use that launcher for later development sessions so CDP and the controller are started correctly.
-
-## Edit-and-preview loop
-
-There is currently no file watcher or HMR server. The supported fast loop is:
-
-```bash
-npm run build
-node scripts/manage.mjs install
-node scripts/manage.mjs apply
-```
-
-This regenerates the IIFE bundle, atomically copies the candidate runtime into Application Support, and hot-applies it to the open Codex renderer. It does not restart Codex when the owned CDP endpoint is already available.
-
-Use the supported shortcut while iterating:
+## Edit → preview
 
 ```bash
 npm run dev:apply
 ```
 
-After changing only controller code, still run `install` before `apply`; `apply` intentionally executes the installed controller rather than repository source.
+This runs build → repository `install` → `apply` against an already debug-enabled app. No watcher/HMR is provided. Unlike public CLI installation, repository `node scripts/manage.mjs install` only refreshes files and the fallback launcher; it does not register/enable the plugin or supervisor.
 
-## Verification before handoff
+- Browser changes: bump `RUNTIME_VERSION` in `runtime/src/inject-expression.mjs`, then build/install/apply.
+- Controller changes: install/apply so the controller uses the updated installed modules.
+- Hook/skill changes: refresh the plugin cachebuster and use the public installer; renewed hook review may be required.
+- Never edit `runtime/dist/injected.js` manually; commit the generated bundle with source changes.
 
-Run the complete local gate:
+## Code map
+
+| Concern | Owner |
+| --- | --- |
+| CLI and installation | `bin/codex-tags.mjs`, `scripts/{cli-options,manager-core}.mjs` |
+| Readiness / mutation lock | `scripts/{health,lifecycle-lock}.mjs` |
+| App lifecycle / CDP | `runtime/src/{codex-process,launch-supervisor,cdp-client,runtime-target-registry}.mjs` |
+| Controller / bridge | `runtime/src/{controller,controller-router,protocol}.mjs` |
+| Catalog / search | `runtime/src/{session-catalog,content-index,search-index}.mjs` |
+| Saved definitions | `runtime/src/{settings-repository,tag-settings}.mjs` |
+| Host selectors | `runtime/src/injected/codex-dom-adapter.ts` |
+| UI lifecycle | `runtime/src/injected/{runtime,host-lifecycle}.ts` |
+| Dashboard / sidebar | `runtime/src/injected/dashboard-view.ts`, `components/`, `sidebar-tag-filter.ts`, `title-decorator.ts` |
+| UI data / language | `runtime/src/injected/{session-registry,search,store,i18n}.ts` |
+| Naming / skills | `hooks/session-naming.mjs`, `skills/{doctor,initial,rename}/` |
+
+## Verification
 
 ```bash
 npm run verify
-node scripts/manage.mjs install
-node scripts/manage.mjs apply
-node scripts/manage.mjs status
+npm run test:package
+npm run dev:apply
+node bin/codex-tags.mjs doctor
 npm run qa:app
 git diff --check
 ```
 
-Expected runtime status includes `cdp: true`, the new `sourceVersion`, and matching values under `activeVersions`. The real-app QA covers launcher placement, Chinese IME input, tag filtering, sort menus, collapsed groups, title/content search, highlighting, navigation, modal cleanup, and scroll stability.
+The package smoke installs the actual tarball into a temporary consumer and checks hoisted dependencies, standalone SQLite, CLI validation and plugin payload without changing real Codex data.
 
-QA screenshots are written under:
-
-```text
-~/Library/Application Support/Codex Sidebar Tags/previews/
-```
+App QA requires an already injected app. It checks IME, search, menu persistence/contrast, draft retention, highlighting and cleanup without restarting, renaming tasks or saving tag edits. Cold launch, trusted first-turn naming and uninstall/restore remain separate [release checks](compatibility.md).
 
 ## Debugging
 
-Start with:
+Start with `node bin/codex-tags.mjs doctor --json`.
 
-```bash
-node scripts/manage.mjs status
-```
+Logs under `~/Library/Application Support/Codex Sidebar Tags/`: `controller.log`, `supervisor.log`, `supervisor-launchd.log`, `launcher.log`. Installation metadata is in `install.json`. Never share credentials or conversation text in diagnostics.
 
-Useful local files:
+Renderer diagnostics: `window.__codexSidebarTags.status()`, `debug()`, `dispose()`.
 
-```text
-~/Library/Application Support/Codex Sidebar Tags/controller.log
-~/Library/Application Support/Codex Sidebar Tags/launcher.log
-~/Library/Application Support/Codex Sidebar Tags/controller.pid
-~/Library/Application Support/Codex Sidebar Tags/install.json
-```
+| Symptom | Check |
+| --- | --- |
+| Missing UI | Owned CDP, source/active versions, sidebar mount |
+| Port 9341 conflict | Report it; never kill a foreign process |
+| Stale UI | Build → install → apply; runtime version bump |
+| Missing body match | Index status, supported record shapes, text limits and refresh delay |
+| Codex update regression | Host adapter / catalog schema; never patch the signed app |
+| Stale CLI lock | Confirm no Tags CLI is running, then remove only the named lock |
 
-The injected runtime exposes a bounded, content-free diagnostic surface as `window.__codexSidebarTags`:
+Testing overrides: `CODEX_TAGS_INSTALL_DIR` (runtime), `CODEX_TAGS_APPLICATIONS_DIR` (launcher), `CODEX_TAGS_CDP_PORT` (default 9341), `CODEX_HOME` (Codex data), `CODEX_TAGS_SETTINGS_PATH` (hook settings), `CODEX_TAGS_STATE_DIR` (hook markers). They do not isolate every macOS/plugin side effect; unit tests use injected fake process runners.
 
-- `status()` reports versions, row counts, asynchronous search state, and render counters.
-- `debug()` reports recent interaction and refresh events without conversation bodies.
-- `dispose()` removes the enhancement and restores native title DOM.
-
-The plugin also bundles `hooks/hooks.json`. Use Codex's hook review UI to trust the current definition before end-to-end testing. Unit tests exercise the lifecycle contract without modifying global Codex configuration: `startup` arms a session, its first `UserPromptSubmit` receives naming context, and later or resumed turns receive nothing.
-
-Common failures:
-
-- `cdp: false`: launch with `enable` or `Codex Tags.app`.
-- Port `9341` belongs to another process: stop and report the conflict; never terminate the foreign process automatically.
-- UI missing after a Codex update: inspect only `codex-dom-adapter.ts`, verify stable `data-*` anchors, and fail closed if they changed.
-- Stale UI after source changes: confirm `npm run build`, then `install`, then `apply`, in that order.
-- Search content missing: verify `searchIndex.indexedSessions` in controller status and `searchIndexStatus` in runtime status; the controller refreshes changed local sessions approximately every 30 seconds.
-
-Environment overrides available for isolated tests are `CODEX_TAGS_CDP_PORT`, `CODEX_TAGS_INSTALL_DIR`, `CODEX_TAGS_APPLICATIONS_DIR`, and `CODEX_TAGS_STATE_DIR`. Do not use them in normal user installation instructions.
-
-## Safe rollback
-
-```bash
-node scripts/manage.mjs restore
-```
-
-This stops the controller and removes injected UI without modifying Codex or session data. Use `uninstall` only when the user explicitly asks to remove Codex Tags and its owned local files.
+Use `node bin/codex-tags.mjs off` to disable all components while keeping settings. Uninstall only with explicit user permission.

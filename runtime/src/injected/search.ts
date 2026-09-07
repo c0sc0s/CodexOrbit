@@ -1,10 +1,5 @@
 import type { ContentSearchMatch, DashboardState, SessionEntry } from "./models";
 
-function timeRank(value: string): number {
-  const match = /^(\d{1,2})[-/.](\d{1,2})$/.exec(value);
-  return match ? Number(match[1]) * 100 + Number(match[2]) : -1;
-}
-
 export function selectVisibleEntries(
   entries: SessionEntry[],
   state: Pick<DashboardState, "query" | "tag" | "sort">,
@@ -21,7 +16,7 @@ export function selectVisibleEntries(
     if (!contentMatch) return [];
     return [{ ...entry, matchType: "content", snippet: `${contentMatch.role}：${contentMatch.snippet}` }];
   });
-  if (state.sort === "time") return filtered.sort((left, right) => timeRank(right.time) - timeRank(left.time) || left.index - right.index);
+  if (state.sort === "time") return filtered.sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0) || left.index - right.index);
   if (state.sort === "tag") return filtered.sort((left, right) => left.tag.localeCompare(right.tag, "zh-CN") || left.title.localeCompare(right.title, "zh-CN"));
   if (state.sort === "title") return filtered.sort((left, right) => left.title.localeCompare(right.title, "zh-CN", { numeric: true }));
   return filtered.sort((left, right) => left.index - right.index);
