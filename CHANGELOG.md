@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-09-07
 
 - Add independently packable Codex Plugin Loader with desktop/CLI entry, per-module service processes, isolated renderer globals, scoped RPC/events and bounded cleanup.
 - Run Tags through the Loader SDK with local settings, catalog and search services.
