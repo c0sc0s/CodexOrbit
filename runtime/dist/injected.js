@@ -2362,16 +2362,16 @@ var CodexTagsInjected = (() => {
       this.options = options;
     }
     options;
-    apply(entries) {
+    apply() {
       const selectedTag = this.options.getSelectedTag();
       const selected = selectedTag.toLocaleLowerCase();
       if (selectedTag === "all") document.documentElement.removeAttribute(this.options.activeAttribute);
       else document.documentElement.setAttribute(this.options.activeAttribute, "true");
-      entries.forEach((entry) => {
-        if (!entry.row?.isConnected) return;
-        const matches = selectedTag === "all" || entry.tag.toLocaleLowerCase() === selected;
-        if (matches) entry.row.removeAttribute(this.options.filteredAttribute);
-        else entry.row.setAttribute(this.options.filteredAttribute, "true");
+      this.options.getRows().forEach(({ row, tag }) => {
+        if (!row.isConnected) return;
+        const matches = selectedTag === "all" || tag.toLocaleLowerCase() === selected;
+        if (matches) row.removeAttribute(this.options.filteredAttribute);
+        else row.setAttribute(this.options.filteredAttribute, "true");
       });
     }
     render(entries) {
@@ -2430,7 +2430,7 @@ var CodexTagsInjected = (() => {
       });
       filterHost.append(heading, rail);
       rail.scrollLeft = previousScrollLeft;
-      this.apply(entries);
+      this.apply();
       if (focusedValue) {
         const filterButtons = [...rail.querySelectorAll(".codex-sidebar-quick-filter")];
         const nextFocus = filterButtons.find((item) => item.dataset.value === focusedValue) ?? filterButtons.find((item) => item.dataset.value === this.options.getSelectedTag());
@@ -2974,6 +2974,12 @@ var CodexTagsInjected = (() => {
       neutralColor: legacyToneColors.neutral,
       ensureHost: ensureFilterHost,
       getEntries: () => entriesFrom(titleNodes()),
+      // Catalog membership must not decide whether a mounted native row gets filtered.
+      getRows: () => titleNodes().flatMap((title) => {
+        const row = findThreadRow(title);
+        const parsed = parse(title.getAttribute(RAW) ?? title.textContent);
+        return row ? [{ row, tag: parsed?.tag ?? i18n.t("uncategorized") }] : [];
+      }),
       getDefinitions: () => tagDefinitions,
       getSelectedTag: () => state.tag,
       setSelectedTag: (value) => {
@@ -3088,7 +3094,7 @@ var CodexTagsInjected = (() => {
       nodes.forEach((node) => titleDecorator.enhance(node));
       const entries = entriesFrom(nodes);
       applySidebarOrder();
-      sidebarTagFilter.apply(entries);
+      sidebarTagFilter.apply();
       if (host?.isConnected && renderedIndexSignature === indexSignature(entries)) return;
       if (hostLifecycle.deferIfInteracting(reason)) return;
       renderToolbar(entries, reason);

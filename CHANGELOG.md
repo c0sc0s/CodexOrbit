@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Filter every mounted sidebar row, including tasks absent from the local catalog and duplicate appearances.
+
 - Group sidebar tasks by configured tag order within Pinned and each project, preserving native order within each tag and restoring native presentation on disposal.
 - Keep row tag labels visible when filtering by a specific tag.
 

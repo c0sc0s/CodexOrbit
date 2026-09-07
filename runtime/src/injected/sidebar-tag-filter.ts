@@ -9,6 +9,7 @@ interface SidebarTagFilterOptions {
   neutralColor: string;
   ensureHost(): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null;
   getEntries(): SessionEntry[];
+  getRows(): Array<{ row: HTMLElement; tag: string }>;
   getDefinitions(): TagDefinition[];
   getSelectedTag(): string;
   setSelectedTag(value: string): void;
@@ -26,16 +27,16 @@ interface FilterItem {
 export class SidebarTagFilter {
   constructor(private readonly options: SidebarTagFilterOptions) {}
 
-  apply(entries: SessionEntry[]): void {
+  apply(): void {
     const selectedTag = this.options.getSelectedTag();
     const selected = selectedTag.toLocaleLowerCase();
     if (selectedTag === "all") document.documentElement.removeAttribute(this.options.activeAttribute);
     else document.documentElement.setAttribute(this.options.activeAttribute, "true");
-    entries.forEach((entry) => {
-      if (!entry.row?.isConnected) return;
-      const matches = selectedTag === "all" || entry.tag.toLocaleLowerCase() === selected;
-      if (matches) entry.row.removeAttribute(this.options.filteredAttribute);
-      else entry.row.setAttribute(this.options.filteredAttribute, "true");
+    this.options.getRows().forEach(({ row, tag }) => {
+      if (!row.isConnected) return;
+      const matches = selectedTag === "all" || tag.toLocaleLowerCase() === selected;
+      if (matches) row.removeAttribute(this.options.filteredAttribute);
+      else row.setAttribute(this.options.filteredAttribute, "true");
     });
   }
 
@@ -103,7 +104,7 @@ export class SidebarTagFilter {
     });
     filterHost.append(heading, rail);
     rail.scrollLeft = previousScrollLeft;
-    this.apply(entries);
+    this.apply();
     if (focusedValue) {
       const filterButtons = [...rail.querySelectorAll<HTMLButtonElement>(".codex-sidebar-quick-filter")];
       const nextFocus = filterButtons.find((item) => item.dataset.value === focusedValue)

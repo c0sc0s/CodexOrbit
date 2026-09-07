@@ -230,6 +230,12 @@ export function installRuntime(input: unknown) {
     neutralColor: legacyToneColors.neutral,
     ensureHost: ensureFilterHost,
     getEntries: () => entriesFrom(titleNodes()),
+    // Catalog membership must not decide whether a mounted native row gets filtered.
+    getRows: () => titleNodes().flatMap((title) => {
+      const row = findThreadRow(title);
+      const parsed = parse(title.getAttribute(RAW) ?? title.textContent);
+      return row ? [{ row, tag: parsed?.tag ?? i18n.t("uncategorized") }] : [];
+    }),
     getDefinitions: () => tagDefinitions,
     getSelectedTag: () => state.tag,
     setSelectedTag: (value) => { runtimeStore.dispatch({ type: "tag.set", value }); },
@@ -358,7 +364,7 @@ export function installRuntime(input: unknown) {
     nodes.forEach((node) => titleDecorator.enhance(node));
     const entries = entriesFrom(nodes);
     applySidebarOrder();
-    sidebarTagFilter.apply(entries);
+    sidebarTagFilter.apply();
     if (host?.isConnected && renderedIndexSignature === indexSignature(entries)) return;
     if (hostLifecycle.deferIfInteracting(reason)) return;
     renderToolbar(entries, reason);
