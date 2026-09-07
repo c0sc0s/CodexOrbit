@@ -1,4 +1,4 @@
-import type { SessionEntry, TagDefinition } from "./models";
+import type { TagDefinition } from "./models";
 import type { RuntimeI18n } from "./i18n";
 
 interface SidebarTagFilterOptions {
@@ -8,7 +8,6 @@ interface SidebarTagFilterOptions {
   i18n: RuntimeI18n;
   neutralColor: string;
   ensureHost(): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null;
-  getEntries(): SessionEntry[];
   getRows(): Array<{ row: HTMLElement; tag: string }>;
   getDefinitions(): TagDefinition[];
   getSelectedTag(): string;
@@ -40,7 +39,7 @@ export class SidebarTagFilter {
     });
   }
 
-  render(entries: SessionEntry[]): void {
+  render(): void {
     const mounted = this.options.ensureHost();
     if (!mounted) return;
     const { filterHost, pinnedToggle } = mounted;
@@ -59,9 +58,10 @@ export class SidebarTagFilter {
       .forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
 
     const counts = new Map<string, number>();
-    entries.forEach((entry) => counts.set(entry.tag, (counts.get(entry.tag) ?? 0) + 1));
+    const rows = this.options.getRows().filter(({ row }) => row.isConnected);
+    rows.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
     const configuredOrder = new Map(this.options.getDefinitions().map(({ name }, index) => [name.toLocaleLowerCase(), index]));
-    const filters: FilterItem[] = [{ value: "all", label: this.options.i18n.t("all"), count: entries.length, color: null }];
+    const filters: FilterItem[] = [{ value: "all", label: this.options.i18n.t("all"), count: rows.length, color: null }];
     Array.from(counts, ([tag, count]): FilterItem => ({
       value: tag,
       label: tag,
@@ -98,7 +98,7 @@ export class SidebarTagFilter {
         const next = this.options.getSelectedTag() === value && value !== "all" ? "all" : value;
         this.options.setSelectedTag(next);
         this.options.trace("sidebar-tag-click", { value, selected: next });
-        this.render(this.options.getEntries());
+        this.render();
       });
       rail.appendChild(filter);
     });

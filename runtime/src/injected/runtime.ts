@@ -229,7 +229,6 @@ export function installRuntime(input: unknown) {
     i18n,
     neutralColor: legacyToneColors.neutral,
     ensureHost: ensureFilterHost,
-    getEntries: () => entriesFrom(titleNodes()),
     // Catalog membership must not decide whether a mounted native row gets filtered.
     getRows: () => titleNodes().flatMap((title) => {
       const row = findThreadRow(title);
@@ -291,7 +290,7 @@ export function installRuntime(input: unknown) {
 
   const indexSignature = (entries: SessionEntry[]): string => entries
     .map((entry) => [entry.key, entry.raw, entry.pinned, entry.projectId].join("\u0001"))
-    .join("\u0002");
+    .join("\u0002") + "\u0003" + titleNodes().map((node) => node.getAttribute(RAW) ?? node.textContent ?? "").join("\u0002");
 
   const scheduleContentSearch = (entries: SessionEntry[]): void => {
     clearPendingSearch();
@@ -355,7 +354,7 @@ export function installRuntime(input: unknown) {
     renderCount += 1;
     trace("render", { reason, count: entries.length, open: state.open });
     applySidebarOrder();
-    sidebarTagFilter.render(entries);
+    sidebarTagFilter.render();
     dashboardView.render(entries, reason);
   };
 

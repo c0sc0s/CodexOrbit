@@ -2374,7 +2374,7 @@ var CodexTagsInjected = (() => {
         else row.setAttribute(this.options.filteredAttribute, "true");
       });
     }
-    render(entries) {
+    render() {
       const mounted = this.options.ensureHost();
       if (!mounted) return;
       const { filterHost, pinnedToggle } = mounted;
@@ -2388,9 +2388,10 @@ var CodexTagsInjected = (() => {
       const pinnedStyle = getComputedStyle(pinnedToggle);
       ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"].forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
       const counts = /* @__PURE__ */ new Map();
-      entries.forEach((entry) => counts.set(entry.tag, (counts.get(entry.tag) ?? 0) + 1));
+      const rows = this.options.getRows().filter(({ row }) => row.isConnected);
+      rows.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
       const configuredOrder = new Map(this.options.getDefinitions().map(({ name }, index) => [name.toLocaleLowerCase(), index]));
-      const filters = [{ value: "all", label: this.options.i18n.t("all"), count: entries.length, color: null }];
+      const filters = [{ value: "all", label: this.options.i18n.t("all"), count: rows.length, color: null }];
       Array.from(counts, ([tag, count]) => ({
         value: tag,
         label: tag,
@@ -2424,7 +2425,7 @@ var CodexTagsInjected = (() => {
           const next = this.options.getSelectedTag() === value && value !== "all" ? "all" : value;
           this.options.setSelectedTag(next);
           this.options.trace("sidebar-tag-click", { value, selected: next });
-          this.render(this.options.getEntries());
+          this.render();
         });
         rail.appendChild(filter);
       });
@@ -2973,7 +2974,6 @@ var CodexTagsInjected = (() => {
       i18n,
       neutralColor: legacyToneColors.neutral,
       ensureHost: ensureFilterHost,
-      getEntries: () => entriesFrom(titleNodes()),
       // Catalog membership must not decide whether a mounted native row gets filtered.
       getRows: () => titleNodes().flatMap((title) => {
         const row = findThreadRow(title);
@@ -3023,7 +3023,7 @@ var CodexTagsInjected = (() => {
         if (entry.threadId) runtimeClient.send(RuntimeMessageType.navigationOpen, { threadId: entry.threadId });
       }
     };
-    const indexSignature = (entries) => entries.map((entry) => [entry.key, entry.raw, entry.pinned, entry.projectId].join("")).join("");
+    const indexSignature = (entries) => entries.map((entry) => [entry.key, entry.raw, entry.pinned, entry.projectId].join("")).join("") + "" + titleNodes().map((node) => node.getAttribute(RAW) ?? node.textContent ?? "").join("");
     const scheduleContentSearch = (entries) => {
       clearPendingSearch();
       contentMatches.clear();
@@ -3086,7 +3086,7 @@ var CodexTagsInjected = (() => {
       renderCount += 1;
       trace("render", { reason, count: entries.length, open: state.open });
       applySidebarOrder();
-      sidebarTagFilter.render(entries);
+      sidebarTagFilter.render();
       dashboardView.render(entries, reason);
     };
     const refresh = (reason = "observer") => {

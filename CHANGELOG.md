@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Scope sidebar tag counts to mounted rows so counts match the available sidebar filter; retain the complete catalog in the dashboard.
+
 - Filter every mounted sidebar row, including tasks absent from the local catalog and duplicate appearances.
 
 - Group sidebar tasks by configured tag order within Pinned and each project, preserving native order within each tag and restoring native presentation on disposal.

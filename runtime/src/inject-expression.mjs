@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { DEFAULT_TAG_DEFINITIONS, LEGACY_TONE_COLORS, TAG_COLOR_PRESETS } from "./tag-settings.mjs";
 import { createRuntimeMessage, RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "./protocol.mjs";
 
-export const RUNTIME_VERSION = "6.0.14";
+export const RUNTIME_VERSION = "6.0.15";
 export const RUNTIME_BINDING = "__codexTagsRequest";
 export const SEARCH_BINDING = RUNTIME_BINDING;
 
