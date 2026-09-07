@@ -235,6 +235,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     i18n,
     neutralColor: legacyToneColors.neutral,
     ensureHost: ensureFilterHost,
+    getEntries: () => entriesFrom(titleNodes()),
     // Catalog membership must not decide whether a mounted native row gets filtered.
     getRows: () => titleNodes().flatMap((title) => {
       const row = findThreadRow(title);

@@ -23,7 +23,7 @@ it("filters mounted rows absent from the catalog, including duplicate appearance
   const filter = new SidebarTagFilter({
     hostId: "filters", filteredAttribute: "data-filtered", activeAttribute: "data-filter-active",
     i18n: new RuntimeI18n("en"), neutralColor: "#777777", ensureHost: () => null,
-    getRows: () => rows, getDefinitions: () => [],
+    getEntries: () => [], getRows: () => rows, getDefinitions: () => [],
     getSelectedTag: () => selected, setSelectedTag: (tag) => { selected = tag; },
     colorForTag: () => "#777777", trace: () => {},
   });
@@ -47,7 +47,7 @@ it("filters mounted rows absent from the catalog, including duplicate appearance
 });
 
 
-it("counts only mounted rows and keeps counts stable across tag filtering", () => {
+it("counts sidebar members even when their rows are unmounted", () => {
   const host = document.createElement("section");
   const heading = document.createElement("button");
   const bug = document.createElement("div");
@@ -59,6 +59,7 @@ it("counts only mounted rows and keeps counts stable across tag filtering", () =
     hostId: "filters", filteredAttribute: "data-filtered", activeAttribute: "data-filter-active",
     i18n: new RuntimeI18n("en"), neutralColor: "#777777",
     ensureHost: () => ({ filterHost: host, pinnedToggle: heading }),
+    getEntries: () => [{ tag: "Bug" }, { tag: "Feature" }] as import("../src/injected/models").SessionEntry[],
     getRows: () => [{ row: bug, tag: "Bug" }, { row: feature, tag: "Feature" }, { row: detached, tag: "Uncategorized" }],
     getDefinitions: () => [], getSelectedTag: () => selected,
     setSelectedTag: (tag) => { selected = tag; }, colorForTag: () => "#777777", trace: () => {},
@@ -71,5 +72,9 @@ it("counts only mounted rows and keeps counts stable across tag filtering", () =
   expect(feature.hasAttribute("data-filtered")).toBe(true);
   document.body.append(detached);
   filter.render();
-  expect(counts()).toContainEqual(["Uncategorized", "1"]);
+  expect(counts()).toEqual([["all", "2"], ["Bug", "1"], ["Feature", "1"]]);
+  bug.remove();
+  feature.remove();
+  filter.render();
+  expect(counts()).toEqual([["all", "2"], ["Bug", "1"], ["Feature", "1"]]);
 });

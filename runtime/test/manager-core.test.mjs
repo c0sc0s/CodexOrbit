@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { RUNTIME_VERSION } from "../src/tags-plugin.mjs";
 import { createManager } from "../../scripts/manager-core.mjs";
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -78,7 +79,7 @@ test("installer creates a self-contained runtime and local Codex marketplace", a
   assert.match(launcher, /loader\.json/u);
   assert.doesNotMatch(launcher, /app\.mjs/u);
   const loaderConfig = JSON.parse(await readFile(join(manager.paths.installRoot, "loader.json"), "utf8"));
-  assert.deepEqual(loaderConfig.plugins, [{ id: "codex-tags", entry: "dist/injected.js", service: "tags-service.mjs", version: "6.3.0", config: { dataDirectory: manager.paths.installRoot } }]);
+  assert.deepEqual(loaderConfig.plugins, [{ id: "codex-tags", entry: "dist/injected.js", service: "tags-service.mjs", version: RUNTIME_VERSION, config: { dataDirectory: manager.paths.installRoot } }]);
   const marketplace = JSON.parse(await readFile(join(manager.paths.marketplaceRoot, ".agents", "plugins", "marketplace.json"), "utf8"));
   assert.equal(marketplace.name, "codex-tags-cli");
   assert.equal(marketplace.plugins[0].name, "codex-tags");

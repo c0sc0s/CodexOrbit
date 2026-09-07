@@ -2382,10 +2382,10 @@ var CodexPlugin = (() => {
       const pinnedStyle = getComputedStyle(pinnedToggle);
       ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"].forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
       const counts = /* @__PURE__ */ new Map();
-      const rows = this.options.getRows().filter(({ row }) => row.isConnected);
-      rows.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+      const entries = this.options.getEntries();
+      entries.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
       const configuredOrder = new Map(this.options.getDefinitions().map(({ name }, index) => [name.toLocaleLowerCase(), index]));
-      const filters = [{ value: "all", label: this.options.i18n.t("all"), count: rows.length, color: null }];
+      const filters = [{ value: "all", label: this.options.i18n.t("all"), count: entries.length, color: null }];
       Array.from(counts, ([tag, count]) => ({
         value: tag,
         label: tag,
@@ -2976,6 +2976,7 @@ var CodexPlugin = (() => {
       i18n,
       neutralColor: legacyToneColors.neutral,
       ensureHost: ensureFilterHost,
+      getEntries: () => entriesFrom(titleNodes()),
       // Catalog membership must not decide whether a mounted native row gets filtered.
       getRows: () => titleNodes().flatMap((title) => {
         const row = findThreadRow(title);

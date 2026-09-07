@@ -2,17 +2,7 @@ import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
-
-function isInternalSession({ source, threadSource }) {
-  if (threadSource === "subagent" || threadSource === "guardian_review") return true;
-  if (source === "subagent") return true;
-  try {
-    const parsed = JSON.parse(source);
-    return parsed === "subagent" || (parsed !== null && typeof parsed === "object" && Object.hasOwn(parsed, "subagent"));
-  } catch {
-    return false;
-  }
-}
+import { readSidebarMembership } from "./sidebar-membership.mjs";
 
 // Keep the private Codex database schema isolated and always open it read-only.
 export class SessionCatalog {
@@ -23,6 +13,7 @@ export class SessionCatalog {
   async read() {
     let database;
     try {
+      const membership = await readSidebarMembership(this.root);
       const files = (await readdir(this.root)).filter((name) => /^state_\d+\.sqlite$/u.test(name))
         .sort((a, b) => Number(b.match(/\d+/u)[0]) - Number(a.match(/\d+/u)[0]));
       if (!files.length) return { items: [], error: "Local session catalog is unavailable", complete: false };
@@ -38,10 +29,11 @@ export class SessionCatalog {
       const source = columns.has("source") ? "source" : "NULL";
       const threadSource = columns.has("thread_source") ? "thread_source" : "NULL";
       const rows = database.prepare(`SELECT id AS threadId, ${title} AS raw, ${time} AS updatedAt, ${project} AS projectId, ${pinned} AS pinned, ${source} AS source, ${threadSource} AS threadSource FROM threads WHERE archived = 0 ORDER BY ${time} DESC, id`).all();
-      // Older builds encode child provenance in source; newer builds also expose thread_source.
-      const items = rows.filter((row) => !isInternalSession(row)).map(({ source: _source, threadSource: _threadSource, ...row }) => ({
-        ...row, pinned: row.pinned === null ? null : Boolean(row.pinned),
-      }));
+      const items = rows.flatMap(({ source: _source, threadSource, ...row }) => {
+        if (threadSource === "realtime_voice" || threadSource === "guardian_review") return [];
+        const sidebar = membership.forThread(row);
+        return sidebar ? [{ ...row, ...sidebar }] : [];
+      });
       return { items, error: null, complete: true };
     } catch {
       return { items: [], error: "Local session catalog could not be read; sidebar-only results are available", complete: false };

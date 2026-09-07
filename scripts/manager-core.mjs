@@ -31,6 +31,7 @@ const runtimeFiles = new Map([
   ["inject-expression.mjs", "inject-expression.mjs"],
   ["search-index.mjs", "search-index.mjs"],
   ["session-catalog.mjs", "session-catalog.mjs"],
+  ["sidebar-membership.mjs", "sidebar-membership.mjs"],
   ["protocol.mjs", "protocol.mjs"],
   ["settings-repository.mjs", "settings-repository.mjs"],
   ["runtime-target-registry.mjs", "runtime-target-registry.mjs"],

@@ -1,60 +1,74 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import Database from "better-sqlite3";
 import { SessionCatalog } from "../src/session-catalog.mjs";
 
-test("catalog reads all active local sessions and real timestamps without sidebar state", async (context) => {
+async function setup(context) {
   const root = await mkdtemp(join(tmpdir(), "codex-tags-catalog-"));
   context.after(() => rm(root, { recursive: true, force: true }));
   const db = new Database(join(root, "state_5.sqlite"));
-  db.exec("CREATE TABLE threads (id TEXT, title TEXT, name TEXT, updated_at INTEGER, archived INTEGER)");
-  db.prepare("INSERT INTO threads VALUES (?, ?, ?, ?, ?)").run("1", "old", "[Bug]Current title", 500, 0);
-  db.prepare("INSERT INTO threads VALUES (?, ?, ?, ?, ?)").run("2", "archived", null, 600, 1);
+  db.exec("CREATE TABLE threads (id TEXT, title TEXT, name TEXT, updated_at INTEGER, archived INTEGER, thread_source TEXT)");
+  const add = (id, source = "user", archived = 0) => db.prepare("INSERT INTO threads VALUES (?, 'old', '[Bug]Current title', 500, ?, ?)").run(id, archived, source);
+  const state = {
+    "local-projects": { project: {} }, "pinned-thread-ids": [], "projectless-thread-ids": [],
+    "thread-project-assignments": {}, "sidebar-project-thread-orders": {},
+  };
+  const save = () => writeFile(join(root, ".codex-global-state.json"), JSON.stringify(state));
+  return { root, db, add, state, save };
+}
+
+test("catalog uses sidebar membership regardless of expansion, age or subagent provenance", async (context) => {
+  const { root, db, add, state, save } = await setup(context);
+  for (const [id, source, archived] of [
+    ["user", "user"], ["promoted", "subagent"], ["standalone", "agent_created_thread"],
+    ["old-user", null], ["voice", "realtime_voice"], ["review", "guardian_review"],
+    ["child", "subagent"], ["orphan", null], ["archived", "user", 1],
+  ]) add(id, source, archived);
   db.close();
+  state["pinned-thread-ids"] = ["local:promoted"];
+  state["projectless-thread-ids"] = ["standalone", "voice", "review"];
+  state["sidebar-project-thread-orders"] = { project: { threadIds: ["user", "old-user", "archived"] } };
+  await save();
+  const catalog = new SessionCatalog(root);
+  const result = await catalog.read();
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.items.map(r => r.threadId), ["old-user", "promoted", "standalone", "user"]);
+  assert.equal(result.items.find(r => r.threadId === "promoted").pinned, true);
+  assert.equal(result.items.find(r => r.threadId === "old-user").projectId, "project");
+  assert.equal(result.items[0].raw, "[Bug]Current title");
+  assert.equal(result.items[0].updatedAt, 500000);
+  state["electron-persisted-atom-state"] = { "sidebar-collapsed-sections-v1": ["project", "pinned"] };
+  await save();
+  assert.deepEqual(await catalog.read(), result);
+  state["pinned-thread-ids"] = [];
+  await save();
+  assert.ok(!(await catalog.read()).items.some(r => r.threadId === "promoted"));
+});
+
+test("explicit project assignments supersede stale ordering and deleted projects", async (context) => {
+  const { root, db, add, state, save } = await setup(context);
+  add("moved"); add("deleted"); db.close();
+  state["sidebar-project-thread-orders"] = { project: { threadIds: ["moved", "deleted"] } };
+  state["local-projects"].next = {};
+  state["thread-project-assignments"] = {
+    moved: { projectKind: "local", projectId: "next" }, deleted: { projectKind: "local", projectId: "missing" },
+  };
+  await save();
   const result = await new SessionCatalog(root).read();
   assert.equal(result.complete, true);
-  assert.deepEqual(result.items, [{ threadId: "1", raw: "[Bug]Current title", updatedAt: 500000, pinned: null, projectId: null }]);
+  assert.deepEqual(result.items.map(r => [r.threadId, r.projectId]), [["moved", "next"]]);
 });
 
-test("catalog fails visibly when Codex changes the private schema", async (context) => {
-  const root = await mkdtemp(join(tmpdir(), "codex-tags-catalog-schema-"));
-  context.after(() => rm(root, { recursive: true, force: true }));
-  assert.equal((await new SessionCatalog(root).read()).complete, false);
-  const db = new Database(join(root, "state_99.sqlite"));
-  db.exec("CREATE TABLE changed (id TEXT)");
-  db.close();
-  assert.equal((await new SessionCatalog(root).read()).complete, false);
+test("missing or malformed membership never falls back to the entire historical database", async (context) => {
+  const { root, db, add } = await setup(context);
+  add("orphan"); db.close();
+  const catalog = new SessionCatalog(root);
+  assert.equal((await catalog.read()).complete, false);
+  await writeFile(join(root, ".codex-global-state.json"), '{}');
+  assert.equal((await catalog.read()).complete, false);
+  await writeFile(join(root, ".codex-global-state.json"), '{invalid');
+  assert.equal((await catalog.read()).complete, false);
 });
-
-for (const legacy of [false, true]) {
-  test(`catalog excludes internal agents without hiding standalone sessions (${legacy ? "legacy" : "current"} schema)`, async (context) => {
-    const root = await mkdtemp(join(tmpdir(), "codex-tags-catalog-sources-"));
-    context.after(() => rm(root, { recursive: true, force: true }));
-    const db = new Database(join(root, "state_5.sqlite"));
-    db.exec(`CREATE TABLE threads (id TEXT, title TEXT, updated_at INTEGER, archived INTEGER, source TEXT${legacy ? "" : ", thread_source TEXT"})`);
-    const rows = [
-      ["user", "vscode", "user"],
-      ["standalone", "vscode", "agent_created_thread"],
-      ["voice", "vscode", "realtime_voice"],
-      ["cli", "cli", null],
-      ["unknown", "future-source", null],
-      ["malformed", "{invalid", null],
-      ["missing", null, null],
-      ["child", JSON.stringify({ subagent: { thread_spawn: { parent_thread_id: "user" } } }), "subagent"],
-      ["review", JSON.stringify({ subagent: { other: "guardian_review" } }), "guardian_review"],
-      ["plain-child", "subagent", null],
-      ["encoded-child", JSON.stringify("subagent"), null],
-      ...(!legacy ? [["new-child", "vscode", "subagent"], ["new-review", "vscode", "guardian_review"]] : []),
-    ];
-    const insert = db.prepare(`INSERT INTO threads VALUES (?, ?, 1, 0, ?${legacy ? "" : ", ?"})`);
-    for (const [id, source, threadSource] of rows) insert.run(...[id, "[Bug]Same title", source, ...(!legacy ? [threadSource] : [])]);
-    db.close();
-    const result = await new SessionCatalog(root).read();
-    assert.equal(result.complete, true);
-    assert.deepEqual(result.items.map(({ threadId }) => threadId), ["cli", "malformed", "missing", "standalone", "unknown", "user", "voice"]);
-    assert.ok(result.items.every((item) => !("source" in item) && !("threadSource" in item)));
-  });
-}

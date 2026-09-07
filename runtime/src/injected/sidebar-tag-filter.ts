@@ -1,4 +1,4 @@
-import type { TagDefinition } from "./models";
+import type { SessionEntry, TagDefinition } from "./models";
 import type { RuntimeI18n } from "./i18n";
 
 interface SidebarTagFilterOptions {
@@ -8,6 +8,7 @@ interface SidebarTagFilterOptions {
   i18n: RuntimeI18n;
   neutralColor: string;
   ensureHost(): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null;
+  getEntries(): SessionEntry[];
   getRows(): Array<{ row: HTMLElement; tag: string }>;
   getDefinitions(): TagDefinition[];
   getSelectedTag(): string;
@@ -58,10 +59,10 @@ export class SidebarTagFilter {
       .forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
 
     const counts = new Map<string, number>();
-    const rows = this.options.getRows().filter(({ row }) => row.isConnected);
-    rows.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+    const entries = this.options.getEntries();
+    entries.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
     const configuredOrder = new Map(this.options.getDefinitions().map(({ name }, index) => [name.toLocaleLowerCase(), index]));
-    const filters: FilterItem[] = [{ value: "all", label: this.options.i18n.t("all"), count: rows.length, color: null }];
+    const filters: FilterItem[] = [{ value: "all", label: this.options.i18n.t("all"), count: entries.length, color: null }];
     Array.from(counts, ([tag, count]): FilterItem => ({
       value: tag,
       label: tag,
