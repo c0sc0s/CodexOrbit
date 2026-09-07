@@ -16,9 +16,7 @@ Do not develop against files under `~/Library/Application Support/Codex Sidebar 
 git clone https://github.com/c0sc0s/codex-tags.git
 cd codex-tags
 npm ci
-npm run build
-npm run typecheck
-npm test
+npm run verify
 ```
 
 The repository commits `runtime/dist/injected.js`, so end users do not need npm dependencies. Contributors must rebuild it whenever files under `runtime/src/injected/` change.
@@ -28,18 +26,25 @@ The repository commits `runtime/dist/injected.js`, so end users do not need npm 
 | Change | Primary location |
 | --- | --- |
 | Dashboard results and highlighting | `runtime/src/injected/components/` |
+| Dashboard shell, search/sort controls, and tag editor | `runtime/src/injected/dashboard-view.ts` |
 | Result merging, filtering, and sorting | `runtime/src/injected/search.ts` |
-| Dashboard state types and defaults | `runtime/src/injected/models.ts`, `store.ts` |
+| Domain/host record types and explicit UI actions | `runtime/src/injected/models.ts`, `store.ts` |
 | Codex private selectors and native-row discovery | `runtime/src/injected/codex-dom-adapter.ts` |
-| Title decoration, modal shell, observers, and cleanup | `runtime/src/injected/runtime.ts` |
+| Reversible title decoration | `runtime/src/injected/title-decorator.ts` |
+| Compact sidebar filtering | `runtime/src/injected/sidebar-tag-filter.ts` |
+| Observer and focus/pointer-safe refresh lifecycle | `runtime/src/injected/host-lifecycle.ts` |
+| Injected configuration and controller client | `runtime/src/injected/runtime-config.ts`, `runtime-client.ts` |
+| Browser-runtime composition, search orchestration, status, and cleanup | `runtime/src/injected/runtime.ts` |
 | Session JSONL parsing and discovery | `runtime/src/content-index.mjs` |
 | Incremental SQLite FTS5 search | `runtime/src/search-index.mjs` |
 | Persistent CDP transport | `runtime/src/cdp-client.mjs` |
-| Codex launch, injection, search bridge, and health loop | `runtime/src/controller.mjs` |
+| Codex process and renderer target ownership | `runtime/src/codex-process.mjs`, `runtime-target-registry.mjs` |
+| Durable settings and versioned message dispatch | `runtime/src/settings-repository.mjs`, `controller-router.mjs` |
+| Controller composition, indexing schedule, and health loop | `runtime/src/controller.mjs` |
 | Installed-file and launcher management | `scripts/manage.mjs` |
 | Browser bundle generation | `scripts/build.mjs` |
 
-The dynamic orchestration shell in `runtime.ts` is the only permissive TypeScript boundary because it integrates with private, version-dependent Codex DOM. New search, state, adapter, and Preact component code must remain strictly typed.
+All injected source is checked under strict TypeScript. Private, version-dependent Codex DOM knowledge belongs in the adapter and host-lifecycle boundary; do not reintroduce `@ts-nocheck` in the composition root.
 
 ## Start Codex for development
 
@@ -71,10 +76,10 @@ node scripts/manage.mjs apply
 
 This regenerates the IIFE bundle, atomically copies the candidate runtime into Application Support, and hot-applies it to the open Codex renderer. It does not restart Codex when the owned CDP endpoint is already available.
 
-Use this one-liner while iterating:
+Use the supported shortcut while iterating:
 
 ```bash
-npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply
+npm run dev:apply
 ```
 
 After changing only controller code, still run `install` before `apply`; `apply` intentionally executes the installed controller rather than repository source.
@@ -84,18 +89,15 @@ After changing only controller code, still run `install` before `apply`; `apply`
 Run the complete local gate:
 
 ```bash
-npm run build
-npm run check
-npm run typecheck
-npm test
+npm run verify
 node scripts/manage.mjs install
 node scripts/manage.mjs apply
 node scripts/manage.mjs status
-node runtime/qa-runtime.mjs
+npm run qa:app
 git diff --check
 ```
 
-Expected runtime status includes `cdp: true`, the new `sourceVersion`, and matching values under `activeVersions`. The real-app QA covers launcher placement, Chinese IME input, tag filtering, sort menus, collapsed groups, title/content search, highlighting, navigation, restoration, and scroll stability.
+Expected runtime status includes `cdp: true`, the new `sourceVersion`, and matching values under `activeVersions`. The real-app QA covers launcher placement, Chinese IME input, tag filtering, sort menus, collapsed groups, title/content search, highlighting, navigation, modal cleanup, and scroll stability.
 
 QA screenshots are written under:
 

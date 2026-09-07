@@ -1,13 +1,16 @@
 {
   "name": "codex-tags",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node --check runtime/src/controller.mjs && node --check runtime/src/cdp-client.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check runtime/src/search-index.mjs && node --check runtime/src/tag-settings.mjs && node --check hooks/session-naming.mjs && node --check scripts/manage.mjs",
+    "check": "node --check runtime/src/controller.mjs && node --check runtime/src/cdp-client.mjs && node --check runtime/src/codex-process.mjs && node --check runtime/src/controller-router.mjs && node --check runtime/src/controller-state.mjs && node --check runtime/src/content-index.mjs && node --check runtime/src/inject-expression.mjs && node --check runtime/src/protocol.mjs && node --check runtime/src/runtime-target-registry.mjs && node --check runtime/src/search-index.mjs && node --check runtime/src/settings-repository.mjs && node --check runtime/src/tag-settings.mjs && node --check runtime/src/title-format.mjs && node --check hooks/session-naming.mjs && node --check scripts/manage.mjs",
+    "dev:apply": "npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply",
+    "qa:app": "node runtime/qa-runtime.mjs",
     "test": "node --test runtime/test/*.test.mjs && vitest run runtime/test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run build && npm run check && npm run typecheck && npm test"
   },
   "engines": {
     "node": ">=22"

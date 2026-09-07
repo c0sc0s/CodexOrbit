@@ -20,11 +20,16 @@ const sqlitePrebuildName = `${process.platform}-${process.arch}.node`;
 const searchDatabaseFiles = ["search.sqlite", "search.sqlite-wal", "search.sqlite-shm"];
 const runtimeFiles = new Map([
   ["controller.mjs", "app.mjs"],
+  ["codex-process.mjs", "codex-process.mjs"],
+  ["controller-router.mjs", "controller-router.mjs"],
   ["cdp-client.mjs", "cdp-client.mjs"],
   ["controller-state.mjs", "controller-state.mjs"],
   ["content-index.mjs", "content-index.mjs"],
   ["inject-expression.mjs", "inject-expression.mjs"],
   ["search-index.mjs", "search-index.mjs"],
+  ["protocol.mjs", "protocol.mjs"],
+  ["settings-repository.mjs", "settings-repository.mjs"],
+  ["runtime-target-registry.mjs", "runtime-target-registry.mjs"],
   ["title-format.mjs", "title-format.mjs"],
   ["tag-settings.mjs", "tag-settings.mjs"],
   ["../dist/injected.js", "dist/injected.js"],

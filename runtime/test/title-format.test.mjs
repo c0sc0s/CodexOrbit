@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseSidebarTitle, toneForTag } from "../src/title-format.mjs";
+import { colorForTag, parseSidebarTitle, parseTitleMetadata } from "../src/title-format.mjs";
 
 test("parses tag, time, and title", () => {
   assert.deepEqual(parseSidebarTitle("[Pending][09-04] mac 键鼠信号迁移"), {
@@ -9,7 +9,7 @@ test("parses tag, time, and title", () => {
     tag: "Pending",
     time: "09-04",
     title: "mac 键鼠信号迁移",
-    tone: "amber",
+    color: "#c98b28",
   });
 });
 
@@ -19,7 +19,7 @@ test("supports a tag without time", () => {
     tag: "Bug",
     time: "",
     title: "修复侧栏",
-    tone: "red",
+    color: "#d95c5c",
   });
 });
 
@@ -29,7 +29,7 @@ test("supports Chinese brackets", () => {
     tag: "调研",
     time: "今天",
     title: "侧栏渲染",
-    tone: "purple",
+    color: "#956ad1",
   });
 });
 
@@ -38,6 +38,15 @@ test("leaves ordinary titles unchanged", () => {
   assert.equal(parseSidebarTitle("[Pending]"), null);
 });
 
-test("falls back to a neutral tone", () => {
-  assert.equal(toneForTag("自定义"), "neutral");
+test("falls back to a neutral color", () => {
+  assert.equal(colorForTag("自定义"), "#7c8798");
+});
+
+test("parses portable title metadata without applying renderer colors", () => {
+  assert.deepEqual(parseTitleMetadata("[Review][09-07] Inspect architecture"), {
+    raw: "[Review][09-07] Inspect architecture",
+    tag: "Review",
+    time: "09-07",
+    title: "Inspect architecture",
+  });
 });

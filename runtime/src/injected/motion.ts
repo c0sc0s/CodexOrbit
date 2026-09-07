@@ -2,6 +2,7 @@ import { animate } from "motion/mini";
 
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const easeOut = [0.2, 0.8, 0.2, 1] as const;
+const EXIT_SETTLE_TIMEOUT_MS = 240;
 
 export function enterDashboard(overlay: HTMLElement, dialog: HTMLElement): void {
   animate(overlay, { opacity: [0, 1] }, { duration: reducedMotionQuery.matches ? 0.1 : 0.14, ease: "easeOut" });
@@ -25,7 +26,12 @@ export async function exitDashboard(overlay: HTMLElement, dialog: HTMLElement): 
       { duration: 0.12, ease: "easeIn" },
     ));
   }
-  await Promise.all(animations);
+  // Chromium can suspend animation timelines for an unfocused Electron window.
+  // Closing state must settle even when the visual transition never completes.
+  await Promise.race([
+    Promise.all(animations),
+    new Promise<void>((resolve) => setTimeout(resolve, EXIT_SETTLE_TIMEOUT_MS)),
+  ]);
 }
 
 export function enterSortMenu(menu: HTMLElement): void {

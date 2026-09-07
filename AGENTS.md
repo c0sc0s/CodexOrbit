@@ -11,6 +11,7 @@ Codex Tags is a reversible macOS enhancement for the official Codex desktop app.
 | Local setup, code ownership, build, hot-apply, or debugging | `docs/development.md` |
 | Packaging, release, public distribution, or user installation | `docs/distribution.md` |
 | Runtime boundaries and data flow | `docs/architecture.md` |
+| Architecture evolution, refactoring sequence, or adding a major capability | `docs/roadmap.md` |
 | Title and controller/runtime contracts | `docs/protocol.md` |
 | Codex-version compatibility work | `docs/compatibility.md` |
 
@@ -37,5 +38,7 @@ node scripts/manage.mjs status
 node runtime/qa-runtime.mjs
 git diff --check
 ```
+
+`npm run verify` is the local shortcut for the first four commands. `npm run dev:apply` is the supported build → install → hot-apply development loop.
 
 `apply` requires Codex to already be running with the owned local CDP endpoint. Follow `docs/development.md` for first-run setup and failure handling.

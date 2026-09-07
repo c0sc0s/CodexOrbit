@@ -2,6 +2,24 @@
 
 All notable changes to Codex Tags are documented here. Versions follow Semantic Versioning.
 
+## Unreleased
+
+- Added a native-aligned Tags rail above Pinned for filtering visible sidebar sessions without opening the dashboard.
+- Kept the compact rail and dashboard on one filter state while preserving focus, horizontal position, collapsed-group indexing, and reversible native row visibility.
+- Added optional classification descriptions and arbitrary six-digit colors to tag definitions.
+- Added six curated color presets plus a native color picker to tag creation.
+- Upgraded tag settings to schema v2 with automatic legacy tone migration and passed tag descriptions, but not colors, into the first-session naming context.
+- Redesigned tag settings as a compact native-aligned editor with a unified color control and a lightweight, divided configuration list.
+- Reduced sidebar color noise with progressive tag emphasis: quiet at rest, stronger on hover, strongest for the selected filter, and no repeated row labels while a concrete tag is active.
+- Made the controller-owned atomic settings repository authoritative while retaining renderer storage only for first-install migration and last-known caching.
+- Added a protocol-v1 envelope and centralized controller router for settings and search messages.
+- Split process ownership, target injection, settings, title decoration, sidebar filtering, dashboard rendering, session bindings, styles, and host refresh lifecycle into independently owned modules.
+- Removed the injected runtime's permissive TypeScript boundary and added fail-closed runtime configuration validation plus service/contract tests.
+- Made modal exit and observer refresh converge when Chromium suspends animation frames in an occluded Electron window.
+- Rebuild stale owned overlays after Codex replaces a renderer execution context while retaining host DOM.
+- Replaced the ambiguous four-tile Tags launcher icon with a native-weight tag glyph.
+- Added English and Simplified Chinese UI resources that follow Codex's active language and update without restarting the injected runtime.
+
 ## 0.3.0 — 2026-09-04
 
 - Added locally bundled Motion animations for dashboard entry and exit, menu and tab transitions, search feedback, and interaction states with reduced-motion support.

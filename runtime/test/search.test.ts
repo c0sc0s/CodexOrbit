@@ -5,8 +5,8 @@ import { selectVisibleEntries } from "../src/injected/search";
 import { createInitialState } from "../src/injected/store";
 
 const entries: SessionEntry[] = [
-  { raw: "[Bug] 修复排序", tag: "Bug", time: "", title: "修复排序", tone: "red", tagged: true, key: "1", threadId: "1", index: 1, pinned: false, projectId: null },
-  { raw: "[调研][09-04] 高价值样本", tag: "调研", time: "09-04", title: "高价值样本", tone: "purple", tagged: true, key: "2", threadId: "2", index: 0, pinned: false, projectId: null },
+  { raw: "[Bug] 修复排序", tag: "Bug", time: "", title: "修复排序", color: "#d95c5c", tagged: true, key: "1", threadId: "1", index: 1, pinned: false, projectId: null },
+  { raw: "[调研][09-04] 高价值样本", tag: "调研", time: "09-04", title: "高价值样本", color: "#956ad1", tagged: true, key: "2", threadId: "2", index: 0, pinned: false, projectId: null },
 ];
 
 describe("selectVisibleEntries", () => {
