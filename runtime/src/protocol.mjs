@@ -1,6 +1,9 @@
 export const RUNTIME_PROTOCOL_VERSION = 1;
 
 export const RuntimeMessageType = Object.freeze({
+  updateCheck: "update.check",
+  updateInstall: "update.install",
+  updateSnapshot: "update.snapshot",
   hello: "hello",
   searchRequest: "search.request",
   searchResult: "search.result",

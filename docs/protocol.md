@@ -68,6 +68,9 @@ Current message families are:
 - `catalog.snapshot`: active local metadata, completeness flag and bounded error message
 - Optional catalog pin/project metadata may be unavailable; `null` must not erase known native-row metadata.
 - `navigation.open`: open a UUID only if present in the controller's current catalog
+- `update.check`: check the fixed npm registry, optionally bypassing the cache with `force: true`
+- `update.install`: install the service’s detected higher version; the renderer cannot supply a package, version, URL or command
+- `update.snapshot`: current/latest package versions, lifecycle phase and localized error code; persisted worker state survives service replacement
 - `hello` and `runtime.status`: reserved protocol-v1 capability/status families
 
 Unknown message types are ignored. Malformed envelopes and unsupported protocol majors fail closed. Search request IDs make stale responses safe to ignore.

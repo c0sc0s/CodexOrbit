@@ -2,12 +2,14 @@ import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { ControllerRouter } from "./controller-router.mjs";
-import { createRuntimeMessage, RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "./protocol.mjs";
+import { createRuntimeMessage, parseRuntimeMessage, RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "./protocol.mjs";
 import { TAG_COLOR_PRESETS, LEGACY_TONE_COLORS } from "./tag-settings.mjs";
 import { RUNTIME_VERSION } from "./tags-plugin.mjs";
 import { SessionSearchIndex } from "./search-index.mjs";
 import { SessionCatalog } from "./session-catalog.mjs";
 import { SettingsRepository } from "./settings-repository.mjs";
+
+import { UpdateService } from "./update-service.mjs";
 
 const run = promisify(execFile);
 
@@ -24,6 +26,8 @@ export async function activate({ stateDirectory, signal, onDispose, config, rpc,
   let indexStatus = { phase: "indexing", completed: 0, total: 0, changed: 0 };
   let settingsState = await settingsRepository.read();
   const send = (client, message) => { events.publish("message", message, client.id); return Promise.resolve(); };
+  const updater = new UpdateService(dataDirectory, (status) => events.publish("message", createRuntimeMessage(RuntimeMessageType.updateSnapshot, status)));
+  await updater.refresh();
   const router = new ControllerRouter({
     searchIndex, settingsRepository,
     getSettings: () => settingsState.settings,
@@ -52,8 +56,16 @@ export async function activate({ stateDirectory, signal, onDispose, config, rpc,
     });
     return bootstrap;
   });
-  rpc.handle("dispatch", (message, { clientId }) => router.handle({ id: clientId }, message));
+  rpc.handle("dispatch", (value, { clientId }) => {
+    const parsed = parseRuntimeMessage(value);
+    if (!parsed.ok) return false;
+    const message = parsed.message;
+    if (message?.protocolVersion === RUNTIME_PROTOCOL_VERSION && message.type === RuntimeMessageType.updateCheck) return updater.check(message.payload?.force === true);
+    if (message?.protocolVersion === RUNTIME_PROTOCOL_VERSION && message.type === RuntimeMessageType.updateInstall) return updater.install();
+    return router.handle({ id: clientId }, message);
+  });
   clients.onConnect(async (id) => {
+    await send({ id }, createRuntimeMessage(RuntimeMessageType.updateSnapshot, updater.state));
     await router.sendSettingsSnapshot({ id });
     await send({ id }, createRuntimeMessage(RuntimeMessageType.catalogSnapshot, catalogState));
   });
@@ -74,6 +86,7 @@ export async function activate({ stateDirectory, signal, onDispose, config, rpc,
     onDispose(() => clearTimeout(timer));
     void tick();
   };
+  repeat(async () => { if (updater.state.phase === "updating") await updater.refresh(); }, 1000);
   repeat(refreshIndex, 30_000);
   repeat(async () => {
     const next = await catalog.read();

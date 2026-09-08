@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title description">
+  <title id="title">Codex Orbit — binary orbit</title>
+  <desc id="description">White binary digits reveal a shaded planet, a tilted orbit and a small satellite against cobalt blue.</desc>
+  <defs>
+    <!-- Outlined digits keep the binary texture identical without external fonts. -->
+    <path id="zero" d="M2 0H4Q6 0 6 2V7Q6 9 4 9H2Q0 9 0 7V2Q0 0 2 0Z" fill="none" stroke="white" stroke-width="1.1"/>
+    <path id="one" d="M1 2 3 0V9M1 9H5" fill="none" stroke="white" stroke-width="1.1" stroke-linejoin="round"/>
+    <pattern id="binary" width="48" height="32" patternUnits="userSpaceOnUse">
+      <use href="#zero" x="3" y="3"/><use href="#one" x="15" y="3"/>
+      <use href="#zero" x="27" y="3"/><use href="#one" x="39" y="3"/>
+      <use href="#one" x="3" y="19"/><use href="#zero" x="15" y="19"/>
+      <use href="#one" x="27" y="19"/><use href="#zero" x="39" y="19"/>
+    </pattern>
+    <radialGradient id="planet-light" cx="72%" cy="22%" r="82%">
+      <stop offset="0" stop-color="white"/>
+      <stop offset=".35" stop-color="#e8e8e8"/>
+      <stop offset=".68" stop-color="#777"/>
+      <stop offset=".92" stop-color="#252525"/>
+      <stop offset="1" stop-color="#111"/>
+    </radialGradient>
+    <linearGradient id="orbit-light" x1="0" y1="1" x2="1" y2="0">
+      <stop stop-color="white"/><stop offset=".45" stop-color="#aaa"/>
+      <stop offset=".7" stop-color="#555"/><stop offset="1" stop-color="#ddd"/>
+    </linearGradient>
+    <radialGradient id="satellite-light" cx="65%" cy="25%" r="80%">
+      <stop stop-color="white"/><stop offset=".6" stop-color="#ddd"/><stop offset="1" stop-color="#555"/>
+    </radialGradient>
+    <mask id="orbit-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000" style="mask-type:luminance">
+      <rect width="1000" height="1000" fill="black"/>
+      <ellipse cx="500" cy="500" rx="420" ry="158" transform="rotate(-34 500 500)" fill="none" stroke="url(#orbit-light)" stroke-width="31"/>
+      <!-- The opaque sphere occludes the rear orbital arc before the front arc is restored. -->
+      <circle cx="500" cy="500" r="218" fill="url(#planet-light)"/>
+      <path d="M420 0A420 158 0 0 1-420 0" transform="translate(500 500) rotate(-34)" fill="none" stroke="white" stroke-width="31"/>
+      <circle cx="827" cy="272" r="40" fill="url(#satellite-light)"/>
+    </mask>
+  </defs>
+  <rect width="1000" height="1000" fill="#0750f5"/>
+  <rect width="1000" height="1000" fill="url(#binary)" mask="url(#orbit-mask)"/>
+</svg>

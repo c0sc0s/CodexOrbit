@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/banner.png" alt="Codex Tags — 少翻列表，快速找到会话。" width="100%"></p>
+<p align="center"><img src="assets/banner.png" alt="Codex Orbit — 你的 Codex，你的运行轨道。" width="100%"></p>
 <p align="center"><a href="README.md">English</a> · <b>简体中文</b></p>
 <p align="center"><a href="#开始使用">开始使用</a> · <a href="#命令">命令</a> · <a href="docs/development.md">本地开发</a> · <a href="docs/architecture.md">架构设计</a></p>
 
@@ -6,7 +6,7 @@
 
 **macOS · Node.js 22+ · 中英文界面**
 
-> **0.6.1** — 修复浅色模式下的 Tags 弹窗背景。运行 `npx @c0sc0s/codex-tags@latest update` 更新。
+> **0.7.0** — 新增一键更新与可记忆的侧边栏排序选择。运行 `npx @c0sc0s/codex-tags@latest update` 更新。
 
 > **早期版本** — 自动化检查已通过。全新账户冷启动及手动授权后的首次命名仍需完整端到端验收，详见[验证范围](docs/compatibility.md)。
 

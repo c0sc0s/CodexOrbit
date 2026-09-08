@@ -13,6 +13,7 @@ interface DashboardSearchState {
 }
 
 interface DashboardViewOptions {
+  updatePanel?: { mount(): HTMLElement };
   state: DashboardState;
   store: RuntimeStore;
   i18n: RuntimeI18n;
@@ -604,6 +605,7 @@ export class DashboardView {
       configList.appendChild(row);
     });
     body.append(note, form, configList);
+    if (this.options.updatePanel) body.append(this.options.updatePanel.mount());
   }
 
   private button(className: string, text: string): HTMLButtonElement {

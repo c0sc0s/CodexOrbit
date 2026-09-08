@@ -151,3 +151,8 @@ export function sidebarOrderGroups(): SidebarOrderItem[][] {
   }
   return [...groups.values()];
 }
+
+export function sidebarSectionHeading(toggle: HTMLElement): HTMLElement {
+  // The title text and overflow menu share this row; inserting inside the text column displaces the menu.
+  return toggle.closest<HTMLElement>('[class~="group/nav-section-title"]') ?? toggle.parentElement ?? toggle;
+}

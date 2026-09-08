@@ -4,6 +4,23 @@ type MessageParams = Record<string, number | string>;
 type Message = (params: MessageParams) => string;
 
 const zhCN = {
+  updatesTitle: () => "软件更新",
+  updatesIdle: () => "检查是否有新版本。",
+  updatesChecking: () => "正在检查更新…",
+  updatesCurrent: () => "已是最新版本。",
+  updatesInstalling: () => "正在升级，Tags 将短暂重新加载，请保持 Codex 打开。",
+  updatesSucceeded: () => "升级完成。",
+  updatesCheckError: () => "检查失败，请检查网络后重试。",
+  updatesStartError: () => "无法启动升级，请确认 Node.js 和 npm 可用后重试。",
+  updatesInstallError: () => "升级失败，可重试。若 Tags 未恢复，请运行 CLI update。",
+  updatesInterrupted: () => "上次升级被中断，请重试。",
+  updatesTransportError: () => "更新服务暂时无法连接，请稍后重试。",
+  updatesRetry: () => "重试检查",
+  updatesCheck: () => "检查更新",
+  updatesInstall: () => "立即升级",
+  updatesVersion: ({ current }: MessageParams) => `当前版本 ${current}`,
+  updatesAvailable: ({ version }: MessageParams) => `新版本 ${version} 可用。`,
+
   add: () => "添加",
   cancel: () => "取消",
   save: () => "保存",
@@ -47,6 +64,10 @@ const zhCN = {
   sessions: () => "会话",
   sessionsDashboard: () => "会话看板",
   settingsNote: () => "描述帮助 AI 在首次命名时选择标签；颜色仅用于显示。",
+  sidebarSort: () => "侧栏排序",
+  sidebarSortTag: () => "按标签",
+  sidebarSortNative: () => "默认",
+  sidebarSortNativeHint: () => "原生模式沿用 Codex 当前顺序，置顶任务保留原生手动顺序",
   sort: () => "排序",
   sortAria: () => "会话排序",
   sortDateDescending: () => "最近更新",
@@ -64,9 +85,26 @@ const zhCN = {
   uncategorized: () => "未分类",
 } satisfies Record<string, Message>;
 
-type MessageKey = keyof typeof zhCN;
+export type MessageKey = keyof typeof zhCN;
 
 const enUS: Record<MessageKey, Message> = {
+  updatesTitle: () => "Software updates",
+  updatesIdle: () => "Check for a new version.",
+  updatesChecking: () => "Checking for updates…",
+  updatesCurrent: () => "You’re up to date.",
+  updatesInstalling: () => "Updating. Tags will reload briefly; keep Codex open.",
+  updatesSucceeded: () => "Update complete.",
+  updatesCheckError: () => "Could not check for updates. Check your connection and retry.",
+  updatesStartError: () => "Could not start the update. Check that Node.js and npm are available.",
+  updatesInstallError: () => "Update failed. Retry, or run CLI update if Tags has not recovered.",
+  updatesInterrupted: () => "The previous update was interrupted. Please retry.",
+  updatesTransportError: () => "The update service is unavailable. Please retry shortly.",
+  updatesRetry: () => "Retry check",
+  updatesCheck: () => "Check for updates",
+  updatesInstall: () => "Update now",
+  updatesVersion: ({ current }: MessageParams) => `Current version ${current}`,
+  updatesAvailable: ({ version }: MessageParams) => `Version ${version} is available.`,
+
   add: () => "Add tag",
   cancel: () => "Cancel",
   save: () => "Save",
@@ -110,6 +148,10 @@ const enUS: Record<MessageKey, Message> = {
   sessions: () => "Sessions",
   sessionsDashboard: () => "Sessions",
   settingsNote: () => "Descriptions help AI choose a tag when first naming a session; colors only affect display.",
+  sidebarSort: () => "Sidebar order",
+  sidebarSortTag: () => "By tag",
+  sidebarSortNative: () => "Default",
+  sidebarSortNativeHint: () => "Native mode follows Codex order, including manual pinned order",
   sort: () => "Sort",
   sortAria: () => "Sort sessions",
   sortDateDescending: () => "Recently updated",

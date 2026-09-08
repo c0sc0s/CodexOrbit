@@ -1,5 +1,8 @@
+import { SidebarSortControl } from "./sidebar-sort-control";
 import type { SessionEntry, TagDefinition } from "./models";
 import type { RuntimeI18n } from "./i18n";
+
+export type SidebarSortMode = "tag" | "native";
 
 interface SidebarTagFilterOptions {
   hostId: string;
@@ -8,6 +11,8 @@ interface SidebarTagFilterOptions {
   i18n: RuntimeI18n;
   neutralColor: string;
   ensureHost(): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null;
+  getSortMode(): SidebarSortMode;
+  setSortMode(value: SidebarSortMode): void;
   getEntries(): SessionEntry[];
   getRows(): Array<{ row: HTMLElement; tag: string }>;
   getDefinitions(): TagDefinition[];
@@ -25,7 +30,10 @@ interface FilterItem {
 }
 
 export class SidebarTagFilter {
-  constructor(private readonly options: SidebarTagFilterOptions) {}
+  private readonly sort: SidebarSortControl;
+  constructor(private readonly options: SidebarTagFilterOptions) {
+    this.sort = new SidebarSortControl(options.i18n, options.getSortMode, options.setSortMode);
+  }
 
   apply(): void {
     const selectedTag = this.options.getSelectedTag();
@@ -44,6 +52,8 @@ export class SidebarTagFilter {
     const mounted = this.options.ensureHost();
     if (!mounted) return;
     const { filterHost, pinnedToggle } = mounted;
+    this.sort.update();
+    if (this.sort.isOpen) { this.apply(); return; }
     const previousRail = filterHost.querySelector<HTMLElement>(".codex-sidebar-quick-filter-rail");
     const previousScrollLeft = previousRail?.scrollLeft ?? 0;
     const focusedValue = filterHost.contains(document.activeElement)
@@ -57,6 +67,9 @@ export class SidebarTagFilter {
     const pinnedStyle = getComputedStyle(pinnedToggle);
     ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"]
       .forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
+
+    this.sort.update();
+    heading.appendChild(this.sort.element);
 
     const counts = new Map<string, number>();
     const entries = this.options.getEntries();
@@ -116,6 +129,7 @@ export class SidebarTagFilter {
   }
 
   dispose(filteredRows: Iterable<HTMLElement>): void {
+    this.sort.dispose();
     for (const row of filteredRows) row.removeAttribute(this.options.filteredAttribute);
     document.documentElement.removeAttribute(this.options.activeAttribute);
     document.getElementById(this.options.hostId)?.remove();

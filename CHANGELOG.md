@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 — 2026-09-08
+
+- Add localized update checks and one-click npm upgrades in Tags settings, with detached installation, persisted completion/failure status and retry.
+
+- Keep Tags above the complete Pinned heading so the native overflow menu stays aligned; use a themed keyboard-accessible sidebar order menu.
+
+- Add a remembered sidebar order selector beside Tags: group by tag or restore Codex native order, preserving tag filters and native pinned ordering.
+
 ## 0.6.1 — 2026-09-07
 
 - Fix Tags dialog, sort menu, selected tabs and result group backgrounds in light mode using current Codex theme colors and theme-aware fallbacks.

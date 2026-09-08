@@ -67,3 +67,11 @@ No open-source license is currently granted (`UNLICENSED`). Public distribution 
 ## Independent Loader package
 
 `runtime/src/plugin-loader` is also a self-contained npm package, `@c0sc0s/codex-plugin-loader`, with no production dependencies. Run `npm pack ./runtime/src/plugin-loader` to produce its tarball. Its CLI is the explicit standalone startup entry; it does not install naming hooks, create Tags data or require the Tags controller. The Tags distribution embeds the same source, configures its renderer/service module and delegates the existing desktop entry directly to Loader. See [Loader contract](plugin-loader.md). The package exports the standalone desktop-launcher builder. The npm release is `@c0sc0s/codex-tags`, with Loader included in the same package. Users install only Tags; there is no separate Loader npm dependency.
+
+## Updates from Tags settings
+
+Tags → Settings → Software updates shows the installed npm package version. Opening Settings checks the public npm registry, with a four-hour in-process cache; Check for updates bypasses the cache. Only a higher stable `latest` version enables Update now. These checks send no session or tag data.
+
+An independent Node worker installs the exact detected `@c0sc0s/codex-tags` version into a temporary npm prefix, then runs its existing `update` CLI. Node and npm must remain available. The worker survives Loader/service replacement, preserves settings through the installer, and records status in `update-status.json` under the installation directory. An exclusive `update.lock` prevents concurrent workers. The UI may briefly reload; keep Codex open. Updated hooks may require review through Codex Plugins.
+
+Failures remain visible with a retry check. If installation stops Loader and recovery cannot restart it, run `npx @c0sc0s/codex-tags@latest update` from a terminal. This flow does not provide transactional rollback. Updates become available to users after publishing a higher npm package version; a Git push alone does not release an update.

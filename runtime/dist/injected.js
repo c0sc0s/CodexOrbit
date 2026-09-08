@@ -25,6 +25,67 @@ var CodexPlugin = (() => {
     installRuntime: () => installRuntime
   });
 
+  // runtime/src/injected/update-panel.ts
+  var UpdatePanel = class {
+    constructor(i18n, check, install) {
+      this.i18n = i18n;
+      this.check = check;
+      this.install = install;
+    }
+    i18n;
+    check;
+    install;
+    state = { phase: "idle" };
+    element = null;
+    mount() {
+      this.element = document.createElement("section");
+      this.element.className = "codex-sidebar-update-panel";
+      this.render();
+      queueMicrotask(() => this.check(false));
+      return this.element;
+    }
+    update(state) {
+      this.state = state;
+      this.render();
+    }
+    render() {
+      if (!this.element) return;
+      const { phase, currentVersion, latestVersion, error } = this.state;
+      const busy = phase === "checking" || phase === "updating";
+      const heading = document.createElement("strong");
+      heading.textContent = this.i18n.t("updatesTitle");
+      const versions = document.createElement("div");
+      versions.textContent = this.i18n.t("updatesVersion", { current: typeof currentVersion === "string" && currentVersion ? currentVersion : "\u2014" });
+      const status = document.createElement("p");
+      status.setAttribute("role", "status");
+      const keys = { idle: "updatesIdle", checking: "updatesChecking", current: "updatesCurrent", available: "updatesAvailable", updating: "updatesInstalling", succeeded: "updatesSucceeded" };
+      const errors = { check: "updatesCheckError", start: "updatesStartError", install: "updatesInstallError", interrupted: "updatesInterrupted", transport: "updatesTransportError" };
+      status.textContent = this.i18n.t(phase === "error" ? errors[String(error)] ?? "updatesInstallError" : keys[String(phase)] ?? "updatesIdle", { version: typeof latestVersion === "string" ? latestVersion : "" });
+      const actions = document.createElement("div");
+      const check = document.createElement("button");
+      check.type = "button";
+      check.textContent = this.i18n.t(phase === "error" ? "updatesRetry" : "updatesCheck");
+      check.disabled = busy;
+      check.addEventListener("click", () => {
+        this.update({ ...this.state, phase: "checking" });
+        this.check(true);
+      });
+      actions.append(check);
+      if (phase === "available") {
+        const install = document.createElement("button");
+        install.type = "button";
+        install.textContent = this.i18n.t("updatesInstall");
+        install.addEventListener("click", () => {
+          this.update({ ...this.state, phase: "updating" });
+          this.install();
+        });
+        actions.append(install);
+      }
+      this.element.setAttribute("aria-busy", String(busy));
+      this.element.replaceChildren(heading, versions, status, actions);
+    }
+  };
+
   // runtime/src/tag-settings.mjs
   var TAG_COLOR_PRESETS = Object.freeze([
     { name: "\u6D77\u84DD", color: "#4f8fd7" },
@@ -99,6 +160,9 @@ var CodexPlugin = (() => {
   // runtime/src/protocol.mjs
   var RUNTIME_PROTOCOL_VERSION = 1;
   var RuntimeMessageType = Object.freeze({
+    updateCheck: "update.check",
+    updateInstall: "update.install",
+    updateSnapshot: "update.snapshot",
     hello: "hello",
     searchRequest: "search.request",
     searchResult: "search.result",
@@ -251,6 +315,9 @@ var CodexPlugin = (() => {
       }
     }
     return [...groups.values()];
+  }
+  function sidebarSectionHeading(toggle) {
+    return toggle.closest('[class~="group/nav-section-title"]') ?? toggle.parentElement ?? toggle;
   }
 
   // node_modules/preact/dist/preact.module.js
@@ -1817,6 +1884,7 @@ var CodexPlugin = (() => {
         configList.appendChild(row);
       });
       body.append(note, form, configList);
+      if (this.options.updatePanel) body.append(this.options.updatePanel.mount());
     }
     button(className, text) {
       const element = document.createElement("button");
@@ -1936,6 +2004,22 @@ var CodexPlugin = (() => {
 
   // runtime/src/injected/i18n.ts
   var zhCN = {
+    updatesTitle: () => "\u8F6F\u4EF6\u66F4\u65B0",
+    updatesIdle: () => "\u68C0\u67E5\u662F\u5426\u6709\u65B0\u7248\u672C\u3002",
+    updatesChecking: () => "\u6B63\u5728\u68C0\u67E5\u66F4\u65B0\u2026",
+    updatesCurrent: () => "\u5DF2\u662F\u6700\u65B0\u7248\u672C\u3002",
+    updatesInstalling: () => "\u6B63\u5728\u5347\u7EA7\uFF0CTags \u5C06\u77ED\u6682\u91CD\u65B0\u52A0\u8F7D\uFF0C\u8BF7\u4FDD\u6301 Codex \u6253\u5F00\u3002",
+    updatesSucceeded: () => "\u5347\u7EA7\u5B8C\u6210\u3002",
+    updatesCheckError: () => "\u68C0\u67E5\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5\u3002",
+    updatesStartError: () => "\u65E0\u6CD5\u542F\u52A8\u5347\u7EA7\uFF0C\u8BF7\u786E\u8BA4 Node.js \u548C npm \u53EF\u7528\u540E\u91CD\u8BD5\u3002",
+    updatesInstallError: () => "\u5347\u7EA7\u5931\u8D25\uFF0C\u53EF\u91CD\u8BD5\u3002\u82E5 Tags \u672A\u6062\u590D\uFF0C\u8BF7\u8FD0\u884C CLI update\u3002",
+    updatesInterrupted: () => "\u4E0A\u6B21\u5347\u7EA7\u88AB\u4E2D\u65AD\uFF0C\u8BF7\u91CD\u8BD5\u3002",
+    updatesTransportError: () => "\u66F4\u65B0\u670D\u52A1\u6682\u65F6\u65E0\u6CD5\u8FDE\u63A5\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002",
+    updatesRetry: () => "\u91CD\u8BD5\u68C0\u67E5",
+    updatesCheck: () => "\u68C0\u67E5\u66F4\u65B0",
+    updatesInstall: () => "\u7ACB\u5373\u5347\u7EA7",
+    updatesVersion: ({ current }) => `\u5F53\u524D\u7248\u672C ${current}`,
+    updatesAvailable: ({ version }) => `\u65B0\u7248\u672C ${version} \u53EF\u7528\u3002`,
     add: () => "\u6DFB\u52A0",
     cancel: () => "\u53D6\u6D88",
     save: () => "\u4FDD\u5B58",
@@ -1979,6 +2063,10 @@ var CodexPlugin = (() => {
     sessions: () => "\u4F1A\u8BDD",
     sessionsDashboard: () => "\u4F1A\u8BDD\u770B\u677F",
     settingsNote: () => "\u63CF\u8FF0\u5E2E\u52A9 AI \u5728\u9996\u6B21\u547D\u540D\u65F6\u9009\u62E9\u6807\u7B7E\uFF1B\u989C\u8272\u4EC5\u7528\u4E8E\u663E\u793A\u3002",
+    sidebarSort: () => "\u4FA7\u680F\u6392\u5E8F",
+    sidebarSortTag: () => "\u6309\u6807\u7B7E",
+    sidebarSortNative: () => "\u9ED8\u8BA4",
+    sidebarSortNativeHint: () => "\u539F\u751F\u6A21\u5F0F\u6CBF\u7528 Codex \u5F53\u524D\u987A\u5E8F\uFF0C\u7F6E\u9876\u4EFB\u52A1\u4FDD\u7559\u539F\u751F\u624B\u52A8\u987A\u5E8F",
     sort: () => "\u6392\u5E8F",
     sortAria: () => "\u4F1A\u8BDD\u6392\u5E8F",
     sortDateDescending: () => "\u6700\u8FD1\u66F4\u65B0",
@@ -1996,6 +2084,22 @@ var CodexPlugin = (() => {
     uncategorized: () => "\u672A\u5206\u7C7B"
   };
   var enUS = {
+    updatesTitle: () => "Software updates",
+    updatesIdle: () => "Check for a new version.",
+    updatesChecking: () => "Checking for updates\u2026",
+    updatesCurrent: () => "You\u2019re up to date.",
+    updatesInstalling: () => "Updating. Tags will reload briefly; keep Codex open.",
+    updatesSucceeded: () => "Update complete.",
+    updatesCheckError: () => "Could not check for updates. Check your connection and retry.",
+    updatesStartError: () => "Could not start the update. Check that Node.js and npm are available.",
+    updatesInstallError: () => "Update failed. Retry, or run CLI update if Tags has not recovered.",
+    updatesInterrupted: () => "The previous update was interrupted. Please retry.",
+    updatesTransportError: () => "The update service is unavailable. Please retry shortly.",
+    updatesRetry: () => "Retry check",
+    updatesCheck: () => "Check for updates",
+    updatesInstall: () => "Update now",
+    updatesVersion: ({ current }) => `Current version ${current}`,
+    updatesAvailable: ({ version }) => `Version ${version} is available.`,
     add: () => "Add tag",
     cancel: () => "Cancel",
     save: () => "Save",
@@ -2039,6 +2143,10 @@ var CodexPlugin = (() => {
     sessions: () => "Sessions",
     sessionsDashboard: () => "Sessions",
     settingsNote: () => "Descriptions help AI choose a tag when first naming a session; colors only affect display.",
+    sidebarSort: () => "Sidebar order",
+    sidebarSortTag: () => "By tag",
+    sidebarSortNative: () => "Default",
+    sidebarSortNativeHint: () => "Native mode follows Codex order, including manual pinned order",
     sort: () => "Sort",
     sortAria: () => "Sort sessions",
     sortDateDescending: () => "Recently updated",
@@ -2350,12 +2458,115 @@ var CodexPlugin = (() => {
     }
   };
 
+  // runtime/src/injected/sidebar-sort-control.ts
+  var SidebarSortControl = class {
+    constructor(i18n, getMode, setMode) {
+      this.i18n = i18n;
+      this.getMode = getMode;
+      this.setMode = setMode;
+      this.element.className = "codex-sidebar-order-control";
+      this.trigger.type = "button";
+      this.trigger.className = "codex-sidebar-order-trigger";
+      this.trigger.setAttribute("aria-haspopup", "menu");
+      this.trigger.addEventListener("click", () => this.menu ? this.close() : this.open());
+      this.trigger.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+        event.preventDefault();
+        this.open();
+        const buttons = this.buttons();
+        (event.key === "ArrowUp" ? buttons.at(-1) : buttons[0])?.focus();
+      });
+      this.element.append(this.trigger);
+      document.addEventListener("pointerdown", this.outside, true);
+      this.element.addEventListener("focusout", this.focusOut);
+      this.update();
+    }
+    i18n;
+    getMode;
+    setMode;
+    element = document.createElement("div");
+    trigger = document.createElement("button");
+    menu = null;
+    get isOpen() {
+      return this.menu !== null;
+    }
+    update() {
+      this.trigger.textContent = this.i18n.t(this.getMode() === "tag" ? "sidebarSortTag" : "sidebarSortNative");
+      this.trigger.title = this.i18n.t("sidebarSortNativeHint");
+      this.trigger.setAttribute("aria-label", `${this.i18n.t("sidebarSort")}: ${this.trigger.textContent}`);
+      this.trigger.setAttribute("aria-expanded", String(this.isOpen));
+      this.menu?.setAttribute("aria-label", this.i18n.t("sidebarSort"));
+      for (const option of this.buttons()) {
+        option.textContent = this.i18n.t(option.dataset.mode === "tag" ? "sidebarSortTag" : "sidebarSortNative");
+      }
+    }
+    dispose() {
+      document.removeEventListener("pointerdown", this.outside, true);
+      this.close();
+      this.element.remove();
+    }
+    buttons() {
+      return [...this.menu?.querySelectorAll("button") ?? []];
+    }
+    open() {
+      if (this.menu) return;
+      this.menu = document.createElement("div");
+      this.menu.className = "codex-sidebar-order-menu";
+      this.menu.setAttribute("role", "menu");
+      this.menu.setAttribute("aria-label", this.i18n.t("sidebarSort"));
+      for (const mode of ["tag", "native"]) {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.dataset.mode = mode;
+        option.setAttribute("role", "menuitemradio");
+        option.setAttribute("aria-checked", String(this.getMode() === mode));
+        option.textContent = this.i18n.t(mode === "tag" ? "sidebarSortTag" : "sidebarSortNative");
+        option.addEventListener("click", () => {
+          this.setMode(mode);
+          this.close();
+          this.trigger.focus();
+        });
+        this.menu.append(option);
+      }
+      this.menu.addEventListener("keydown", (event) => {
+        const buttons = this.buttons();
+        const index = buttons.indexOf(document.activeElement);
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          this.close();
+          this.trigger.focus();
+        } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+          buttons[next]?.focus();
+        }
+      });
+      this.element.append(this.menu);
+      this.update();
+      this.menu.querySelector('[aria-checked="true"]')?.focus();
+    }
+    close() {
+      this.menu?.remove();
+      this.menu = null;
+      this.update();
+    }
+    outside = (event) => {
+      if (event.target instanceof Node && !this.element.contains(event.target)) this.close();
+    };
+    focusOut = (event) => {
+      if (!(event.relatedTarget instanceof Node) || !this.element.contains(event.relatedTarget)) this.close();
+    };
+  };
+
   // runtime/src/injected/sidebar-tag-filter.ts
   var SidebarTagFilter = class {
     constructor(options) {
       this.options = options;
+      this.sort = new SidebarSortControl(options.i18n, options.getSortMode, options.setSortMode);
     }
     options;
+    sort;
     apply() {
       const selectedTag = this.options.getSelectedTag();
       const selected = selectedTag.toLocaleLowerCase();
@@ -2372,6 +2583,11 @@ var CodexPlugin = (() => {
       const mounted = this.options.ensureHost();
       if (!mounted) return;
       const { filterHost, pinnedToggle } = mounted;
+      this.sort.update();
+      if (this.sort.isOpen) {
+        this.apply();
+        return;
+      }
       const previousRail = filterHost.querySelector(".codex-sidebar-quick-filter-rail");
       const previousScrollLeft = previousRail?.scrollLeft ?? 0;
       const focusedValue = filterHost.contains(document.activeElement) ? document.activeElement?.closest(".codex-sidebar-quick-filter")?.dataset.value : null;
@@ -2381,6 +2597,8 @@ var CodexPlugin = (() => {
       heading.textContent = "Tags";
       const pinnedStyle = getComputedStyle(pinnedToggle);
       ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"].forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
+      this.sort.update();
+      heading.appendChild(this.sort.element);
       const counts = /* @__PURE__ */ new Map();
       const entries = this.options.getEntries();
       entries.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
@@ -2434,6 +2652,7 @@ var CodexPlugin = (() => {
       }
     }
     dispose(filteredRows) {
+      this.sort.dispose();
       for (const row of filteredRows) row.removeAttribute(this.options.filteredAttribute);
       document.documentElement.removeAttribute(this.options.activeAttribute);
       document.getElementById(this.options.hostId)?.remove();
@@ -2487,6 +2706,13 @@ var CodexPlugin = (() => {
     const FILTERED = filteredAttribute;
     const ROW = rowAttribute;
     return `
+.codex-sidebar-update-panel { margin-top: 24px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); font-size: 13px; }
+.codex-sidebar-update-panel > div, .codex-sidebar-update-panel p { margin-top: 8px; }
+.codex-sidebar-update-panel p { opacity: .7; }
+.codex-sidebar-update-panel button { padding: 6px 10px; margin-right: 8px; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); border-radius: 7px; background: transparent; color: inherit; cursor: pointer; }
+.codex-sidebar-update-panel button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.codex-sidebar-update-panel button:disabled { opacity: .5; cursor: default; }
+
 
     [${ENHANCED}] { min-width: 0; }
     .codex-sidebar-tag-layout { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
@@ -2503,7 +2729,16 @@ var CodexPlugin = (() => {
     .codex-sidebar-tag-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #${FILTER_BAR_ID} { min-width: 0; margin: 0 0 6px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); }
-    .codex-sidebar-tags-section-heading { min-height: 28px; margin: 0; pointer-events: none; }
+    .codex-sidebar-tags-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; margin: 0; }
+    .codex-sidebar-order-control { position: relative; flex: 0 1 auto; min-width: 0; }
+    .codex-sidebar-order-trigger { display: flex; align-items: center; gap: 7px; max-width: 100%; padding: 3px 6px; border: 0; border-radius: 5px; color: inherit; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+    .codex-sidebar-order-trigger::after { width: 5px; height: 5px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: translateY(-2px) rotate(45deg); content: ""; }
+    .codex-sidebar-order-trigger:hover, .codex-sidebar-order-trigger[aria-expanded="true"] { background: var(--color-token-list-hover-background, #8882); }
+    .codex-sidebar-order-trigger:focus-visible, .codex-sidebar-order-menu button:focus-visible { outline: 2px solid var(--color-border-focus, #4b8cff); outline-offset: -2px; }
+    .codex-sidebar-order-menu { position: absolute; z-index: 100; top: calc(100% + 4px); right: 0; min-width: 170px; padding: 4px; border: 1px solid var(--color-border, #8884); border-radius: 8px; background: var(--color-background-elevated-secondary-opaque, var(--color-background-elevated-high, var(--color-token-dropdown-background, Canvas))); color: var(--color-text-foreground, var(--color-token-dropdown-foreground, CanvasText)); box-shadow: 0 6px 20px #0003; }
+    .codex-sidebar-order-menu button { display: block; width: 100%; padding: 7px 28px 7px 8px; border: 0; border-radius: 4px; background: transparent; color: inherit; font: inherit; font-size: 12px; text-align: left; cursor: pointer; position: relative; }
+    .codex-sidebar-order-menu button:hover, .codex-sidebar-order-menu button:focus { background: var(--color-token-list-hover-background, #8882); }
+    .codex-sidebar-order-menu button[aria-checked="true"]::after { position: absolute; right: 9px; content: "\u2713"; }
     .codex-sidebar-quick-filter-rail {
       display: flex; min-width: 0; gap: 3px; padding: 1px 4px 5px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
     }
@@ -2845,9 +3080,11 @@ var CodexPlugin = (() => {
           items: [],
           error: i18n.t("searchUnavailable")
         }, request.requestId));
+        if (request.type === RuntimeMessageType.updateCheck || request.type === RuntimeMessageType.updateInstall) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.updateSnapshot, { phase: "error", error: "transport" }));
         if (request.type === RuntimeMessageType.settingsUpdate) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.settingsError));
       }
     );
+    const updatePanel = new UpdatePanel(i18n, (force) => runtimeClient.send(RuntimeMessageType.updateCheck, { force }), () => runtimeClient.send(RuntimeMessageType.updateInstall, {}));
     const parse = (value) => {
       const raw = typeof value === "string" ? value.trim() : "";
       const parsed = parseTitleMetadata(raw);
@@ -2900,11 +3137,23 @@ var CodexPlugin = (() => {
     });
     const titleNodes = () => queryThreadTitles(TOOLBAR_ID);
     const sidebarTagOrder = new SidebarTagOrder();
-    const applySidebarOrder = () => sidebarTagOrder.apply(
-      sidebarOrderGroups(),
-      tagDefinitions.map(({ name }) => name),
-      (title) => parse(title.getAttribute(RAW) ?? title.textContent)?.tag ?? i18n.t("uncategorized")
-    );
+    const SIDEBAR_SORT_KEY = "codex-sidebar-tags-sort-v1";
+    let sidebarSort = "tag";
+    try {
+      if (localStorage.getItem(SIDEBAR_SORT_KEY) === "native") sidebarSort = "native";
+    } catch {
+    }
+    const applySidebarOrder = () => {
+      if (sidebarSort === "native") {
+        sidebarTagOrder.dispose();
+        return;
+      }
+      sidebarTagOrder.apply(
+        sidebarOrderGroups(),
+        tagDefinitions.map(({ name }) => name),
+        (title) => parse(title.getAttribute(RAW) ?? title.textContent)?.tag ?? i18n.t("uncategorized")
+      );
+    };
     const commonAncestor = (left, right) => {
       if (!left || !right) return left?.parentElement ?? null;
       const parents = /* @__PURE__ */ new Set();
@@ -2947,7 +3196,7 @@ var CodexPlugin = (() => {
     const ensureFilterHost = () => {
       const pinnedToggle = findSectionToggle(codexLabels.pinned) ?? (pinnedToggleRef?.isConnected ? pinnedToggleRef : null);
       if (!pinnedToggle) return null;
-      const pinnedHeadingRow = pinnedToggle.parentElement ?? pinnedToggle;
+      const pinnedHeadingRow = sidebarSectionHeading(pinnedToggle);
       filterHost = document.getElementById(FILTER_BAR_ID);
       if (!filterHost) {
         filterHost = document.createElement("section");
@@ -2978,6 +3227,16 @@ var CodexPlugin = (() => {
       i18n,
       neutralColor: legacyToneColors.neutral,
       ensureHost: ensureFilterHost,
+      getSortMode: () => sidebarSort,
+      setSortMode: (value) => {
+        sidebarSort = value;
+        try {
+          localStorage.setItem(SIDEBAR_SORT_KEY, value);
+        } catch {
+        }
+        applySidebarOrder();
+        trace("sidebar-sort", { value });
+      },
       getEntries: () => entriesFrom(titleNodes()),
       // Catalog membership must not decide whether a mounted native row gets filtered.
       getRows: () => titleNodes().flatMap((title) => {
@@ -3052,6 +3311,7 @@ var CodexPlugin = (() => {
       }, 200);
     };
     dashboardView = new DashboardView({
+      updatePanel,
       state,
       store: runtimeStore,
       i18n,
@@ -3144,6 +3404,10 @@ var CodexPlugin = (() => {
       return true;
     };
     const handleRuntimeMessage = (message) => {
+      if (message.type === RuntimeMessageType.updateSnapshot) {
+        updatePanel.update(message.payload);
+        return true;
+      }
       if (message.type === RuntimeMessageType.settingsError) {
         searchError = i18n.t("settingsSaveFailed");
         renderToolbar(entriesFrom(titleNodes()), "settings-error");
@@ -3197,6 +3461,7 @@ var CodexPlugin = (() => {
         toolbar: Boolean(document.getElementById(TOOLBAR_ID)),
         sidebarFilter: Boolean(document.getElementById(FILTER_BAR_ID)),
         activeTag: state.tag,
+        sidebarSort,
         visibleResults: dashboardView.visibleResultCount,
         renderCount,
         observerRefreshCount: hostLifecycle.observerRefreshCount

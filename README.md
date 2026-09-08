@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/banner.png" alt="Codex Tags — Less scrolling. More finding." width="100%"></p>
+<p align="center"><img src="assets/banner.png" alt="Codex Orbit — Your Codex. Your orbit." width="100%"></p>
 <p align="center"><b>English</b> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center"><a href="#get-started">Get started</a> · <a href="#commands">Commands</a> · <a href="docs/development.md">Development</a> · <a href="docs/architecture.md">Architecture</a></p>
 
@@ -6,7 +6,7 @@ An independent, local-first enhancement for Codex: organize sessions with tags, 
 
 **macOS · Node.js 22+ · English / 简体中文**
 
-> **0.6.1** — Fix Tags popup backgrounds in light mode. Update with `npx @c0sc0s/codex-tags@latest update`.
+> **0.7.0** — Add one-click updates and a remembered sidebar order selector. Update with `npx @c0sc0s/codex-tags@latest update`.
 
 > **Early release** — Automated checks pass. Clean-account cold-start and manually trusted first-turn naming still need full end-to-end acceptance; see [verification coverage](docs/compatibility.md).
 

@@ -23,6 +23,8 @@ const runtimeFiles = new Map([
   ...loaderFiles.map((file) => [`plugin-loader/${file}`, `plugin-loader/${file}`]),
   ["tags-plugin.mjs", "tags-plugin.mjs"],
   ["tags-service.mjs", "tags-service.mjs"],
+  ["update-service.mjs", "update-service.mjs"],
+  ["update-worker.mjs", "update-worker.mjs"],
   ["codex-process.mjs", "codex-process.mjs"],
   ["controller-router.mjs", "controller-router.mjs"],
   ["cdp-client.mjs", "cdp-client.mjs"],
@@ -276,6 +278,7 @@ export function createManager(options = {}) {
     const pluginVersion = await readPluginVersion();
     const installation = {
       schemaVersion: 2,
+      packageVersion: JSON.parse(await readFile(join(root, "package.json"), "utf8")).version,
       pluginVersion,
       installedAt: new Date().toISOString(),
       packageRoot: root,

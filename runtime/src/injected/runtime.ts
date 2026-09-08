@@ -1,3 +1,4 @@
+import { UpdatePanel } from "./update-panel";
 import { normalizeTagDefinitions } from "../tag-settings.mjs";
 import { parseTitleMetadata } from "../title-format.mjs";
 import { createRuntimeMessage, RUNTIME_PROTOCOL_VERSION, RuntimeMessageType } from "../protocol.mjs";
@@ -22,6 +23,7 @@ import {
   queryThreadTitles,
   sectionToggleForThreadRow,
   sidebarOrderGroups,
+  sidebarSectionHeading,
   threadIdForRow,
 } from "./codex-dom-adapter";
 import { DashboardView } from "./dashboard-view";
@@ -32,7 +34,7 @@ import { RuntimeClient } from "./runtime-client";
 import { parseRuntimeConfig } from "./runtime-config";
 import { SessionRegistry } from "./session-registry";
 import { SidebarTagOrder } from "./sidebar-tag-order";
-import { SidebarTagFilter } from "./sidebar-tag-filter";
+import { SidebarTagFilter, type SidebarSortMode } from "./sidebar-tag-filter";
 import { RuntimeStore } from "./store";
 import { buildRuntimeStyles } from "./styles";
 import { TitleDecorator } from "./title-decorator";
@@ -97,9 +99,12 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
       if (request.type === RuntimeMessageType.searchRequest) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.searchResult, {
         query: request.payload.query, items: [], error: i18n.t("searchUnavailable"),
       }, request.requestId));
+      if (request.type === RuntimeMessageType.updateCheck || request.type === RuntimeMessageType.updateInstall) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.updateSnapshot, { phase: "error", error: "transport" }));
       if (request.type === RuntimeMessageType.settingsUpdate) receiveRuntimeMessage(createRuntimeMessage(RuntimeMessageType.settingsError));
     },
   );
+
+  const updatePanel = new UpdatePanel(i18n, (force) => runtimeClient.send(RuntimeMessageType.updateCheck, { force }), () => runtimeClient.send(RuntimeMessageType.updateInstall, {}));
 
   const parse = (value: unknown): ParsedSessionTitle | null => {
     const raw = typeof value === "string" ? value.trim() : "";
@@ -154,10 +159,17 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
 
   const titleNodes = () => queryThreadTitles(TOOLBAR_ID);
   const sidebarTagOrder = new SidebarTagOrder();
-  const applySidebarOrder = (): void => sidebarTagOrder.apply(
-    sidebarOrderGroups(), tagDefinitions.map(({ name }) => name),
-    (title) => parse(title.getAttribute(RAW) ?? title.textContent)?.tag ?? i18n.t("uncategorized"),
-  );
+  const SIDEBAR_SORT_KEY = "codex-sidebar-tags-sort-v1";
+  let sidebarSort: SidebarSortMode = "tag";
+  try { if (localStorage.getItem(SIDEBAR_SORT_KEY) === "native") sidebarSort = "native"; } catch {}
+
+  const applySidebarOrder = (): void => {
+    if (sidebarSort === "native") { sidebarTagOrder.dispose(); return; }
+    sidebarTagOrder.apply(
+      sidebarOrderGroups(), tagDefinitions.map(({ name }) => name),
+      (title) => parse(title.getAttribute(RAW) ?? title.textContent)?.tag ?? i18n.t("uncategorized"),
+    );
+  };
 
   const commonAncestor = (left: HTMLElement | null | undefined, right: HTMLElement | null | undefined): HTMLElement | null => {
     if (!left || !right) return left?.parentElement ?? null;
@@ -205,7 +217,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
   const ensureFilterHost = (): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null => {
     const pinnedToggle = findSectionToggle(codexLabels.pinned) ?? (pinnedToggleRef?.isConnected ? pinnedToggleRef : null);
     if (!pinnedToggle) return null;
-    const pinnedHeadingRow = pinnedToggle.parentElement ?? pinnedToggle;
+    const pinnedHeadingRow = sidebarSectionHeading(pinnedToggle);
     filterHost = document.getElementById(FILTER_BAR_ID);
     if (!filterHost) {
       filterHost = document.createElement("section");
@@ -235,6 +247,13 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     i18n,
     neutralColor: legacyToneColors.neutral,
     ensureHost: ensureFilterHost,
+    getSortMode: () => sidebarSort,
+    setSortMode: (value) => {
+      sidebarSort = value;
+      try { localStorage.setItem(SIDEBAR_SORT_KEY, value); } catch {}
+      applySidebarOrder();
+      trace("sidebar-sort", { value });
+    },
     getEntries: () => entriesFrom(titleNodes()),
     // Catalog membership must not decide whether a mounted native row gets filtered.
     getRows: () => titleNodes().flatMap((title) => {
@@ -323,6 +342,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
   };
 
   dashboardView = new DashboardView({
+    updatePanel,
     state,
     store: runtimeStore,
     i18n,
@@ -417,6 +437,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
   };
 
   const handleRuntimeMessage = (message: RuntimeMessage): boolean => {
+    if (message.type === RuntimeMessageType.updateSnapshot) { updatePanel.update(message.payload); return true; }
     if (message.type === RuntimeMessageType.settingsError) {
       searchError = i18n.t("settingsSaveFailed");
       renderToolbar(entriesFrom(titleNodes()), "settings-error");
@@ -471,6 +492,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
       toolbar: Boolean(document.getElementById(TOOLBAR_ID)),
       sidebarFilter: Boolean(document.getElementById(FILTER_BAR_ID)),
       activeTag: state.tag,
+      sidebarSort,
       visibleResults: dashboardView.visibleResultCount,
       renderCount,
       observerRefreshCount: hostLifecycle.observerRefreshCount,
