@@ -20,6 +20,8 @@ An optional `legacyIds` declaration allows same-package identity resolution. Own
 
 Official extension registration uses Codex commands without editing trust records. Recovery may remove only a missing marketplace with an exact declared name and platform-owned path. Foreign or malformed existing sources require inspection.
 
+An unchanged Orbit registration is not proof of an installed Codex extension. Reconciliation checks the actual Codex registry and cached payload before skipping work. Repeating `orbit install` repairs registrations for enabled plugins without upgrading the runtime; enabling an already enabled plugin also reconciles its registration. `orbit doctor` checks registration and payload presence without repairing or granting hook trust.
+
 ## Interfaces
 
 `orbit install/start/status/doctor/update/rollback` manage Orbit. `orbit plugin add/install/list/enable/disable/uninstall/update` manage capabilities. See [distribution](distribution.md) for executable examples.

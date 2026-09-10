@@ -32,6 +32,29 @@ export function createCodexExtensionManager(root: string, run: Runner, binary?: 
       return JSON.parse((await command(args)).stdout);
     }
   }
+  async function inspect(id: string, config: PlatformConfig) {
+    const extension = config.orbit.packages[id]?.manifest.codex;
+    if (!extension) return { installed: false, enabled: false, payloadPresent: false, marketplaceOwned: false };
+    try {
+      const listing = JSON.parse((await command(["plugin", "marketplace", "list", "--json"])).stdout);
+      const marketplace = listing.marketplaces?.find((item: { name: string }) => item.name === extension.marketplace);
+      const state = JSON.parse((await command(["plugin", "list", "--json"])).stdout);
+      const plugin = state.installed?.find((item: { pluginId: string }) => item.pluginId === `${extension.name}@${extension.marketplace}`);
+      const payload = plugin?.source?.path;
+      const expected = join(root, "marketplaces", id, "plugins", extension.name);
+      const manifestPresent = typeof payload === "string" && await exists(join(payload, ".codex-plugin/plugin.json"));
+      const hooksPresent = !(await exists(join(expected, "hooks/hooks.json"))) ||
+        (typeof payload === "string" && await exists(join(payload, "hooks/hooks.json")));
+      return {
+        installed: Boolean(plugin), enabled: plugin?.enabled === true,
+        payloadPresent: manifestPresent && hooksPresent && await exists(join(expected, ".codex-plugin/plugin.json")),
+        marketplaceOwned: marketplace?.root === join(root, "marketplaces", id),
+      };
+    } catch (error) {
+      return { installed: false, enabled: false, payloadPresent: false, marketplaceOwned: false,
+        error: error instanceof Error ? error.message : "Official extension inspection failed" };
+    }
+  }
   async function remove(
     name: string,
     marketplace: string,
@@ -77,8 +100,10 @@ export function createCodexExtensionManager(root: string, run: Runner, binary?: 
       if (
         previous.orbit.packages[id]?.path === record.path &&
         previous.plugins.find((plugin) => plugin.id === id)?.enabled !== false
-      )
-        continue;
+      ) {
+        const actual = await inspect(id, next);
+        if (actual.installed && actual.enabled && actual.payloadPresent && actual.marketplaceOwned) continue;
+      }
       const marketplaceRoot = inside(root, `marketplaces/${id}`);
       const payload = inside(marketplaceRoot, `plugins/${extension.name}`);
       const source = join(root, record.path);
@@ -117,5 +142,5 @@ export function createCodexExtensionManager(root: string, run: Runner, binary?: 
       await command(["plugin", "add", `${extension.name}@${extension.marketplace}`, "--json"]);
     }
   }
-  return { reconcile, command, remove };
+  return { reconcile, command, remove, inspect };
 }

@@ -233,6 +233,7 @@ export function createInstallationManager(options: InstallationOptions = {}) {
       if (await exists(configPath)) {
         const current = await read();
         await repairEntry(current);
+        if (options.manageExtensions !== false) await extensions.reconcile(current, current);
         return { status: "already-installed", root, launcherPath };
       }
       const runtime = await stageRuntime(source);
@@ -554,6 +555,12 @@ export function createInstallationManager(options: InstallationOptions = {}) {
           ok = false;
         }
         checks.push({ id: `plugin:${record.manifest.id}`, ok });
+        if (options.manageExtensions !== false && record.manifest.codex &&
+            state.plugins?.find(plugin => plugin.id === record.manifest.id)?.enabled !== false) {
+          const actual = await extensions.inspect(record.manifest.id, await read());
+          checks.push({ id: `codex-registration:${record.manifest.id}`, ok: actual.installed && actual.enabled && actual.marketplaceOwned });
+          checks.push({ id: `codex-payload:${record.manifest.id}`, ok: actual.payloadPresent });
+        }
       }
     }
     return { ok: checks.every((check) => check.ok), checks, status: state };

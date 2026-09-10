@@ -128,7 +128,7 @@ test("official extension migration restores its old marketplace when registratio
           if (failNext) { failNext = false; throw new Error("Registration failed"); }
           marketplace = args[3];
         }
-      } else if (args[1] === "list") result = { installed: installed ? [{ pluginId: "fixture@fixture-market" }] : [] };
+      } else if (args[1] === "list") result = { installed: installed ? [{ pluginId: "fixture@fixture-market", enabled: true, source: { path: join(marketplace, "plugins/fixture") } }] : [] };
       else if (args[1] === "add") installed = true;
       else if (args[1] === "remove") installed = false;
       return { stdout: JSON.stringify(result), stderr: "" };
@@ -157,6 +157,16 @@ test("official extension migration restores its old marketplace when registratio
   assert.equal(marketplace, join(manager.paths.root, "marketplaces/new-extension"));
   assert.deepEqual(Object.keys((await manager.read()).orbit.packages), ["new-extension"]);
   assert.equal(installed, true);
+  installed = false;
+  marketplace = undefined;
+  assert.equal((await manager.doctor()).checks.find(check => check.id === "codex-registration:new-extension").ok, false);
+  assert.equal(installed, false, "doctor must not register plugins");
+  await manager.install();
+  assert.equal(installed, true, "install repairs missing official registration without changing the Orbit record");
+  assert.equal((await manager.doctor()).checks.find(check => check.id === "codex-registration:new-extension").ok, true);
+  installed = false;
+  await manager.setEnabled("new-extension", true);
+  assert.equal(installed, true, "enabling an already enabled module repairs registration drift");
 });
 
 test("incompatibility and concurrent mutation preserve authoritative configuration", async t => {
