@@ -18,7 +18,7 @@ Run from the OrbitAI checkout:
 npm ci
 npm run verify
 npm pack -w @c0sc0s/orbit
-npm install -g ./c0sc0s-orbit-0.5.0.tgz
+npm install -g ./c0sc0s-orbit-0.5.1.tgz
 orbit install
 orbit plugin list
 ```
@@ -40,7 +40,7 @@ Review SessionStart, UserPromptSubmit and SessionEnd in Codex Plugins. Registrat
 
 ## Plugin operations
 
-The source CLI shows Orbit branding, live operation progress and readable results with next steps in interactive terminals. Use `--plain` for text without color or animation, or `--json` for structured results. Redirected output defaults to JSON for compatibility with scripts. `NO_COLOR` and dumb terminals disable terminal effects; CI disables animation. Progress goes to stderr and results go to stdout. These presentation options apply to platform commands, not the advanced `--config` loader interface, and are not included in npm version 0.5.0.
+The CLI shows Orbit branding, live operation progress and readable results with next steps in interactive terminals. Use `--plain` for text without color or animation, or `--json` for structured results. Redirected output defaults to JSON for compatibility with scripts. `NO_COLOR` and dumb terminals disable terminal effects; CI disables animation. Progress goes to stderr and results go to stdout. These presentation options apply to platform commands, not the advanced `--config` loader interface.
 
 ```sh
 orbit plugin disable orbit-tags
@@ -65,7 +65,7 @@ orbit start
 
 ## Uninstall everything
 
-The source CLI supports platform uninstall (this command is not included in npm version 0.5.0). Preview the exact targets first:
+Orbit supports platform uninstall. Preview the exact targets first:
 
 ```sh
 orbit uninstall --purge --dry-run

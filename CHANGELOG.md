@@ -1,5 +1,12 @@
 # Release notes
 
+## Orbit 0.5.1
+
+- Platform uninstall with preview, explicit confirmation, optional owned-data cleanup and residual-process protection.
+- FIGlet wordmark, Ora progress, styled responsive help and readable platform results.
+- Explicit JSON and plain output modes with script-compatible defaults.
+- Compatible with Orbit Tags 0.9.0; renderer and SDK contracts are unchanged.
+
 ## OrbitAI candidate: Orbit 0.5.0 and Orbit Tags 0.9.0
 
 - Independently installed Orbit platform with its own application icon and optional plugins.

@@ -20,7 +20,7 @@ Business modules import types from `@c0sc0s/orbit/sdk`; installation clients use
 
 ## Platform uninstall
 
-The source CLI adds `orbit uninstall --dry-run` to preview removal and `orbit uninstall --yes` to remove Orbit, its launcher and registered plugins while keeping data. Add `--purge` to delete Orbit-owned data. External data is reported for explicit cleanup. Remove the separate global CLI with `npm uninstall -g @c0sc0s/orbit`. Platform uninstall is not included in npm version 0.5.0. See [uninstall boundaries](../../docs/distribution.md#uninstall-everything).
+Use `orbit uninstall --dry-run` to preview removal and `orbit uninstall --yes` to remove Orbit, its launcher and registered plugins while keeping data. Add `--purge` to delete Orbit-owned data. External data is reported for explicit cleanup. Remove the separate global CLI with `npm uninstall -g @c0sc0s/orbit`. See [uninstall boundaries](../../docs/distribution.md#uninstall-everything).
 
 ## Advanced runtime entry
 
