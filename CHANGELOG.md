@@ -1,5 +1,11 @@
 # Release notes
 
+## Orbit 0.5.2
+
+- Detect missing or disabled Codex extension registrations and missing plugin payloads during platform diagnostics.
+- Repair registration drift when installing Orbit again or enabling an already enabled plugin.
+- Preserve plugin data and Codex hook trust boundaries during recovery.
+
 ## Orbit 0.5.1
 
 - Platform uninstall with preview, explicit confirmation, optional owned-data cleanup and residual-process protection.

@@ -18,7 +18,7 @@ Run from the OrbitAI checkout:
 npm ci
 npm run verify
 npm pack -w @c0sc0s/orbit
-npm install -g ./c0sc0s-orbit-0.5.1.tgz
+npm install -g ./c0sc0s-orbit-0.5.2.tgz
 orbit install
 orbit plugin list
 ```

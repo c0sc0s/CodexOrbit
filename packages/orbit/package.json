@@ -1,6 +1,6 @@
 {
   "name": "@c0sc0s/orbit",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Local renderer plugin lifecycle and explicit CDP entry for Codex desktop.",
   "type": "module",
   "exports": {
