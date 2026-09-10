@@ -1,48 +1,37 @@
-# Compatibility policy
+# Compatibility and verification
 
-Codex Tags integrates with private Codex renderer DOM and therefore cannot promise compatibility with every future Codex build.
+Orbit integrates with private Codex renderer DOM and local metadata. Every Codex update requires renewed adapter and lifecycle checks.
 
-Each release must:
+## Verification baseline
 
-- record the tested Codex application version
-- verify required stable `data-*` anchors before mutation
-- disable only the enhancement when an adapter check fails
-- preserve native title content and attributes for exact restoration
-- keep the launcher, compact tag filtering, title rendering, search, IME, menus, scrolling, collapsed groups, and restore path in the real-app smoke matrix
-- expose the detected adapter and last error through `status`
+The candidate is Orbit 0.5.0, Orbit Tags 0.9.0 and injected runtime 6.5.1 on macOS. Automated checks cover build, types, architecture boundaries, service isolation, ownership, recovery and independently installed tarballs.
 
-Compatibility failures must never trigger edits to the official application bundle. A failed injection leaves the original sidebar operational.
+| Scenario | Coverage |
+| --- | --- |
+| Empty Orbit installation | Packed runtime and launcher with icon |
+| Tags lifecycle | Real official CLI in an isolated user configuration; add, disable, enable and uninstall |
+| Missing marketplace | Owned-path recovery and foreign-source protection |
+| Failed activation | Configuration restoration and independent runtime recovery |
+| Live UI | Navigation/dialog, themes, Chinese IME, search/menu, unsaved editor and highlighting |
+| Clean-account cold launch | Manual acceptance required |
+| First-turn naming and hook trust | Manual acceptance required |
+| Never-expanded session navigation | Manual acceptance required |
+| Registry onboarding | Requires publication and registry acceptance |
 
-## Candidate verification — 2026-09-07
+`npm run qa:app` exercises an injected app without restarting Codex, renaming tasks or saving tag edits. It does not validate hook authorization. Record the exact Codex version and build during release acceptance.
 
-- Codex desktop: `26.901.51231` (build `8109`), macOS, bundle identifier `com.openai.codex`.
-- Runtime candidate: `6.3.6`; npm candidate: `@c0sc0s/codex-tags@0.7.0`; Loader: `0.3.1`.
-- Actual tarball installation and repeated source installation both reached healthy state without restarting the already-debuggable app.
-- Loader checks passed: independent tarball consumption, service RPC, crash containment, scoped removal, two-window coexistence and isolated renderer globals.
-- Live UI checks passed: navigation/dialog, Chinese input composition, local search response, sort menu persistence/contrast, light/dark popup surfaces with current/legacy/missing theme tokens, unsaved tag editor retention, and title highlighting.
-- Production dependency audit reported zero known vulnerabilities at verification time.
-- Pending: a clean-account cold launch from the dedicated Tags launcher, manual hook authorization and an actual first-turn naming check. Automated hook contract tests do not replace that permission boundary.
+## Adapter requirements
 
-`npm run qa:app` is a content-free, non-restarting smoke against an already injected app. It does not rename sessions or save tag edits. Broader cold-launch and rollback scenarios remain manual release gates.
+Validate host anchors before DOM changes, preserve native content and attributes, and disable the affected enhancement when checks fail. Private selectors belong in Tags' `codex-dom-adapter.ts`. Diagnostics expose capabilities and bounded errors, never session bodies.
 
-## Release acceptance matrix
+The official bundle, signature, authentication and session files must remain untouched.
 
-| Scenario | Required result | Status |
-| --- | --- | --- |
-| Source verification | Build, syntax, types and regression tests pass | Passed locally |
-| Packed npm consumer | CLI, standalone native SQLite and three skills load | Passed locally |
-| Already-open app | UI mounts; search, IME, menus and drafts stay stable | Passed locally |
-| Clean-account cold launch | Dedicated launcher activates; running non-debuggable app is left untouched | Pending |
-| Manual hook trust | First new prompt gets current tags; resumed/later prompts do not | Pending real-app check |
-| Never-expanded navigation | Catalog result opens the correct session | Pending real-app check |
-| Lifecycle recovery | off/on/update/restore and both uninstall modes preserve unrelated data | Pending clean-account check |
-| Published npm entry | Exact `npx …@latest` flow succeeds | Pending publication |
+## Limits
 
-## Known limits
-
-- macOS only; no verified Windows/Linux installer.
-- The catalog uses a private, schema-checked local database. Remote-only sessions are best-effort sidebar discovery.
-- Text extraction supports local user/assistant message records, caps fields at 24,000 characters and sessions at 500,000, and excludes tool output. Search returns at most 100 unique sessions; it is not exhaustive transcript export.
-- A newer extractor rebuilds the owned search cache; original session files are unchanged.
-- Multi-window settings use last-writer-wins. Updates are retryable but do not yet offer transactional rollback.
-- Future Codex builds require renewed adapter and lifecycle checks. Hook trust cannot be granted or certified by doctor.
+- Installation is supported on macOS; Windows and Linux installation are not verified.
+- The catalog uses schema-checked private local metadata; remote-only tasks use best-effort native-row discovery.
+- Search caps fields at 24,000 characters and sessions at 500,000, excludes tool output and returns at most 100 unique sessions.
+- Settings use last-writer-wins across windows.
+- Runtime rollback does not undo business data migrations. Snapshot garbage collection and power-loss journaling are not implemented.
+- Renderers share the DOM and main thread; services have the user's Node privileges.
+- Doctor cannot grant or certify hook trust.

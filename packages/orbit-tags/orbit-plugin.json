@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "orbit-tags",
+  "legacyIds": ["codex-tags"],
+  "version": "0.9.0",
+  "runtimeVersion": "6.5.1",
+  "orbit": { "min": "0.5.0", "maxExclusive": "0.6.0" },
+  "renderer": "runtime/dist/injected.js",
+  "service": "dist/runtime/src/service/activate.js",
+  "codex": { "name": "codex-tags", "marketplace": "codex-tags-cli" }
+}

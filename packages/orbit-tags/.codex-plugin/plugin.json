@@ -1,0 +1,24 @@
+{
+  "name": "codex-tags",
+  "version": "0.9.0+codex.20260910150000",
+  "description": "Add tag-aware session browsing and local content search to the Codex desktop sidebar.",
+  "author": {
+    "name": "Orbit Tags contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Orbit Tags",
+    "shortDescription": "Tag, filter, and search local Codex sessions.",
+    "longDescription": "Orbit Tags installs a reversible local enhancement for the official Codex desktop app. It renders structured session tags, supports custom colors and optional AI classification descriptions, provides a searchable Tags dashboard, and keeps session content on the local machine.",
+    "developerName": "Orbit Tags contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Use $doctor to check whether Orbit Tags is healthy.",
+      "Use $initial to tag my active Codex sessions using my configured tags.",
+      "Use $rename to name this session with the best matching configured tag."
+    ]
+  }
+}

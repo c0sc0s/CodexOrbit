@@ -1,6 +1,6 @@
-# Codex Plugin Loader
+# Orbit
 
-Codex Plugin Loader is a dependency-free Node.js package at `runtime/src/plugin-loader`. It owns desktop startup, the local CDP connection, plugin services and renderer lifecycle. Tags uses its public SDK; the Loader never imports Tags, SQLite or private Codex DOM selectors.
+Orbit is a dependency-free Node.js package at `packages/orbit`. It owns desktop startup, the local CDP connection, plugin services and renderer lifecycle. Tags uses its public SDK; Orbit never imports Tags, SQLite or private Codex DOM selectors.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Desktop launcher / Loader CLI → loader.json → Loader daemon
 
 The microkernel owns transport and lifecycle. Business modules own their data, validation and UI. The service process boundary contains process crashes and blocking Node code. The renderer uses a named isolated JavaScript world in the main frame, keeping its globals separate from Codex while sharing the DOM. Neither mechanism is a security sandbox for untrusted plugins: services have the user's Node privileges, and renderer plugins share a renderer thread and DOM. A synchronous renderer loop can still block Codex.
 
-The desktop launcher directly invokes `codex-plugin-loader start --config …`. `createLauncher` creates a standalone macOS entry with caller-supplied paths. The Tags distribution places this entry at `~/Applications/Codex Tags.app`, with display name **Codex Plugin Loader**.
+Orbit installs `~/Applications/Orbit.app` with its own icon. The launcher invokes the platform's stable `orbit.mjs` entry, which resolves the active runtime. `createLauncher` accepts explicit infrastructure paths.
 
 ## Manifest and SDK
 
@@ -37,7 +37,7 @@ Paths are relative to the configuration directory; entries and symlinks must res
 }
 ```
 
-The package ships TypeScript `RendererContext`, `RendererPlugin` and `ServiceContext` contracts. Both contexts provide `id`, `config`, an abort `signal` and `onDispose(callback)`. Bundle renderer dependencies locally with esbuild `format: "iife", globalName: "CodexPlugin"`.
+The `@c0sc0s/orbit/sdk` entry ships TypeScript `RendererContext`, `RendererPlugin` and `ServiceContext` contracts. Both contexts provide `id`, `config`, an abort `signal` and `onDispose(callback)`. Bundle renderer dependencies locally with esbuild `format: "iife", globalName: "CodexPlugin"`.
 
 ```js
 // service.mjs
@@ -86,16 +86,16 @@ Diagnostics report module/window and failure stage without recording request bod
 ## Commands and packaging
 
 ```bash
-npm pack ./runtime/src/plugin-loader
-node runtime/src/plugin-loader/cli.mjs start --config ./loader.json --attach
-node runtime/src/plugin-loader/cli.mjs status --config ./loader.json
-node runtime/src/plugin-loader/cli.mjs remove --config ./loader.json --plugin example
-node runtime/src/plugin-loader/cli.mjs stop --config ./loader.json
+npm pack -w @c0sc0s/orbit
+node packages/orbit/dist/cli.js start --config ./loader.json --attach
+node packages/orbit/dist/cli.js status --config ./loader.json
+node packages/orbit/dist/cli.js remove --config ./loader.json --plugin example
+node packages/orbit/dist/cli.js stop --config ./loader.json
 ```
 
-The packed executable is `codex-plugin-loader`. `start` starts a closed official Codex with local debugging, or reuses a compatible running app; `--attach` requires it already running with the owned endpoint. `watch` runs in the foreground. `apply` loads renderer-only bundles once. `remove --plugin` persists `enabled: false` and preserves peers. `stop` leaves Codex running. `status` imports no plugins. Commands use port 9341 unless `--port` is supplied. A running non-debuggable Codex must be quit manually.
+The packed executable is `orbit`. `start` starts a closed official Codex with local debugging, or reuses a compatible running app; `--attach` requires it already running with the owned endpoint. `watch` runs in the foreground. `apply` loads renderer-only bundles once. `remove --plugin` persists `enabled: false` and preserves peers. `stop` leaves Codex running. `status` imports no plugins. Commands use port 9341 unless `--port` is supplied. A running non-debuggable Codex must be quit manually.
 
-Tags embeds these same package sources. Its installer writes a renderer/service manifest and preserves the existing settings directory through module configuration. Disabling Tags retains other modules; uninstall refuses to remove shared infrastructure while other modules are configured. Package publication is separate from source delivery.
+Tags declares a versioned dependency on `@c0sc0s/orbit`. Orbit registers its renderer/service manifest and assigns its data directory. Disabling or uninstalling Tags leaves the platform and peers intact. Package publication is separate from source delivery.
 
 Tests exercise real service processes, crash/blocking containment, cancellation, message limits, multiple modules/windows, stale replies, reload, scoped removal, ownership and independent packed consumption. Real-app QA checks the Tags UI and local RPC path; [compatibility checks](compatibility.md) cover release acceptance.
 

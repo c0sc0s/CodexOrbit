@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Codex Tags — 给每个 Codex 任务一个清晰的位置',
-  description: '用标签整理 Codex 任务，用本地全文搜索找回上下文。可恢复、不修改官方应用包的 macOS 桌面增强。',
+  title: 'OrbitAI — 你的 Codex，你的轨道',
+  description: '面向 Codex 桌面的本地扩展平台。Orbit 提供 CDP 注入运行时，Orbit Tags 提供标签、智能命名与本地搜索。',
 };
 
 export default function RootLayout({

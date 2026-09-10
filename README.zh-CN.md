@@ -1,91 +1,49 @@
-<p align="center"><img src="assets/banner.png" alt="Codex Orbit — 你的 Codex，你的运行轨道。" width="100%"></p>
-<p align="center"><a href="README.md">English</a> · <b>简体中文</b></p>
-<p align="center"><a href="#开始使用">开始使用</a> · <a href="#命令">命令</a> · <a href="docs/development.md">本地开发</a> · <a href="docs/architecture.md">架构设计</a></p>
+# OrbitAI
 
-为 Codex 提供本地会话管理增强：按标签整理会话、搜索正文，并让 Agent 按你的分类规则命名。
+为官方 Codex 桌面应用提供本地扩展能力。
 
-**macOS · Node.js 22+ · 中英文界面**
+[English](README.md) · [安装指南](docs/distribution.md) · [架构](docs/architecture.md) · [开发指南](docs/development.md)
 
-> **0.7.0** — 新增一键更新与可记忆的侧边栏排序选择。运行 `npx @c0sc0s/codex-tags@latest update` 更新。
+先安装 **Orbit**，再按需安装能力。Orbit 负责启动器、运行时、插件注册和生命周期。**Orbit Tags** 提供会话标签、本地搜索与命名指导。
 
-> **早期版本** — 自动化检查已通过。全新账户冷启动及手动授权后的首次命名仍需完整端到端验收，详见[验证范围](docs/compatibility.md)。
+| 包 | 职责 |
+| --- | --- |
+| [Orbit](packages/orbit/README.md) · `@c0sc0s/orbit` | 安装、启动器、插件、CDP、服务进程和 RPC |
+| [Orbit Tags](packages/orbit-tags/README.zh-CN.md) · `@c0sc0s/orbit-tags` | 标签、搜索、侧边栏 UI 和命名 hooks |
+| `website` | 产品网站 |
 
-## 功能
+## 从源码目录安装
 
-- **融入侧边栏：** 标签筛选、低干扰的标题标签，以及 Tags 会话看板。
-- **本地搜索：** 搜索标题和已索引的用户/助手正文，高亮关键词。
-- **自定义分类：** 默认 Feature、Bug、Design、Research 四类；可自定义颜色和可选分类描述。
-- **Agent 辅助命名：** 使用 `[Tag]标题`，不带日期；首次提交时获得最新分类规则。
-- **三个插件 Skill：** `doctor` 检查健康状态，`initial` 分类已有活跃会话，`rename` 命名当前会话。
-- **中英文界面：** 跟随 Codex 当前语言，不翻译用户自己的标签。
+需要 macOS、Node.js 22.13+ 和官方 Codex 桌面应用。Orbit 0.5.0 与 Tags 0.9.0 为尚未发布 npm 的候选版本，请使用本地包。
 
-## 开始使用
-
-### 1. 安装 CLI 和插件
-
-先完成正在运行的任务。如果 Codex 已打开但未启用 Tags，请手动退出，再执行：
-
-```bash
-npx @c0sc0s/codex-tags@latest
-```
-
-### 2. 授权 Hook
-
-打开 **Codex → Plugins → Codex Tags**，检查并信任/启用 **SessionStart、UserPromptSubmit、SessionEnd**。
-
-**下次启动：** 使用 `~/Applications/Codex Tags.app`，可拖到 Dock 固定。它是 Codex Plugin Loader 的入口：启动官方 App 后，由 Loader 加载 Tags 等已配置模块，保留原路径以兼容 Dock；不会自动重启或安装启动守护进程。命名由 Agent 辅助完成，不保证每次确定性改名。
-
-<details>
-<summary>从源码开发或安装</summary>
-
-```bash
-git clone https://github.com/c0sc0s/codex-tags.git
-cd codex-tags
+```sh
 npm ci
 npm run verify
-node bin/codex-tags.mjs install
+npm pack -w @c0sc0s/orbit
+npm install -g ./c0sc0s-orbit-0.5.0.tgz
+orbit install
+orbit plugin add ./packages/orbit-tags
+orbit start
+orbit doctor
 ```
 
-随后按上面的步骤授权三个 Hook。
-
-</details>
-
-## 命令
-
-执行 `npx @c0sc0s/codex-tags@latest <命令>`；源码安装：`node bin/codex-tags.mjs <命令>`。
-
-| 命令 | 作用 |
-| --- | --- |
-| `install`、`on`、`enable` | 安装当前调用的包版本并开启全部组件 |
-| `off`、`restore`、`disable` | 停止注入并移除命名插件，保留数据 |
-| `status` / `doctor` | 只读查看状态 / 诊断是否就绪 |
-| `update` | 安装当前调用的版本；使用 `@latest` 才会获取最新版 |
-| `uninstall` | 移除自有组件和索引，保留标签设置 |
-| `uninstall --purge` | 进一步移除标签设置和自有缓存 |
-
-操作命令支持 `--json`。Hook 授权必须由用户在 Codex 中手动确认。
-
-## 隐私与兼容性
-
-CLI 安装本地代码，通过 Codex 插件命令注册插件；**不会**修改官方签名应用、会话记录或登录信息。本地 SQLite 索引只向界面返回有限的命中片段。
-
-注入依赖本机调试端口及 Codex 私有 DOM/数据库结构，不是官方侧边栏扩展 API；Codex 更新后可能需要适配。调试权限较高，请只在可信电脑上使用。详见[验证范围与限制](docs/compatibility.md)。
+Tags 为可选能力：跳过 `plugin add` 即可得到无插件的 Orbit。如果 Codex 已启动但未开启调试，请手动退出后再启动 Orbit。之后使用 `~/Applications/Orbit.app` 启动。在 Codex Plugins 中审核命名 hooks；安装不会自动授予信任。
 
 ## 开发
 
-```bash
-npm run dev:apply   # 构建 → 更新安装文件 → 热应用
-npm run verify     # 构建、语法、类型与回归测试
+严格 TypeScript 编译为 ESM 和类型声明。UI 使用 Preact、Motion、esbuild，搜索使用本地 SQLite FTS5。业务插件使用 Orbit 公共 SDK；Orbit 不依赖 Tags 或 SQLite。
+
+```sh
+npm run verify
 npm run test:package
+npm run dev:apply
+npm run qa:app
 ```
 
-快速调试需要 Codex 已激活且带调试端口运行；目前没有 HMR 服务。
+开发应用流程会安装工作区包并连接已开启调试的应用。详见[源码结构](docs/source-layout.md)与[贡献指南](CONTRIBUTING.md)。
 
-- [本地开发与调试](docs/development.md)
-- [安装与发布](docs/distribution.md)
-- [架构](docs/architecture.md) · [数据与命名协议](docs/protocol.md)
-- [后续规划](docs/roadmap.md) · [更新记录](CHANGELOG.md)
+## 隐私与限制
 
-本项目独立开发，不隶属于 OpenAI，也未经其背书。目前没有开放源代码许可授权（`UNLICENSED`）。
+不会修改应用签名、会话或认证数据。渲染资源和搜索内容留在本机。插件属于可信代码：服务拥有 Node 权限，渲染插件共享 Codex DOM 和主线程。
 
-独立基础包与模块开发接口见 [Codex Plugin Loader](docs/plugin-loader.md)：Loader 管理 CDP、独立服务进程和 RPC/事件，业务模块通过 SDK 实现功能。
+[兼容性说明](docs/compatibility.md)记录验证范围与手动发布验收项。项目未授予开源许可。

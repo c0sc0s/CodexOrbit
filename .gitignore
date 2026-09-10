@@ -1,6 +1,7 @@
 .DS_Store
 coverage/
 /dist/
+/packages/*/dist/
 node_modules/
 *.log
 *.pid

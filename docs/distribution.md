@@ -1,77 +1,96 @@
-# Installation and release
+# Orbit installation and distribution
 
-[English home](../README.md) · [中文首页](../README.zh-CN.md)
+[Home](../README.md) · [中文首页](../README.zh-CN.md) · [Platform ownership](orbit-platform-design.md)
 
-## Contract
+Orbit is the installed product. Plugins are optional. The private OrbitAI workspace root is not published.
 
-The npm package `@c0sc0s/codex-tags` carries the CLI, prebuilt UI bundle, independent Loader and Tags service module, naming hooks and three English skills. Its production dependency is native SQLite. Users need macOS, Node.js 22+, and the official Codex app with plugin support.
+## Requirements
 
-Installation:
+Use macOS, Node.js 22.13+, npm and the official Codex desktop app. Install only trusted plugins.
 
-1. Quit Codex if it is open without Tags, then run `npx @c0sc0s/codex-tags@latest`.
-2. In Codex Plugins, review/trust SessionStart, UserPromptSubmit and SessionEnd.
+Orbit 0.5.0 and Orbit Tags 0.9.0 are unpublished npm candidates. Registry installation and update commands require a published compatible version.
 
-The CLI uses official plugin commands, never private trust records or authorization bypasses. Installing only the plugin does not provide the native runtime needed for UI injection.
+## Local installation
 
-For future launches, open `~/Applications/Codex Tags.app` (pin it to the Dock). This small launcher invokes Loader with `loader.json`; Loader starts the official app with loopback debugging; it never monitors or restarts a running app. If a non-debuggable Codex is open, it shows a prompt to quit it manually. The official entry is unmodified. The Loader only maintains configured modules while the explicitly activated app runs; it does not relaunch Codex. Keep the activation Node installation available; rerun the CLI after replacing Node versions.
+Run from the OrbitAI checkout:
 
-## Installed files
-
-| Location | Contents |
-| --- | --- |
-| `~/Library/Application Support/Codex Sidebar Tags/` | Runtime, UI bundle, SQLite dependency, settings, index, logs |
-| Its `plugin-marketplace/` directory | CLI-owned plugin snapshot and marketplace |
-| `~/Applications/Codex Tags.app` | Loader desktop entry; original path/identity retained for Dock compatibility |
-| Codex plugin cache/data | Registered plugin payload and hook markers |
-
-The signed app, authentication data and transcript files are never patched. Search/catalog reads stay local; only bounded snippets enter the injected UI. CDP remains a powerful trusted-local-machine capability.
-
-## Lifecycle
-
-- **install / on / enable:** preflight → remove legacy supervisor → stop old controller → copy runtime/plugin → register → activate → verify.
-- **update:** same flow using the invoked package version. Use `npx …@latest update` to fetch the newest; an old globally installed CLI cannot self-upgrade.
-- **off / disable / restore:** disable the Tags service/renderer module, remove any legacy supervisor and naming plugin; preserve other Loader modules; retain settings/index.
-- **uninstall:** refuse when other modules share the installation; otherwise stop Loader and remove owned runtime, plugin registration, launcher, legacy supervisor, index and logs; retain settings.
-- **uninstall --purge:** also remove settings, owned hook data and reachable renderer caches. Never deletes or renames Codex sessions.
-- **status / doctor:** read-only. Doctor exits nonzero when not ready; a closed app or disabled installation is expected to be non-ready.
-
-Mutations are serialized. Failed updates are retryable, **not transactional rollbacks**. Unrelated launcher/marketplace conflicts require explicit resolution. Installation health does not verify hook trust.
-
-## Source candidate
-
-```bash
+```sh
 npm ci
 npm run verify
-node bin/codex-tags.mjs install
+npm pack -w @c0sc0s/orbit
+npm install -g ./c0sc0s-orbit-0.5.0.tgz
+orbit install
+orbit plugin list
 ```
 
-See [development](development.md) for the separate file-refresh/hot-apply flow.
+This creates a zero-plugin platform and `~/Applications/Orbit.app` with its bundled icon. The global CLI and active runtime are separate installations. `orbit install` repairs an installed entry without replacing its active runtime.
 
-## Publish checklist
+Add Tags if desired:
 
-The first public release is an early release with pending manual acceptance explicitly documented. Restart-dependent checks require user approval; do not present package smoke as real-app acceptance.
+```sh
+orbit plugin add ./packages/orbit-tags
+orbit start
+orbit plugin list
+orbit doctor
+```
 
-- [ ] Complete the clean-account [compatibility matrix](compatibility.md), including manually trusted first-turn naming.
-- [ ] Synchronize package/lockfile/changelog/plugin versions and review the final diff.
-- [ ] Bump `RUNTIME_VERSION` for browser changes; replace the plugin `+codex.<cachebuster>` suffix for changed payloads.
-- [ ] Run `npm run verify`, `npm run test:package`, app QA and `git diff --check`.
-- [ ] Inspect the tarball: no `.env`, credentials, transcripts, local databases, logs or test fixtures.
-- [ ] Verify npm ownership for `@c0sc0s`; keep credentials outside Git and the package.
-- [ ] Publish the verified commit: `npm publish --access public --registry=https://registry.npmjs.org`.
-- [ ] Verify the published version and exact `npx @c0sc0s/codex-tags@latest` onboarding; update both README release notices.
+If Codex is running without debugging, quit it manually before starting Orbit. Orbit never restarts Codex. Subsequent launches use `~/Applications/Orbit.app`.
 
-`prepublishOnly` runs source verification and package smoke. macOS CI checks Node 22/24 and bundle drift; it cannot replace GUI/hook acceptance. Use a configured trusted CI publisher if provenance is needed.
+Review SessionStart, UserPromptSubmit and SessionEnd in Codex Plugins. Registration does not grant trust or prove a hook executed.
 
-No open-source license is currently granted (`UNLICENSED`). Public distribution alone does not grant one; the owner must choose a license if open-source distribution is intended.
+## Plugin operations
 
-## Independent Loader package
+```sh
+orbit plugin disable orbit-tags
+orbit plugin enable orbit-tags
+orbit plugin uninstall orbit-tags
+```
 
-`runtime/src/plugin-loader` is also a self-contained npm package, `@c0sc0s/codex-plugin-loader`, with no production dependencies. Run `npm pack ./runtime/src/plugin-loader` to produce its tarball. Its CLI is the explicit standalone startup entry; it does not install naming hooks, create Tags data or require the Tags controller. The Tags distribution embeds the same source, configures its renderer/service module and delegates the existing desktop entry directly to Loader. See [Loader contract](plugin-loader.md). The package exports the standalone desktop-launcher builder. The npm release is `@c0sc0s/codex-tags`, with Loader included in the same package. Users install only Tags; there is no separate Loader npm dependency.
+Disable retains files and data. Uninstall removes the selected plugin's registration and managed payload, retains data by default, and leaves Orbit and peers intact. `--purge` removes data only when Orbit verifies ownership of its canonical directory. External data requires explicit cleanup.
 
-## Updates from Tags settings
+`orbit plugin add <built-directory>` requires a package `files` allowlist and `orbit-plugin.json`. It snapshots resolved production dependencies without workspace symlinks.
 
-Tags → Settings → Software updates shows the installed npm package version. Opening Settings checks the public npm registry, with a four-hour in-process cache; Check for updates bypasses the cache. Only a higher stable `latest` version enables Update now. These checks send no session or tag data.
+## Registry distribution
 
-An independent Node worker installs the exact detected `@c0sc0s/codex-tags` version into a temporary npm prefix, then runs its existing `update` CLI. Node and npm must remain available. The worker survives Loader/service replacement, preserves settings through the installer, and records status in `update-status.json` under the installation directory. An exclusive `update.lock` prevents concurrent workers. The UI may briefly reload; keep Codex open. Updated hooks may require review through Codex Plugins.
+After compatible versions are published:
 
-Failures remain visible with a retry check. If installation stops Loader and recovery cannot restart it, run `npx @c0sc0s/codex-tags@latest update` from a terminal. This flow does not provide transactional rollback. Updates become available to users after publishing a higher npm package version; a Git push alone does not release an update.
+```sh
+npm install -g @c0sc0s/orbit
+orbit install
+orbit plugin install @c0sc0s/orbit-tags
+orbit start
+```
+
+`orbit update` fetches Orbit; `orbit plugin update orbit-tags` fetches Tags. `orbit rollback` selects the retained runtime subject to plugin compatibility. Registry installation disables npm lifecycle scripts; native dependencies must ship compatible binaries.
+
+## Files and ownership
+
+The root is `~/Library/Application Support/Orbit`, configurable with `ORBIT_HOME`.
+
+| Path | Purpose |
+| --- | --- |
+| `orbit.mjs` | Stable entry resolving the active runtime |
+| `runtime/<version>-<identity>/` | Runtime snapshots |
+| `loader.json` | Runtime, plugin registrations and ownership |
+| `plugins/<id>/<version>-<identity>/` | Plugin snapshots and dependencies |
+| `data/<id>/` | Plugin data |
+| `marketplaces/<id>/` | Official Codex extension payloads |
+| `.loader-<identity>/` | Daemon lease, status and logs |
+
+Tags uses Orbit module ID `orbit-tags` and official Codex extension ID `codex-tags@codex-tags-cli`. These identifiers belong to different registries. The installed package's `orbit-installation.json` records its assigned data directory for naming hooks.
+
+## Safety and recovery
+
+Mutations serialize on the configuration lock. Compatibility and ownership checks precede activation. Module changes restart a running Orbit daemon, not Codex. Failed activation restores configuration and attempts runtime recovery even when extension recovery fails. Runtime snapshots support rollback; business data migrations are not rolled back.
+
+A missing marketplace can be rebuilt only when its exact name and declared path belong to the plugin under this platform root. Existing malformed directories and foreign sources require inspection. No command bypasses hook trust.
+
+Plugins are trusted code, not security sandboxes. Bundle renderer assets locally and never log conversation bodies.
+
+## Verification and release
+
+Run `npm run verify`, `npm run test:package`, `npm run qa:app` and `git diff --check`.
+
+Package tests use real tarballs; on macOS the official CLI runs under a temporary `CODEX_HOME` to test empty-platform installation, plugin lifecycle and missing-marketplace recovery. They do not start Codex or alter the real account.
+
+Complete the manual gates in [compatibility](compatibility.md). Publish Orbit before Tags. Npm publication is an explicit release action, separate from Git push.

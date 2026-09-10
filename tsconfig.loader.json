@@ -1,5 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext" },
-  "include": ["runtime/test/loader-api.types.ts"]
-}

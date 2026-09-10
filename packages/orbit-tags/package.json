@@ -1,0 +1,62 @@
+{
+  "name": "@c0sc0s/orbit-tags",
+  "version": "0.9.0",
+  "description": "One-command installer and lifecycle CLI for Orbit Tags.",
+  "type": "module",
+  "bin": {
+    "orbit-tags": "bin/codex-tags.mjs",
+    "codex-tags": "bin/codex-tags.mjs"
+  },
+  "files": [
+    "orbit-plugin.json",
+    ".codex-plugin/",
+    "assets/",
+    "bin/",
+    "hooks/",
+    "runtime/dist/",
+    "dist/",
+    "scripts/manage.mjs",
+    "skills/",
+    "CHANGELOG.md",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c0sc0s/codex-tags.git"
+  },
+  "homepage": "https://github.com/c0sc0s/codex-tags#readme",
+  "scripts": {
+    "prepublishOnly": "npm --prefix ../.. run verify && npm --prefix ../.. run test:package",
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && node scripts/build.mjs",
+    "prepack": "npm run build",
+    "check": "node ../../scripts/check.mjs",
+    "dev:apply": "npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply",
+    "qa:app": "node runtime/qa-runtime.mjs",
+    "test": "node --test runtime/test/node/*.test.mjs && vitest run runtime/test/ui/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit",
+    "verify": "npm run build && npm run check && npm run typecheck && npm test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@c0sc0s/orbit": "0.5.0",
+    "better-sqlite3": "13.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "22.19.19",
+    "esbuild": "0.28.2",
+    "happy-dom": "20.14.0",
+    "motion": "13.1.0",
+    "preact": "10.29.8",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0"
+  }
+}

@@ -4,10 +4,10 @@
 
 1. Edit repository source, never generated bundles or installed plugin/runtime files.
 2. Run `npm run verify` and `npm run test:package`.
-3. Commit `runtime/dist/injected.js` with the source that produced it.
+3. Commit `packages/orbit-tags/runtime/dist/injected.js` with the source that produced it.
 4. Install the candidate runtime with `node scripts/manage.mjs install`.
 5. Hot-apply only when `node scripts/manage.mjs status` reports an active Codex CDP endpoint.
-6. Run `node runtime/qa-runtime.mjs` against the real app.
+6. Run `node packages/orbit-tags/runtime/qa-runtime.mjs` against the real app.
 7. Update `CHANGELOG.md` for user-visible, protocol, installer, or compatibility changes.
 
 ## Release rules

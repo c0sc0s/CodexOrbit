@@ -16,5 +16,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
-      - run: git diff --exit-code -- runtime/dist/injected.js
+      - run: git diff --exit-code -- packages/orbit-tags/runtime/dist/injected.js
       - run: npm run test:package

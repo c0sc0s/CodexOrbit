@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "dist", "declaration": true, "sourceMap": true, "declarationMap": true, "types": ["node"], "lib": ["ES2022", "DOM"] },
+  "exclude": ["runtime/src/injected"],
+  "include": ["runtime/src/**/*.ts", "scripts/*.ts", "hooks/*.ts", "bin/*.ts"]
+}

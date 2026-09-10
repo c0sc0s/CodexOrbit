@@ -8,7 +8,7 @@ The portable fallback metadata lives in the session title:
 [Tag]Title
 ```
 
-New names contain one ASCII-bracketed tag and the title, with no date/time metadata. Legacy date-bearing titles and Chinese brackets remain readable. Tags are case-insensitive for color lookup but retain their original display spelling. `Uncategorized` is the reserved fallback when no configured tag fits; user tag data is not translated.
+New names contain one ASCII-bracketed tag and the title, with no date/time metadata. The parser also accepts date-bearing metadata and Chinese brackets. Tags are case-insensitive for color lookup but retain their original display spelling. `Uncategorized` is the reserved fallback when no configured tag fits; user tag data is not translated.
 
 ## New-session naming hook
 
@@ -34,7 +34,7 @@ The hook never edits a transcript or session file. It instructs the Codex agent 
 }
 ```
 
-`description` is optional and normalized to a single line of at most 240 characters. `color` is a six-digit hexadecimal UI value. Schema v1 `{ name, tone }` files remain readable and are migrated to curated concrete colors. On macOS the authoritative repository is `~/Library/Application Support/Codex Sidebar Tags/settings.json`; plugin-data environment overrides remain supported for tests and future platforms.
+`description` is optional and normalized to a single line of at most 240 characters. `color` is a six-digit hexadecimal UI value. The settings reader accepts schema v1 `{ name, tone }` input and normalizes it to concrete colors. The authoritative `settings.json` lives in the plugin's assigned data directory, recorded in `orbit-installation.json`.
 
 The first-prompt context contains classification data in this shape and deliberately excludes colors:
 
@@ -43,7 +43,7 @@ The first-prompt context contains classification data in this shape and delibera
 - [Review]
 ```
 
-The hook and the `initial`/`rename` skills share `readNamingContext` and `buildNamingContext` in `hooks/session-naming.mjs`. Running that script with `--context` prints a read-only JSON snapshot containing `settingsPath`, `source` (`settings` or `defaults`), `error`, `titleFormat`, `fallbackTag`, `tags` (names/descriptions only), and `policy`. Skills surface invalid settings before making changes; the automatic hook retains the existing built-in fallback behavior.
+The hook and the `initial`/`rename` skills share `readNamingContext` and `buildNamingContext` in `hooks/session-naming.mjs`. Running that script with `--context` prints a read-only JSON snapshot containing `settingsPath`, `source` (`settings` or `defaults`), `error`, `titleFormat`, `fallbackTag`, `tags` (names/descriptions only), and `policy`. Skills surface invalid settings before making changes; the automatic hook falls back to the built-in definitions.
 
 Settings are read at the first `UserPromptSubmit`, not cached at `SessionStart` or bundled at install time. Saved edits made between startup and the first prompt are included. Later turns do not receive repeated automatic naming instructions; invoking a naming skill reads fresh settings again. The supported vocabulary is at most 32 normalized tags, names up to 32 characters and descriptions up to 240 characters. The hook's 65,536-unit context allowance covers the complete maximum vocabulary even when measured in UTF-8 bytes. All configured tags are included, regardless of the current sidebar filter.
 
@@ -78,7 +78,7 @@ Unknown message types are ignored. Malformed envelopes and unsupported protocol 
 The injected runtime exposes `window.__codexSidebarTags` as a deliberately small diagnostics and compatibility surface:
 
 - `handleMessage(message)`: validate and dispatch a protocol-v1 controller message
-- `setSearchResult(result)`: legacy compatibility adapter for a bounded search result
+- `setSearchResult(result)`: direct result adapter for a bounded search result
 - `tagDefinitions()`: return a defensive snapshot for first-install migration and diagnostics
 - `contentThreadIds()`: enumerate sessions currently mapped by the DOM adapter
 - `status()`: report runtime version, enhanced rows, search state, and render counters

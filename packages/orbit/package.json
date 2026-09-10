@@ -1,0 +1,40 @@
+{
+  "name": "@c0sc0s/orbit",
+  "version": "0.5.0",
+  "description": "Local renderer plugin lifecycle and explicit CDP entry for Codex desktop.",
+  "type": "module",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./cli": "./dist/cli.js",
+    "./installation": { "types": "./dist/installation/manager.d.ts", "import": "./dist/installation/manager.js" },
+    "./sdk": { "types": "./dist/sdk/contracts.d.ts", "import": "./dist/sdk/contracts.js" },
+    "./manifest": { "types": "./dist/config/manifest.d.ts", "import": "./dist/config/manifest.js" },
+    "./daemon": { "types": "./dist/host/daemon.d.ts", "import": "./dist/host/daemon.js" },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "orbit": "./dist/cli.js",
+    "codex-plugin-loader": "./dist/cli.js"
+  },
+  "files": [
+    "assets/",
+    "dist/",
+    "examples",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "UNLICENSED",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build:icon": "node scripts/build-icon.mjs",
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build && npm run typecheck && npm test && node ../../scripts/test-orbit-package.mjs",
+    "test": "node --test test/**/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.renderer.json && tsc -p tsconfig.test.json"
+  },
+  "devDependencies": { "typescript": "7.0.2", "@types/node": "22.19.19" },
+  "publishConfig": { "access": "public" }
+}

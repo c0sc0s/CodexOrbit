@@ -1,32 +1,43 @@
 # Architecture
 
-[Development](development.md) · [Protocol](protocol.md) · [Loader SDK](plugin-loader.md)
+[Development](development.md) · [Source layout](source-layout.md) · [Platform design](orbit-platform-design.md) · [Protocol](protocol.md)
 
-The desktop launcher starts Codex Plugin Loader. Loader loads configured modules into the official Codex app without modifying its signed bundle.
+OrbitAI is an npm workspaces monorepo. Orbit is the independently installable platform; orbit-tags is an optional business plugin.
+
+## Ownership and execution
 
 | Layer | Responsibility |
 | --- | --- |
-| Tags CLI / installer | Package installation, module configuration and diagnostics |
-| Desktop launcher | Invoke the standalone Loader CLI |
-| Loader | Owned CDP endpoint, isolated renderer world, per-plugin service processes, RPC/events, lifecycle and cleanup |
-| Tags service | Local settings, session catalog, search index and navigation validation |
-| Tags renderer | UI, interactions and reversible DOM decoration |
-| Codex DOM adapter | All private host selectors and native row bindings |
-| Hooks / skills | Agent naming guidance using the saved tag definitions |
+| Orbit installation manager | Versioned runtime, launcher, configuration lock, activation recovery |
+| Orbit plugin manager | Manifest/compatibility validation, snapshots, registration, enable/disable/uninstall |
+| Orbit official-extension adapter | Naming hooks/skills registration through official Codex APIs |
+| Orbit host | Owned CDP, renderer targets, isolated service processes, RPC/events and cleanup |
+| Tags service | Settings, session catalog, search index and validated navigation |
+| Tags renderer | UI and reversible DOM decoration |
+| Tags host adapter | Product-specific Codex selectors and diagnostics |
 
 ```text
-Desktop entry → Loader → Tags renderer ⇄ RPC/events ⇄ Tags service
-                              │                         ├─ settings.json
-                       Codex DOM adapter                ├─ read-only session catalog
-                                                        └─ local SQLite search index
+Orbit launcher → active Orbit Runtime
+                         ├─ Tags renderer ⇄ module-local RPC/events ⇄ Tags service
+                         └─ Other plugin  ⇄ module-local RPC/events ⇄ Other service
 ```
 
-`runtime/src/plugin-loader` is independently packable and has no Tags or SQLite dependency. Its public module contexts expose business RPC, events and resource lifecycle; business modules never construct CDP commands or injection expressions. Services run in separate Node processes. Renderer globals live in a named isolated world, sharing the app's DOM and renderer thread. See [Loader architecture](plugin-loader.md) for contracts and failure behavior.
+A zero-plugin installation is valid. Packages have independent versions; plugin manifests declare a stable Orbit compatibility interval. The platform, not each business installer, selects the active runtime.
 
-Tags registers `runtime/dist/injected.js` and `tags-service.mjs` in `loader.json`. On activation the renderer requests its configuration; after readiness the service sends settings/catalog snapshots. Each connected window has an instance identity, so replacement and reload cannot receive another instance's outstanding replies.
+`loader.json` is an atomic authoritative configuration containing platform metadata and plugin registrations. All management mutations use its installation lock; low-level helpers refuse to edit platform-managed configuration. Versioned snapshots are prepared before activation, and the preceding runtime is retained. Changes currently coordinate a daemon restart so cleanup precedes package removal. Codex itself is never restarted.
 
-`SettingsRepository` normalizes and atomically serializes writes. Windows use last-writer-wins; localStorage is a cache. Hooks read the same settings file. `SessionCatalog` joins schema-checked local metadata with [persisted sidebar membership](sidebar-catalog.md), independently of sidebar expansion. Voice and guardian reviews are excluded; explicitly listed tasks retain membership regardless of legacy subagent provenance. Schema mismatch reports incompleteness. `SessionRegistry` joins that metadata with temporary DOM bindings. `SessionSearchIndex` refreshes about every 30 seconds; catalog snapshots refresh about every five seconds. Only metadata and bounded matching snippets enter the renderer, and conversation content stays local.
+Each plugin receives a persistent data directory. Disable preserves package/data files. Uninstall removes only the selected plugin's files and registration, preserving data by default and leaving the platform intact. The package snapshot records its assigned data location for naming hooks.
 
-`HostLifecycle` coalesces native changes. `DashboardView` combines imperative controls and Preact result rows, preserving input composition, drafts, menus and scroll during updates. `ControllerRouter` validates Tags message envelopes; navigation requires a UUID in the current catalog. Private selectors stay in `injected/codex-dom-adapter.ts`.
+## Business boundaries
 
-Browser code uses strict TypeScript, Preact, bundled Motion and an esbuild IIFE. Node services use ESM and better-sqlite3. Modules register cleanup as they acquire resources. The Loader contains service-process failures; renderer plugins remain trusted code sharing DOM and CPU. No remote runtime assets are loaded. Signed app files, sessions and authentication data remain untouched.
+Tags UI and services import the type-only `@c0sc0s/orbit/sdk` contract. Runtime CDP and process APIs are reserved for platform and diagnostic adapters. Tags installation clients delegate to Orbit, and its update worker requests a pinned plugin installation through the stable Orbit command.
+
+Tags settings are normalized and atomically persisted. The catalog reads local metadata independently of sidebar expansion; the SQLite index stays private to Tags. Other plugins must not call Tags internal RPC or share its database. Only metadata, bounded matching snippets and settings enter the renderer.
+
+Renderer globals use an isolated JavaScript world, but DOM, CSS and main-thread CPU remain shared. Service processes contain crashes and blocking service work, not malicious access to the OS. Each business plugin owns its host adapter and CSS namespace. Cross-plugin capabilities, UI slots and a plugin store are not implemented.
+
+## Engineering
+
+Strict TypeScript produces ESM and generated declarations. Separate renderer checks exclude Node ambient types. AST-based checks enforce source-layer imports and reject runtime dependency cycles. Tests cover SDK contracts, compiled Node code, browser interactions, installation ownership, compatibility, locking, rollback and real tarball consumers. Preact, Motion and esbuild implement the Tags UI; no remote runtime assets are fetched.
+
+Signed Codex files, authentication and session content remain untouched. Search content stays local. See [release gates](distribution.md) for the distinction between automated verification and clean-account/manual acceptance.
