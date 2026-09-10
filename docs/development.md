@@ -40,6 +40,8 @@ All Orbit and Tags production logic is strict TypeScript. The shared `tsconfig.b
 
 Small `.mjs` CLI/hook entrypoints delegate to compiled code. Build scripts and Node test harnesses may remain JavaScript. Run `npm run build` before direct CLI or Node tests. `npm pack` builds the package through `prepack`; published packages do not require TypeScript at runtime.
 
+Orbit's CLI uses FIGlet for the ORBIT wordmark, Ora for terminal progress and Picocolors for styling. These production dependencies are restricted to `src/cli/`; the SDK and injected runtime do not import them. Presentation tests cover terminal cleanup, responsive help layout, plain output and JSON compatibility. Keep operation text and next-step guidance in the presentation layer, not in installation services.
+
 ## Code map
 
 See [source layout and enforced dependency rules](source-layout.md) for the complete module and test organization.

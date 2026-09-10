@@ -46,8 +46,12 @@ try {
   await access(join(platform.paths.launcherPath, "Contents/Resources/icon.icns"));
   const platformStatus = await run(process.execPath, [join(platform.paths.root, "orbit.mjs"), "status"], { env: { ...process.env, ORBIT_HOME: platform.paths.root } });
   assert.equal(JSON.parse(platformStatus.stdout).installed, true);
-  const { stdout: help } = await run(process.execPath, [join(packageRoot, "dist", "cli.js"), "--help"]);
-  assert.match(help, /start\|apply\|watch\|status\|remove\|stop/);
+  const { stdout: help } = await run(process.execPath, [join(packageRoot, "dist", "cli.js"), "--help", "--plain"], { env: { ...process.env, TERM: "xterm-256color" } });
+  assert.match(help, /GET STARTED/);
+  assert.match(help, /██████/);
+  assert.match(help, /orbit --help --config <file>/);
+  const { stdout: loaderHelp } = await run(process.execPath, [join(packageRoot, "dist", "cli.js"), "--help", "--config", "unused.json"]);
+  assert.match(loaderHelp, /start\|apply\|watch\|status\|remove\|stop/);
   await assert.rejects(run(process.execPath, [join(packageRoot, "dist", "cli.js"), "apply"]));
   const api = await import(pathToFileURL(join(packageRoot, "dist", "index.js")));
   const { readPlugins } = await import(pathToFileURL(join(packageRoot, "dist", "config", "manifest.js")));

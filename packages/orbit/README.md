@@ -2,7 +2,7 @@
 
 An independently installed extension platform for Codex desktop on macOS, built on Node.js 22+. Orbit owns the launcher, versioned runtime, plugin installation, compatibility checks, configuration locking and activation recovery. It has no Tags or SQLite dependency.
 
-Orbit 0.5.0 is an unpublished npm candidate. Install the local tarball following [installation](../../docs/distribution.md). From a built checkout:
+Install from npm or a local tarball following [installation](../../docs/distribution.md). From a built checkout:
 
 ```sh
 orbit install
@@ -17,6 +17,10 @@ orbit plugin uninstall orbit-tags
 Use `~/Applications/Orbit.app` for subsequent launches. A zero-plugin platform is valid. `orbit plugin add /path/to/package` snapshots a built local package. The package must provide an explicit `files` allowlist and `orbit-plugin.json` with `schemaVersion`, `id`, `version`, `runtimeVersion`, `orbit: {min, maxExclusive}`, `renderer` and optional `service`/`codex` declarations. Runtime dependencies are copied into its private snapshot. Registry installs disable npm lifecycle scripts.
 
 Business modules import types from `@c0sc0s/orbit/sdk`; installation clients use `@c0sc0s/orbit/installation`. Platform data defaults to `~/Library/Application Support/Orbit`, configurable with `ORBIT_HOME`. Disable preserves files/data; uninstall removes only that plugin and preserves data by default. `--purge` never recursively removes external data. Registry `orbit update`, `orbit plugin update orbit-tags` and `orbit plugin install @c0sc0s/orbit-tags` require published compatible packages; `orbit rollback` selects a retained compatible runtime.
+
+## Platform uninstall
+
+The source CLI adds `orbit uninstall --dry-run` to preview removal and `orbit uninstall --yes` to remove Orbit, its launcher and registered plugins while keeping data. Add `--purge` to delete Orbit-owned data. External data is reported for explicit cleanup. Remove the separate global CLI with `npm uninstall -g @c0sc0s/orbit`. Platform uninstall is not included in npm version 0.5.0. See [uninstall boundaries](../../docs/distribution.md#uninstall-everything).
 
 ## Advanced runtime entry
 

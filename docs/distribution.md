@@ -8,7 +8,7 @@ Orbit is the installed product. Plugins are optional. The private OrbitAI worksp
 
 Use macOS, Node.js 22.13+, npm and the official Codex desktop app. Install only trusted plugins.
 
-Orbit 0.5.0 and Orbit Tags 0.9.0 are unpublished npm candidates. Registry installation and update commands require a published compatible version.
+Install the published packages using the registry commands below.
 
 ## Local installation
 
@@ -40,6 +40,8 @@ Review SessionStart, UserPromptSubmit and SessionEnd in Codex Plugins. Registrat
 
 ## Plugin operations
 
+The source CLI shows Orbit branding, live operation progress and readable results with next steps in interactive terminals. Use `--plain` for text without color or animation, or `--json` for structured results. Redirected output defaults to JSON for compatibility with scripts. `NO_COLOR` and dumb terminals disable terminal effects; CI disables animation. Progress goes to stderr and results go to stdout. These presentation options apply to platform commands, not the advanced `--config` loader interface, and are not included in npm version 0.5.0.
+
 ```sh
 orbit plugin disable orbit-tags
 orbit plugin enable orbit-tags
@@ -52,8 +54,6 @@ Disable retains files and data. Uninstall removes the selected plugin's registra
 
 ## Registry distribution
 
-After compatible versions are published:
-
 ```sh
 npm install -g @c0sc0s/orbit
 orbit install
@@ -62,6 +62,27 @@ orbit start
 ```
 
 `orbit update` fetches Orbit; `orbit plugin update orbit-tags` fetches Tags. `orbit rollback` selects the retained runtime subject to plugin compatibility. Registry installation disables npm lifecycle scripts; native dependencies must ship compatible binaries.
+
+## Uninstall everything
+
+The source CLI supports platform uninstall (this command is not included in npm version 0.5.0). Preview the exact targets first:
+
+```sh
+orbit uninstall --purge --dry-run
+```
+
+Remove the platform, all registered plugins, launcher and Orbit-owned data:
+
+```sh
+orbit uninstall --purge --yes
+npm uninstall -g @c0sc0s/orbit
+```
+
+Omit `--purge` to keep plugin data for reinstallation. The CLI requires `--yes` before removal and stops injection without quitting Codex. The global npm CLI is separate and is removed by the second command. Codex itself, conversations and authentication are untouched.
+
+External plugin data (including migrated Tags data), unknown files and npm download caches are not recursively deleted. The result lists preserved external directories and remaining platform files for explicit review. Do not delete a reported directory unless you have verified its ownership. Failed cleanup can be retried with the same command; retained data can be purged after ordinary uninstall.
+
+On macOS, leftover runtime processes block destructive cleanup even when the active daemon has stopped. Resolve the reported process issue and retry; do not delete runtime files underneath a running process.
 
 ## Files and ownership
 

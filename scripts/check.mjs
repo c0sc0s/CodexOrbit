@@ -16,7 +16,7 @@ for (const directory of ["packages/orbit/src", "packages/orbit-tags/runtime/src"
 for (const workspace of ["orbit", "orbit-tags"]) {
   const root = resolve("packages", workspace);
   const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  if (workspace === "orbit" && Object.keys(manifest.dependencies ?? {}).length) {
+  if (workspace === "orbit" && Object.keys(manifest.dependencies ?? {}).some(name => !["figlet", "ora", "picocolors"].includes(name))) {
     throw new Error("Orbit must remain independent of business and storage dependencies");
   }
   for (const file of await readdir(root, { recursive: true })) {
@@ -24,6 +24,9 @@ for (const workspace of ["orbit", "orbit-tags"]) {
     const source = await readFile(join(root, file), "utf8");
     for (const match of source.matchAll(/(?:from\s*|import\s*\(\s*)["']([^"']+)["']/gu)) {
       const specifier = match[1];
+      if (workspace === "orbit" && ["figlet", "ora", "picocolors"].includes(specifier.split("/")[0]) && !file.startsWith("src/cli/")) {
+        throw new Error(`Terminal dependencies belong in Orbit's CLI layer: ${file}`);
+      }
       if (specifier.startsWith(".") && !resolve(dirname(join(root, file)), specifier).startsWith(`${root}/`)) {
         throw new Error(`Cross-workspace source import in ${workspace}/${file}: ${specifier}`);
       }

@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, realpathSync } from "node:fs";
 import { execFile } from "node:child_process";
-import { cp, lstat, mkdir, readFile, realpath, rm } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, realpath, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,8 @@ import { daemonPaths, daemonStatus } from "../host/daemon.js";
 import { assertCompatible, readPluginManifest } from "../plugins/manifest.js";
 import { atomicJson, exists, inside, snapshotPackage } from "./files.js";
 import { withInstallationLock } from "./lock.js";
+import { planUninstall, removeEmptyDirectory, removePlannedFiles } from "./uninstall.js";
+import type { UninstallOptions } from "./uninstall.js";
 import type { PluginManifest } from "../plugins/manifest.js";
 import type { PluginEntry } from "../sdk/contracts.js";
 import type { ExecFileOptions } from "node:child_process";
@@ -225,6 +227,9 @@ export function createInstallationManager(options: InstallationOptions = {}) {
   async function install() {
     await prepare();
     return withInstallationLock(configPath, async () => {
+      const receipt = join(root, "uninstall.json");
+      if (await exists(receipt) && !JSON.parse(await readFile(receipt, "utf8")).uninstallComplete)
+        throw new Error("Finish the pending uninstall before installing Orbit again");
       if (await exists(configPath)) {
         const current = await read();
         await repairEntry(current);
@@ -238,6 +243,7 @@ export function createInstallationManager(options: InstallationOptions = {}) {
       };
       await atomicJson(configPath, config);
       await repairEntry(config);
+      await rm(receipt, { force: true });
       return { status: "installed", root, launcherPath, version: runtime.version };
     });
   }
@@ -401,6 +407,47 @@ export function createInstallationManager(options: InstallationOptions = {}) {
     );
     return result;
   }
+  async function uninstall(settings: UninstallOptions = {}) {
+    const receipt = inside(root, "uninstall.json");
+    if (!(await exists(root))) return { status: "not-installed", root };
+    const result = await withInstallationLock(configPath, async () => {
+      inside(root, "loader.json");
+      const installed = await exists(configPath);
+      if (!installed && !(await exists(receipt))) throw new Error("No Orbit ownership metadata; refusing cleanup");
+      const config: PlatformConfig = installed ? await read() : JSON.parse(await readFile(receipt, "utf8"));
+      const plan = await planUninstall(root, launcherPath, port, config, settings.purge === true);
+      if (installed) {
+        const state = await daemon(config);
+        if (state.conflict) throw new Error("Orbit daemon ownership conflicts; no files were changed");
+      }
+      if (settings.dryRun) return { status: "planned", ...plan, cliPreserved: true };
+      if (installed) {
+        // Stop also unloads renderer-only modules when the daemon is already absent.
+        await runtimeCommand(config, "stop");
+        const state = await daemon(config);
+        if (state.running || state.conflict) throw new Error("Orbit has not stopped; installation files were preserved");
+        if ((options.platform ?? process.platform) === "darwin") {
+          const processes = (await run("/bin/ps", ["-axo", "pid=,command="])).stdout;
+          const residual = processes.split("\n").filter(line =>
+            line.includes(`${root}/runtime/`) && line.includes("/dist/cli.js watch ") && line.includes(`--config ${configPath}`));
+          if (residual.length) throw new Error("Residual Orbit runtime processes remain; stop them before retrying uninstall. Installation files were preserved");
+        }
+        const empty = structuredClone(config);
+        empty.plugins = [];
+        empty.orbit.packages = {};
+        if (options.manageExtensions !== false) await extensions.reconcile(config, empty);
+        // Keep a retry receipt before deleting the active runtime or configuration.
+        await atomicJson(receipt, config);
+        await rm(configPath);
+      }
+      await removePlannedFiles(plan);
+      if (settings.purge || (!(await exists(join(root, "data"))) && !(await exists(join(root, "module-data"))))) await rm(receipt, { force: true });
+      else await atomicJson(receipt, { ...config, uninstallComplete: true });
+      return { status: "uninstalled", ...plan, cliPreserved: true };
+    });
+    if (!settings.dryRun) await removeEmptyDirectory(root);
+    return { ...result, remaining: await exists(root) ? (await readdir(root)).map(name => join(root, name)) : [] };
+  }
   async function installPackage(spec: string, expectedId?: string) {
     return withRegistryPackage(spec, run, async (candidate) => {
       const manifest = await readPluginManifest(candidate);
@@ -430,7 +477,7 @@ export function createInstallationManager(options: InstallationOptions = {}) {
     });
   }
   async function start(attach = false) {
-    return runtimeCommand(await read(), "start", attach);
+    return withInstallationLock(configPath, async () => runtimeCommand(await read(), "start", attach));
   }
   async function status() {
     if (!(await exists(configPath))) return { installed: false, root };
@@ -521,6 +568,7 @@ export function createInstallationManager(options: InstallationOptions = {}) {
     addPlugin,
     setEnabled,
     uninstallPlugin,
+    uninstall,
     installPackage,
     start,
     status,
