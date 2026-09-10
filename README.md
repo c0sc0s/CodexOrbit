@@ -1,3 +1,5 @@
+<p align="center"><img src="packages/orbit-tags/assets/banner.png" alt="Codex Orbit — Your Codex. Your orbit." width="100%"></p>
+
 # OrbitAI
 
 A local extension platform for the official Codex desktop app.

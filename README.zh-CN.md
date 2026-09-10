@@ -1,3 +1,5 @@
+<p align="center"><img src="packages/orbit-tags/assets/banner.png" alt="Codex Orbit — 你的 Codex，你的轨道。" width="100%"></p>
+
 # OrbitAI
 
 为官方 Codex 桌面应用提供本地扩展能力。
