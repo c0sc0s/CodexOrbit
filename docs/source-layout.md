@@ -1,6 +1,6 @@
 # Source structure and dependency rules
 
-OrbitAI uses two independently versioned packages. Directory boundaries describe execution environments and ownership; they are not additional npm packages. `npm run check` validates imports using a TypeScript-capable AST parser and rejects runtime import cycles.
+OrbitAI uses independently versioned packages. Directory boundaries describe execution environments and ownership; they are not additional npm packages. `npm run check` validates imports using a TypeScript-capable AST parser and rejects runtime import cycles.
 
 ## Orbit
 
@@ -63,9 +63,21 @@ packages/orbit-tags/
 
 Orbit snapshots the business package without flattening its compiled hierarchy. The plugin manifest loads `dist/runtime/src/service/activate.js`; the diagnostic controller does not write platform configuration. Tags uses module ID `orbit-tags`; its package snapshot records the assigned data directory. See [installation ownership](orbit-platform-design.md).
 
+## Orbit Blur
+
+```text
+packages/orbit-blur/
+├── src/                        # Renderer TypeScript (style injection)
+├── scripts/build.mjs           # esbuild IIFE → runtime/dist/injected.js
+├── runtime/dist/injected.js    # Tracked browser bundle
+└── orbit-plugin.json           # Manifest (renderer-only, no service)
+```
+
+Renderer-only plugin: transparent backgrounds plus `backdrop-filter` blur. It imports type-only `@c0sc0s/orbit/sdk`. No private Codex selectors and no Orbit implementation imports.
+
 ## Verification and change discipline
 
-- `npm run build`: clean only each package's generated Node directory, build Orbit first, then Tags and its browser bundle.
+- `npm run build`: clean only each package's generated Node directory, build Orbit first, then Tags, then Blur and its browser bundle.
 - `npm run check`: syntax, package boundaries, source-layer dependencies, runtime cycles and documentation links.
 - `npm run typecheck`: strict implementation checks and public SDK contract tests.
 - Browser typechecks explicitly exclude Node ambient types, preventing accidental use of Node globals in renderer code.
