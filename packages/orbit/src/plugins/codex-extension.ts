@@ -1,16 +1,15 @@
 import { cp, mkdir, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { findCodexApp } from "../platform/codex-process.js";
+import { findCodexCli } from "../platform/codex-cli.js";
 import { atomicJson, exists, inside } from "../installation/files.js";
 import type { PlatformConfig, InstallationOptions } from "../installation/manager.js";
 
 type Runner = NonNullable<InstallationOptions["run"]>;
 export function createCodexExtensionManager(root: string, run: Runner, binary?: string) {
   async function command(args: string[]) {
-    const app = findCodexApp();
-    const executable = binary ?? (app ? join(app.appPath, "Contents/Resources/codex") : undefined);
+    const executable = binary ?? findCodexCli();
     if (!executable)
-      throw new Error("Official Codex CLI is required for this plugin's naming extension");
+      throw new Error("Official Codex CLI is required for this plugin's naming extension; no executable bundled CLI was found in the official desktop app");
     return run(executable, args, { timeout: 90_000, maxBuffer: 8 * 1024 * 1024 });
   }
   async function listMarketplaces(name: string, allowedRoots: string[]) {

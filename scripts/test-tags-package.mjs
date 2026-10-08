@@ -52,17 +52,18 @@ try {
   if (process.platform === "darwin") {
     const orbitRoot = join(consumer, "node_modules/@c0sc0s/orbit");
     const { createInstallationManager } = await import(pathToFileURL(join(orbitRoot, "dist/installation/manager.js")));
-    const { findCodexApp } = await import(pathToFileURL(join(orbitRoot, "dist/platform/codex-process.js")));
+    const { findCodexApp, findCodexCli } = await import(pathToFileURL(join(orbitRoot, "dist/index.js")));
     const app = findCodexApp();
     if (app) {
-    const cli = join(app.appPath, "Contents/Resources/codex");
+    const cli = findCodexCli(app.appPath);
+    assert.ok(cli, "The installed Codex app must contain an executable official CLI");
     const codexHome = join(temporary, "codex-home");
     await mkdir(codexHome);
     const isolatedRun = (file, args, options) => run(file, args, { ...options,
       env: { ...process.env, ...options?.env, CODEX_HOME: codexHome },
     });
     const platform = createInstallationManager({ home: temporary, root: join(temporary, "fresh-orbit"),
-      applicationsRoot: join(temporary, "fresh-applications"), codexBinary: cli, run: isolatedRun,
+      applicationsRoot: join(temporary, "fresh-applications"), run: isolatedRun,
     });
     await platform.install();
     assert.deepEqual((await platform.read()).plugins, []);

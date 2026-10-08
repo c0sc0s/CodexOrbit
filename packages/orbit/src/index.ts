@@ -1,4 +1,5 @@
 export { CodexProcess, findCodexApp } from "./platform/codex-process.js";
+export { findCodexCli } from "./platform/codex-cli.js";
 export { CdpClient } from "./cdp/client.js";
 export { PluginTargetRegistry, isCodexRendererTarget } from "./cdp/target-registry.js";
 export { LOADER_VERSION, buildLoaderExpression, buildPluginExpression, buildPluginRemovalExpression, buildPluginMessageExpression } from "./cdp/expressions.js";

@@ -46,7 +46,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@c0sc0s/orbit": "0.5.0",
+    "@c0sc0s/orbit": "0.5.2",
     "better-sqlite3": "13.0.3"
   },
   "devDependencies": {
