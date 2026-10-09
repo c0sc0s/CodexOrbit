@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "orbit-blur",
+  "version": "0.1.0",
+  "runtimeVersion": "1.0.0",
+  "orbit": { "min": "0.5.0", "maxExclusive": "0.6.0" },
+  "renderer": "runtime/dist/injected.js"
+}

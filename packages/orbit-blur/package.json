@@ -1,0 +1,34 @@
+{
+  "name": "@c0sc0s/orbit-blur",
+  "version": "0.1.0",
+  "description": "Orbit plugin: transparent Codex chrome with Gaussian blur.",
+  "type": "module",
+  "files": [
+    "orbit-plugin.json",
+    "runtime/dist/",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c0sc0s/codex-tags.git"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@c0sc0s/orbit": "0.5.2",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

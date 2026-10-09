@@ -10,7 +10,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "build": "npm run build -w @c0sc0s/orbit && npm run build -w @c0sc0s/orbit-tags",
+    "build": "npm run build -w @c0sc0s/orbit && npm run build -w @c0sc0s/orbit-tags && npm run build -w @c0sc0s/orbit-blur",
     "check": "node scripts/check.mjs && node scripts/check-architecture.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "node --test scripts/test/*.test.mjs && npm test --workspaces --if-present",
