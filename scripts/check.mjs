@@ -7,13 +7,13 @@ import { fileURLToPath } from "node:url";
 process.chdir(dirname(dirname(fileURLToPath(import.meta.url))));
 
 const run = promisify(execFile);
-for (const directory of ["packages/orbit/src", "packages/orbit-tags/runtime/src", "packages/orbit-tags/hooks", "scripts", "packages/orbit-tags/scripts", "packages/orbit-tags/bin"]) {
+for (const directory of ["packages/orbit/src", "packages/orbit-tags/runtime/src", "packages/orbit-tags/hooks", "scripts", "packages/orbit-tags/scripts", "packages/orbit-tags/bin", "packages/orbit-blur/scripts"]) {
   for (const file of await readdir(directory, { recursive: true })) {
     if (file.endsWith(".mjs")) await run(process.execPath, ["--check", join(directory, file)]);
   }
 }
 
-for (const workspace of ["orbit", "orbit-tags"]) {
+for (const workspace of ["orbit", "orbit-tags", "orbit-blur"]) {
   const root = resolve("packages", workspace);
   const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   if (workspace === "orbit" && Object.keys(manifest.dependencies ?? {}).some(name => !["figlet", "ora", "picocolors"].includes(name))) {
@@ -31,11 +31,20 @@ for (const workspace of ["orbit", "orbit-tags"]) {
         throw new Error(`Cross-workspace source import in ${workspace}/${file}: ${specifier}`);
       }
       if (workspace === "orbit" && specifier.startsWith("@c0sc0s/orbit-tags")) throw new Error("Orbit must not import Tags");
+      if (workspace === "orbit" && specifier.startsWith("@c0sc0s/orbit-blur")) throw new Error("Orbit must not import business plugins");
+      if (workspace === "orbit-blur" && specifier.startsWith("@c0sc0s/orbit") && specifier !== "@c0sc0s/orbit/sdk") {
+        throw new Error(`Blur plugin must use the SDK contract: ${file}`);
+      }
+      if (workspace === "orbit-blur" && specifier === "@c0sc0s/orbit/sdk") {
+        const typeOnly = /import\s+type\s+[^;]*from\s+["']@c0sc0s\/orbit\/sdk["']/u.test(source)
+          && !/import\s+(?!type\b)[^;]*from\s+["']@c0sc0s\/orbit\/sdk["']/u.test(source);
+        if (!typeOnly) throw new Error(`Blur plugin must import @c0sc0s/orbit/sdk as types only: ${file}`);
+      }
     }
   }
 }
 
-const documentation = ["README.md", "README.zh-CN.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md", "packages/orbit/README.md", "packages/orbit-tags/README.md", "packages/orbit-tags/README.zh-CN.md", "packages/orbit-tags/CHANGELOG.md"];
+const documentation = ["README.md", "README.zh-CN.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md", "packages/orbit/README.md", "packages/orbit-tags/README.md", "packages/orbit-tags/README.zh-CN.md", "packages/orbit-tags/CHANGELOG.md", "packages/orbit-blur/README.md"];
 for (const directory of ["docs", "packages/orbit/assets", "packages/orbit-tags/assets", "packages/orbit-tags/skills"]) {
   for (const file of await readdir(directory, { recursive: true })) {
     if (file.endsWith(".md")) documentation.push(join(directory, file));
