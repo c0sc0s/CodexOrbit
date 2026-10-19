@@ -320,6 +320,195 @@ var CodexPlugin = (() => {
   function sidebarSectionHeading(toggle) {
     return toggle.closest('[class~="group/nav-section-title"]') ?? toggle.parentElement ?? toggle;
   }
+  function findSidebarFilterAnchor() {
+    const toggle = findSectionToggle(codexLabels.pinned) ?? findAnySectionToggle();
+    if (toggle) return { headingTemplate: toggle, headingRow: sidebarSectionHeading(toggle) };
+    const projectsHeader = findProjectsHeader();
+    return projectsHeader ? { headingTemplate: projectsHeader, headingRow: projectsHeader } : null;
+  }
+
+  // ../orbit/dist/ui/tooltip.js
+  var tooltipStyles = `
+  position: fixed; z-index: 10000; width: max-content; max-width: min(20rem, calc(100vw - 16px));
+  padding: var(--tooltip-padding-block, 5px) var(--tooltip-padding-inline, 12px);
+  border: 1px solid var(--tooltip-border-color, var(--color-border-tooltip, #8883));
+  border-radius: var(--tooltip-border-radius, 16px); corner-shape: var(--tooltip-corner-shape, round);
+  background: var(--tooltip-background-color, var(--color-background-tooltip, Canvas));
+  color: var(--tooltip-text-color, var(--color-text-tooltip, CanvasText));
+  box-shadow: var(--tooltip-box-shadow, var(--shadow-tooltip, 0 8px 18px #0f172a33));
+  font-size: var(--tooltip-font-size, 13px); font-weight: var(--tooltip-font-weight, 400);
+  line-height: var(--tooltip-line-height, 18px); letter-spacing: var(--tooltip-letter-spacing, -.15px);
+  zoom: var(--codex-window-zoom, 1); overflow-wrap: break-word; text-align: center; pointer-events: none; user-select: none;
+`;
+  function mountTooltip(trigger, options) {
+    const doc = trigger.ownerDocument;
+    const view = doc.defaultView;
+    if (!view)
+      throw new Error("Tooltips require a browser document");
+    const events = new view.AbortController();
+    const id = options.id ?? `orbit-tooltip-${view.crypto.randomUUID()}`;
+    let timer = null;
+    let tooltip = null;
+    const hide = () => {
+      if (timer !== null)
+        view.clearTimeout(timer);
+      timer = null;
+      tooltip?.remove();
+      tooltip = null;
+      const describedBy = trigger.getAttribute("aria-describedby")?.split(/\s+/).filter((value) => value !== id).join(" ");
+      if (describedBy)
+        trigger.setAttribute("aria-describedby", describedBy);
+      else
+        trigger.removeAttribute("aria-describedby");
+    };
+    const show = () => {
+      hide();
+      if (!trigger.isConnected || trigger.getAttribute("aria-expanded") === "true")
+        return;
+      tooltip = doc.createElement("div");
+      tooltip.id = id;
+      tooltip.className = "orbit-ui-tooltip";
+      tooltip.setAttribute("role", "tooltip");
+      tooltip.textContent = options.label;
+      tooltip.style.cssText = tooltipStyles;
+      doc.body.appendChild(tooltip);
+      trigger.setAttribute("aria-describedby", [trigger.getAttribute("aria-describedby"), id].filter(Boolean).join(" "));
+      const anchor = trigger.getBoundingClientRect();
+      const zoom = Number.parseFloat(view.getComputedStyle(tooltip).zoom) || 1;
+      const offset = options.offset ?? 2;
+      const padding = 8;
+      tooltip.style.maxWidth = `min(20rem, ${Math.max(0, view.innerWidth - padding * 2) / zoom}px)`;
+      const bounds = tooltip.getBoundingClientRect();
+      let side = options.side ?? "right";
+      if (side === "right" && anchor.right + offset + bounds.width > view.innerWidth - padding)
+        side = "left";
+      else if (side === "left" && anchor.left - offset - bounds.width < padding)
+        side = "right";
+      else if (side === "bottom" && anchor.bottom + offset + bounds.height > view.innerHeight - padding)
+        side = "top";
+      else if (side === "top" && anchor.top - offset - bounds.height < padding)
+        side = "bottom";
+      const left = side === "right" ? anchor.right + offset : side === "left" ? anchor.left - offset - bounds.width : anchor.left + (anchor.width - bounds.width) / 2;
+      const top = side === "bottom" ? anchor.bottom + offset : side === "top" ? anchor.top - offset - bounds.height : anchor.top + (anchor.height - bounds.height) / 2;
+      tooltip.style.left = `${Math.max(padding, Math.min(left, view.innerWidth - padding - bounds.width)) / zoom}px`;
+      tooltip.style.top = `${Math.max(padding, Math.min(top, view.innerHeight - padding - bounds.height)) / zoom}px`;
+      tooltip.dataset.side = side;
+    };
+    const listenerOptions = { signal: events.signal };
+    trigger.addEventListener("pointerenter", (event) => {
+      if (event.pointerType === "touch" || event.buttons)
+        return;
+      hide();
+      timer = view.setTimeout(show, options.delay ?? 200);
+    }, listenerOptions);
+    trigger.addEventListener("pointerleave", hide, listenerOptions);
+    trigger.addEventListener("focus", show, listenerOptions);
+    trigger.addEventListener("blur", hide, listenerOptions);
+    trigger.addEventListener("click", hide, listenerOptions);
+    doc.addEventListener("pointerdown", hide, { ...listenerOptions, capture: true });
+    doc.addEventListener("keydown", (event) => {
+      if (event.key === "Escape")
+        hide();
+    }, listenerOptions);
+    doc.addEventListener("scroll", (event) => {
+      if (event.target === doc || event.target instanceof view.Element && event.target.contains(trigger))
+        hide();
+    }, { ...listenerOptions, capture: true });
+    view.addEventListener("resize", hide, listenerOptions);
+    view.addEventListener("blur", hide, listenerOptions);
+    return () => {
+      hide();
+      events.abort();
+    };
+  }
+
+  // ../orbit/dist/ui/sidebar-button.js
+  var presentationAttributes = /* @__PURE__ */ new Set([
+    "class",
+    "style",
+    "data-color",
+    "data-variant",
+    "data-squircle",
+    "data-pill",
+    "data-uniform",
+    "data-size",
+    "data-icon-size",
+    "data-suppress-active-style"
+  ]);
+  function createSidebarButton(options) {
+    const doc = options.icon.ownerDocument;
+    const view = doc.defaultView;
+    if (!view)
+      throw new Error("Sidebar buttons require a browser document");
+    const button = options.template?.cloneNode(true) ?? doc.createElement("button");
+    for (const attribute of Array.from(button.attributes)) {
+      if (!presentationAttributes.has(attribute.name))
+        button.removeAttribute(attribute.name);
+    }
+    button.type = "button";
+    button.id = options.id;
+    button.setAttribute("aria-label", options.ariaLabel ?? options.label);
+    const icon = options.icon.cloneNode(true);
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    const nativeIcon = button.querySelector("svg");
+    if (nativeIcon) {
+      for (const name of ["class", "style", "width", "height"]) {
+        const value = nativeIcon.getAttribute(name);
+        if (value !== null)
+          icon.setAttribute(name, value);
+      }
+      nativeIcon.replaceWith(icon);
+    } else {
+      icon.setAttribute("width", "20");
+      icon.setAttribute("height", "20");
+      button.prepend(icon);
+    }
+    const walker = doc.createTreeWalker(button, view.NodeFilter.SHOW_TEXT);
+    let labeled = false;
+    while (walker.nextNode()) {
+      if (icon.contains(walker.currentNode))
+        continue;
+      if (!walker.currentNode.textContent?.trim())
+        continue;
+      walker.currentNode.textContent = labeled ? "" : options.label;
+      labeled = true;
+    }
+    let style = null;
+    if (!options.template) {
+      button.append(doc.createTextNode(options.label));
+      const selector = `#${view.CSS.escape(options.id)}`;
+      style = doc.createElement("style");
+      style.id = `${options.id}-style`;
+      doc.getElementById(style.id)?.remove();
+      style.textContent = `
+      ${selector} { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 12px;
+        border: 0; border-radius: 6px; background: transparent; color: var(--color-text-tertiary, var(--color-token-text-secondary, inherit));
+        font: inherit; text-align: left; cursor: pointer; }
+      ${selector}:hover { background: var(--color-token-list-hover-background, #8882); color: var(--color-text-foreground, inherit); }
+      ${selector}:focus-visible { outline: 2px solid var(--color-border-focus, #4b8cff); outline-offset: -2px; }
+    `;
+      doc.head.append(style);
+    }
+    if (options.onClick)
+      button.addEventListener("click", options.onClick);
+    const disposeTooltip = options.tooltip === false ? () => {
+    } : mountTooltip(button, {
+      label: options.label,
+      ...options.tooltip,
+      id: `${options.id}-tooltip`
+    });
+    return {
+      element: button,
+      dispose() {
+        disposeTooltip();
+        if (options.onClick)
+          button.removeEventListener("click", options.onClick);
+        style?.remove();
+        button.remove();
+      }
+    };
+  }
 
   // ../../node_modules/preact/dist/preact.module.js
   var n;
@@ -1344,12 +1533,15 @@ var CodexPlugin = (() => {
     constructor(options) {
       this.options = options;
       document.querySelectorAll(".codex-sidebar-dashboard-overlay").forEach((overlay) => overlay.remove());
+      document.getElementById("orbit-tags-launcher-tooltip")?.remove();
     }
     options;
     modal = null;
     closing = false;
     deletedDefinition = null;
     composing = false;
+    launcherControl = null;
+    launcherLocale = "";
     get isClosing() {
       return this.closing;
     }
@@ -1396,34 +1588,41 @@ var CodexPlugin = (() => {
       const backgroundUpdate = ["catalog-snapshot", "settings-snapshot", "search-result"].includes(reason);
       if (backgroundUpdate && this.modal && (state.view === "settings" || state.sortOpen || this.composing)) return;
       const previousScroll = this.modal?.querySelector(".codex-sidebar-results-list")?.scrollTop ?? 0;
-      const toolbar = ensureToolbar(entries.map((entry2) => entry2.node).filter((node) => Boolean(node)));
+      const toolbar = ensureToolbar(entries.map((entry) => entry.node).filter((node) => Boolean(node)));
       if (!toolbar) return;
       const activeInput = document.activeElement instanceof HTMLInputElement && document.activeElement.matches(".codex-sidebar-search-input, .codex-sidebar-tag-input, .codex-sidebar-tag-description") ? document.activeElement : null;
       const activeInputClass = activeInput?.className ?? null;
       const selectionStart = activeInput?.selectionStart ?? null;
       this.modal?.remove();
       this.modal = null;
-      toolbar.replaceChildren();
-      const entry = document.createElement("div");
-      entry.className = "codex-sidebar-dashboard-entry";
-      const navigationTemplate = getNavigationTemplate();
-      const launcher = navigationTemplate?.cloneNode(true) ?? this.button("", "Tags");
-      launcher.classList.add("codex-sidebar-dashboard-launcher");
-      if (!navigationTemplate) launcher.dataset.dashboardFallback = "true";
-      launcher.querySelector(".text-fade-truncate")?.replaceChildren(document.createTextNode("Tags"));
-      const icon = launcher.querySelector("svg");
-      if (icon) this.renderTagsIcon(icon);
-      launcher.title = i18n.t("launcherLabel");
-      launcher.setAttribute("aria-label", i18n.t("launcherLabel"));
-      launcher.setAttribute("aria-haspopup", "dialog");
+      if (!this.launcherControl?.element.isConnected || !toolbar.contains(this.launcherControl.element) || this.launcherLocale !== i18n.locale) {
+        this.launcherControl?.dispose();
+        toolbar.replaceChildren();
+        const entry = document.createElement("div");
+        entry.className = "codex-sidebar-dashboard-entry";
+        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.renderTagsIcon(icon);
+        this.launcherControl = createSidebarButton({
+          id: "orbit-tags-launcher",
+          label: "Tags",
+          icon,
+          template: getNavigationTemplate() ?? void 0,
+          ariaLabel: i18n.t("launcherLabel"),
+          tooltip: { label: i18n.t("tags") },
+          onClick: () => {
+            this.closing = false;
+            store.dispatch({ type: "dashboard.open" });
+            requestRender("open-dashboard");
+          }
+        });
+        this.launcherLocale = i18n.locale;
+        this.launcherControl.element.classList.add("codex-sidebar-dashboard-launcher");
+        this.launcherControl.element.setAttribute("aria-haspopup", "dialog");
+        entry.appendChild(this.launcherControl.element);
+        toolbar.appendChild(entry);
+      }
+      const launcher = this.launcherControl.element;
       launcher.setAttribute("aria-expanded", String(state.open));
-      launcher.addEventListener("click", () => {
-        this.closing = false;
-        store.dispatch({ type: "dashboard.open" });
-        requestRender("open-dashboard");
-      });
-      entry.appendChild(launcher);
-      toolbar.appendChild(entry);
       if (!state.open) return;
       const overlay = document.createElement("div");
       overlay.className = "codex-sidebar-dashboard-overlay";
@@ -1522,6 +1721,8 @@ var CodexPlugin = (() => {
       }
     }
     dispose() {
+      this.launcherControl?.dispose();
+      this.launcherControl = null;
       this.modal?.remove();
       this.modal = null;
       this.closing = false;
@@ -1896,6 +2097,7 @@ var CodexPlugin = (() => {
     }
     renderTagsIcon(icon) {
       const namespace = "http://www.w3.org/2000/svg";
+      icon.setAttribute("viewBox", "0 0 16 16");
       const outline = document.createElementNS(namespace, "path");
       outline.setAttribute("d", "M2.25 2.25h4.32c.43 0 .84.17 1.14.47l5.61 5.61a1.6 1.6 0 0 1 0 2.27l-2.72 2.72a1.6 1.6 0 0 1-2.27 0L2.72 7.71a1.61 1.61 0 0 1-.47-1.14V2.25Z");
       outline.setAttribute("fill", "none");
@@ -2583,7 +2785,7 @@ var CodexPlugin = (() => {
     render() {
       const mounted = this.options.ensureHost();
       if (!mounted) return;
-      const { filterHost, pinnedToggle } = mounted;
+      const { filterHost, headingTemplate } = mounted;
       this.sort.update();
       if (this.sort.isOpen) {
         this.apply();
@@ -2596,8 +2798,8 @@ var CodexPlugin = (() => {
       const heading = document.createElement("div");
       heading.className = "codex-sidebar-tags-section-heading";
       heading.textContent = "Tags";
-      const pinnedStyle = getComputedStyle(pinnedToggle);
-      ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"].forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
+      const headingStyle = getComputedStyle(headingTemplate);
+      ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"].forEach((property) => heading.style.setProperty(property, headingStyle.getPropertyValue(property)));
       this.sort.update();
       heading.appendChild(this.sort.element);
       const counts = /* @__PURE__ */ new Map();
@@ -2619,8 +2821,8 @@ var CodexPlugin = (() => {
       rail.className = "codex-sidebar-quick-filter-rail";
       rail.setAttribute("role", "group");
       rail.setAttribute("aria-label", this.options.i18n.t("tags"));
-      rail.style.paddingLeft = pinnedStyle.paddingLeft;
-      rail.style.paddingRight = pinnedStyle.paddingRight;
+      rail.style.paddingLeft = headingStyle.paddingLeft;
+      rail.style.paddingRight = headingStyle.paddingRight;
       filters.forEach(({ value, label, count, color }) => {
         const filter = document.createElement("button");
         filter.type = "button";
@@ -2761,18 +2963,9 @@ var CodexPlugin = (() => {
     [${ROW}="true"][${FILTERED}="true"] { display: none !important; }
 
     #${TOOLBAR_ID} {
-      display: contents; color: var(--color-text-foreground, var(--color-token-text-primary, inherit));
+      display: contents;
     }
     .codex-sidebar-dashboard-entry { display: contents; }
-    .codex-sidebar-dashboard-launcher { width: 100%; color: inherit; font: inherit; }
-    .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"] {
-      display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 6px;
-      background: transparent; text-align: left; cursor: pointer; transition: background 100ms ease, transform 100ms ease;
-    }
-    .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"]:hover { background: var(--color-token-list-hover-background, #8882); }
-    .codex-sidebar-dashboard-launcher:active { transform: scale(.985); }
-    .codex-sidebar-dashboard-launcher:focus-visible { outline: 2px solid var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); outline-offset: -2px; }
-
     .codex-sidebar-dashboard-overlay {
       --codex-sidebar-surface: var(--color-background-elevated-primary-opaque, var(--color-background-elevated-base, var(--color-token-dropdown-background, Canvas)));
       --codex-sidebar-menu-surface: var(--color-background-elevated-secondary-opaque, var(--color-background-elevated-high, var(--color-token-dropdown-background, Canvas)));
@@ -3195,17 +3388,19 @@ var CodexPlugin = (() => {
       return host;
     };
     const ensureFilterHost = () => {
-      const pinnedToggle = findSectionToggle(codexLabels.pinned) ?? (pinnedToggleRef?.isConnected ? pinnedToggleRef : null);
-      if (!pinnedToggle) return null;
-      const pinnedHeadingRow = sidebarSectionHeading(pinnedToggle);
+      const anchor = findSidebarFilterAnchor();
+      if (!anchor) {
+        filterHost?.remove();
+        return null;
+      }
       filterHost = document.getElementById(FILTER_BAR_ID);
       if (!filterHost) {
         filterHost = document.createElement("section");
         filterHost.id = FILTER_BAR_ID;
       }
       filterHost.setAttribute("aria-label", i18n.t("filterSidebarByTag"));
-      if (filterHost.nextElementSibling !== pinnedHeadingRow) pinnedHeadingRow.insertAdjacentElement("beforebegin", filterHost);
-      return { filterHost, pinnedToggle };
+      if (filterHost.nextElementSibling !== anchor.headingRow) anchor.headingRow.insertAdjacentElement("beforebegin", filterHost);
+      return { filterHost, headingTemplate: anchor.headingTemplate };
     };
     const entriesFrom = (nodes) => {
       return sessionRegistry.ingest(nodes, {
@@ -3355,7 +3550,9 @@ var CodexPlugin = (() => {
       const entries = entriesFrom(nodes);
       applySidebarOrder();
       sidebarTagFilter.apply();
-      if (host?.isConnected && renderedIndexSignature === indexSignature(entries)) return;
+      const filterAnchor = findSidebarFilterAnchor();
+      const filterMounted = filterAnchor ? filterHost?.isConnected && filterHost.nextElementSibling === filterAnchor.headingRow : !filterHost?.isConnected;
+      if (host?.isConnected && filterMounted && renderedIndexSignature === indexSignature(entries)) return;
       if (hostLifecycle.deferIfInteracting(reason)) return;
       renderToolbar(entries, reason);
     };

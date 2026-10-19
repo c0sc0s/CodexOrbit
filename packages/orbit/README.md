@@ -18,6 +18,8 @@ Use `~/Applications/Orbit.app` for subsequent launches. A zero-plugin platform i
 
 Business modules import types from `@c0sc0s/orbit/sdk`; installation clients use `@c0sc0s/orbit/installation`. Platform data defaults to `~/Library/Application Support/Orbit`, configurable with `ORBIT_HOME`. Disable preserves files/data; uninstall removes only that plugin and preserves data by default. `--purge` never recursively removes external data. Registry `orbit update`, `orbit plugin update orbit-tags` and `orbit plugin install @c0sc0s/orbit-tags` require published compatible packages; `orbit rollback` selects a retained compatible runtime.
 
+Renderer plugins can import `createSidebarButton` and `mountTooltip` from `@c0sc0s/orbit/ui` for native sidebar presentation, themed hints, zoom-aware placement and scoped cleanup. See the [shared UI guide](../../docs/plugin-ui.md) for usage and ownership rules.
+
 ## Platform uninstall
 
 Use `orbit uninstall --dry-run` to preview removal and `orbit uninstall --yes` to remove Orbit, its launcher and registered plugins while keeping data. Add `--purge` to delete Orbit-owned data. External data is reported for explicit cleanup. Remove the separate global CLI with `npm uninstall -g @c0sc0s/orbit`. See [uninstall boundaries](../../docs/distribution.md#uninstall-everything).

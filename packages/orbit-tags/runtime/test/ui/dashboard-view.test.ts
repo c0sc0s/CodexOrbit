@@ -6,7 +6,8 @@ import { RuntimeStore } from "../../src/injected/store";
 import type { TagDefinition } from "../../src/injected/models";
 
 vi.mock("../../src/injected/motion", () => ({ enterDashboard: vi.fn(), enterDashboardContent: vi.fn(), enterSortMenu: vi.fn(), exitDashboard: vi.fn(), refreshResults: vi.fn() }));
-afterEach(() => { document.body.replaceChildren(); });
+const views: DashboardView[] = [];
+afterEach(() => { views.splice(0).forEach((view) => view.dispose()); document.body.replaceChildren(); });
 
 function setup(initial: TagDefinition[] = [{ name: "Bug", description: "Fix defects", color: "#d95c5c" }]) {
   let definitions = initial;
@@ -22,6 +23,7 @@ function setup(initial: TagDefinition[] = [{ name: "Bug", description: "Fix defe
     scheduleContentSearch: () => {}, onTagDefinitionsChanged: (next) => { definitions = next; },
     onOpenEntry: () => {}, requestRender: (reason) => view.render([], reason), trace: () => {},
   });
+  views.push(view);
   view.render([]);
   return { view, store, tags: () => definitions };
 }
@@ -29,6 +31,22 @@ function setup(initial: TagDefinition[] = [{ name: "Bug", description: "Fix defe
 function input(selector: string): HTMLInputElement { return document.querySelector<HTMLInputElement>(selector)!; }
 function click(selector: string): void { document.querySelector<HTMLButtonElement>(selector)!.click(); }
 function submit(): void { document.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); }
+
+it("keeps the launcher and its visible hint mounted during background refreshes", () => {
+  const { view, store } = setup();
+  store.dispatch({ type: "dashboard.close" });
+  view.render([]);
+  const launcher = document.querySelector<HTMLButtonElement>(".codex-sidebar-dashboard-launcher")!;
+  launcher.dispatchEvent(new FocusEvent("focus"));
+  const tooltip = document.getElementById(launcher.getAttribute("aria-describedby")!)!;
+  expect(tooltip).not.toBeNull();
+  view.render([], "catalog-snapshot");
+  view.render([], "settings-snapshot");
+  expect(document.querySelector(".codex-sidebar-dashboard-launcher")).toBe(launcher);
+  expect(tooltip.isConnected).toBe(true);
+  view.dispose();
+  expect(tooltip.isConnected).toBe(false);
+});
 
 it("edits descriptions and custom colors without replacing titles or duplicating tags", () => {
   const { tags } = setup();

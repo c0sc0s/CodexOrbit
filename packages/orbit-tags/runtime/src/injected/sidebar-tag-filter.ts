@@ -10,7 +10,7 @@ interface SidebarTagFilterOptions {
   activeAttribute: string;
   i18n: RuntimeI18n;
   neutralColor: string;
-  ensureHost(): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null;
+  ensureHost(): { filterHost: HTMLElement; headingTemplate: HTMLElement } | null;
   getSortMode(): SidebarSortMode;
   setSortMode(value: SidebarSortMode): void;
   getEntries(): SessionEntry[];
@@ -51,7 +51,7 @@ export class SidebarTagFilter {
   render(): void {
     const mounted = this.options.ensureHost();
     if (!mounted) return;
-    const { filterHost, pinnedToggle } = mounted;
+    const { filterHost, headingTemplate } = mounted;
     this.sort.update();
     if (this.sort.isOpen) { this.apply(); return; }
     const previousRail = filterHost.querySelector<HTMLElement>(".codex-sidebar-quick-filter-rail");
@@ -64,9 +64,9 @@ export class SidebarTagFilter {
     const heading = document.createElement("div");
     heading.className = "codex-sidebar-tags-section-heading";
     heading.textContent = "Tags";
-    const pinnedStyle = getComputedStyle(pinnedToggle);
+    const headingStyle = getComputedStyle(headingTemplate);
     ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"]
-      .forEach((property) => heading.style.setProperty(property, pinnedStyle.getPropertyValue(property)));
+      .forEach((property) => heading.style.setProperty(property, headingStyle.getPropertyValue(property)));
 
     this.sort.update();
     heading.appendChild(this.sort.element);
@@ -93,8 +93,8 @@ export class SidebarTagFilter {
     rail.className = "codex-sidebar-quick-filter-rail";
     rail.setAttribute("role", "group");
     rail.setAttribute("aria-label", this.options.i18n.t("tags"));
-    rail.style.paddingLeft = pinnedStyle.paddingLeft;
-    rail.style.paddingRight = pinnedStyle.paddingRight;
+    rail.style.paddingLeft = headingStyle.paddingLeft;
+    rail.style.paddingRight = headingStyle.paddingRight;
     filters.forEach(({ value, label, count, color }) => {
       const filter = document.createElement("button");
       filter.type = "button";

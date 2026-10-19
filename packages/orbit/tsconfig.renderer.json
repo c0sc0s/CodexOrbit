@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "noEmit": true, "types": [] },
-  "include": ["src/renderer/**/*.ts", "src/lifecycle/**/*.ts", "src/sdk/**/*.ts", "src/protocol/types.ts"]
+  "include": ["src/renderer/**/*.ts", "src/ui/**/*.ts", "src/lifecycle/**/*.ts", "src/sdk/**/*.ts", "src/protocol/types.ts"]
 }

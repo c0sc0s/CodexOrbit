@@ -23,6 +23,20 @@ async function scenario(name, expression) {
 
 try {
   assert.equal(await client.evaluate("window.__codexSidebarTags.version"), RUNTIME_VERSION);
+  await scenario("launcher hover hint", `(async () => {
+    const launcher = document.querySelector('.codex-sidebar-dashboard-launcher');
+    launcher.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+    try {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const tooltip = document.getElementById(launcher.getAttribute('aria-describedby'));
+      if (!tooltip || tooltip.getAttribute('role') !== 'tooltip' || !tooltip.textContent.trim() || launcher.hasAttribute('title')) return false;
+      const anchor = launcher.getBoundingClientRect(), bounds = tooltip.getBoundingClientRect();
+      if (Math.abs(anchor.top + anchor.height / 2 - bounds.top - bounds.height / 2) > 1 || bounds.left < 0 || bounds.right > innerWidth) return false;
+      if (tooltip.dataset.side === 'right' && Math.abs(bounds.left - anchor.right - 2) > .5) return false;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      return !tooltip.isConnected && !launcher.hasAttribute('aria-describedby');
+    } finally { launcher.dispatchEvent(new PointerEvent('pointerleave')); }
+  })()`);
   await scenario("navigation and dialog", `(() => {
     document.querySelector('.codex-sidebar-dashboard-launcher').click();
     return document.querySelector('.codex-sidebar-dashboard-dialog')?.getAttribute('role') === 'dialog';

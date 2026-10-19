@@ -28,6 +28,8 @@ test("execution environments and shared models cannot depend on composition laye
   for (const [workspace, source, target] of [
     ["orbit", "renderer/loader.ts", "host/plugin-host.ts"],
     ["orbit", "sdk/contracts.ts", "cdp/client.ts"],
+    ["orbit", "ui/tooltip.ts", "host/plugin-host.ts"],
+    ["orbit", "ui/sidebar-button.ts", "renderer/loader.ts"],
     ["orbit", "service/module.ts", "host/plugin-host.ts"],
     ["orbit-tags", "shared/protocol.ts", "service/router.ts"],
     ["orbit-tags", "injected/entry.ts", "service/activate.ts"],

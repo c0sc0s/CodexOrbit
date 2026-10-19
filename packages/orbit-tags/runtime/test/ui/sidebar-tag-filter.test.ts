@@ -58,7 +58,7 @@ it("counts sidebar members even when their rows are unmounted", () => {
   const filter = new SidebarTagFilter({
     hostId: "filters", filteredAttribute: "data-filtered", activeAttribute: "data-filter-active",
     i18n: new RuntimeI18n("en"), neutralColor: "#777777",
-    ensureHost: () => ({ filterHost: host, pinnedToggle: heading }),
+    ensureHost: () => ({ filterHost: host, headingTemplate: heading }),
     getEntries: () => [{ tag: "Bug" }, { tag: "Feature" }] as import("../../src/injected/models").SessionEntry[],
     getRows: () => [{ row: bug, tag: "Bug" }, { row: feature, tag: "Feature" }, { row: detached, tag: "Uncategorized" }],
     getSortMode: () => "tag", setSortMode: () => {},
@@ -88,7 +88,7 @@ it("offers independent sidebar modes and retains the open menu during refresh", 
   const filter = new SidebarTagFilter({
     hostId: "filters", filteredAttribute: "data-filtered", activeAttribute: "data-filter-active",
     i18n: new RuntimeI18n("en"), neutralColor: "#777777",
-    ensureHost: () => ({ filterHost: host, pinnedToggle: heading }),
+    ensureHost: () => ({ filterHost: host, headingTemplate: heading }),
     getEntries: () => [], getRows: () => [], getDefinitions: () => [],
     getSortMode: () => mode, setSortMode: (value) => { mode = value; },
     getSelectedTag: () => "Bug", setSelectedTag: () => {}, colorForTag: () => "#777777", trace: () => {},

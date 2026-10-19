@@ -8,7 +8,7 @@ const repository = fileURLToPath(new URL("../", import.meta.url));
 const rules = {
   orbit: {
     installation: ["sdk", "host", "platform", "plugins"], plugins: ["installation", "platform"],
-    config: ["sdk", "protocol", "cdp"], sdk: [], protocol: ["sdk"], lifecycle: ["sdk"],
+    config: ["sdk", "protocol", "cdp"], sdk: [], ui: [], protocol: ["sdk"], lifecycle: ["sdk"],
     renderer: ["sdk", "protocol", "lifecycle"], platform: ["sdk", "protocol"],
     cdp: ["sdk", "protocol", "renderer", "lifecycle"],
     service: ["sdk", "protocol", "lifecycle", "cdp", "config"],
@@ -68,11 +68,15 @@ export async function checkArchitecture() {
       const layer = file.split("/")[0];
       const entries = workspace === "orbit" ? ["index.ts", "cli.ts"] : ["controller.ts"];
       if (!layers[layer] && !entries.includes(file)) throw new Error(`Module has no architectural owner: ${workspace}/${file}`);
-      const browserSafe = ["sdk", "protocol", "lifecycle", "renderer", "shared", "injected"].includes(layer);
+      const browserSafe = ["sdk", "ui", "protocol", "lifecycle", "renderer", "shared", "injected"].includes(layer);
       const edges = [];
       for (const { specifier, typeOnly } of dependencies(await readFile(resolve(root, file), "utf8"), file)) {
         if (browserSafe && (specifier.startsWith("node:") || builtinModules.includes(specifier) || specifier === "better-sqlite3")) throw new Error(`Node dependency in browser-safe module ${workspace}/${file}: ${specifier}`);
-        if (workspace === "orbit-tags" && ["service", "injected"].includes(layer) && specifier.startsWith("@c0sc0s/orbit") && (!typeOnly || specifier !== "@c0sc0s/orbit/sdk")) throw new Error(`Tags business modules must use the SDK contract: ${file}`);
+        if (workspace === "orbit-tags" && ["service", "injected"].includes(layer) && specifier.startsWith("@c0sc0s/orbit")) {
+          const sdkContract = typeOnly && specifier === "@c0sc0s/orbit/sdk";
+          const rendererUi = layer === "injected" && specifier === "@c0sc0s/orbit/ui";
+          if (!sdkContract && !rendererUi) throw new Error(`Business modules must use public SDK/UI exports: ${file}`);
+        }
         if (!specifier.startsWith(".")) continue;
         const base = relative(root, resolve(root, dirname(file), specifier));
         const target = [base, `${base}.ts`, `${base}.tsx`, base.replace(/\.js$/, ".ts"), base.replace(/\.js$/, ".tsx")].find(candidate => sourceFiles.has(candidate));

@@ -156,3 +156,10 @@ export function sidebarSectionHeading(toggle: HTMLElement): HTMLElement {
   // The title text and overflow menu share this row; inserting inside the text column displaces the menu.
   return toggle.closest<HTMLElement>('[class~="group/nav-section-title"]') ?? toggle.parentElement ?? toggle;
 }
+
+export function findSidebarFilterAnchor(): { headingTemplate: HTMLElement; headingRow: HTMLElement } | null {
+  const toggle = findSectionToggle(codexLabels.pinned) ?? findAnySectionToggle();
+  if (toggle) return { headingTemplate: toggle, headingRow: sidebarSectionHeading(toggle) };
+  const projectsHeader = findProjectsHeader();
+  return projectsHeader ? { headingTemplate: projectsHeader, headingRow: projectsHeader } : null;
+}

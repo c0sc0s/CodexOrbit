@@ -8,6 +8,7 @@
     "./cli": "./dist/cli.js",
     "./installation": { "types": "./dist/installation/manager.d.ts", "import": "./dist/installation/manager.js" },
     "./sdk": { "types": "./dist/sdk/contracts.d.ts", "import": "./dist/sdk/contracts.js" },
+    "./ui": { "types": "./dist/ui/index.d.ts", "import": "./dist/ui/index.js" },
     "./manifest": { "types": "./dist/config/manifest.d.ts", "import": "./dist/config/manifest.js" },
     "./daemon": { "types": "./dist/host/daemon.d.ts", "import": "./dist/host/daemon.js" },
     "./package.json": "./package.json"
@@ -36,6 +37,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.renderer.json && tsc -p tsconfig.test.json"
   },
   "dependencies": { "figlet": "1.11.4", "ora": "9.4.1", "picocolors": "1.1.1" },
-  "devDependencies": { "typescript": "7.0.2", "@types/node": "22.19.19" },
+  "devDependencies": { "typescript": "7.0.2", "@types/node": "22.19.19", "happy-dom": "20.14.0" },
   "publishConfig": { "access": "public" }
 }

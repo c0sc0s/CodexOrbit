@@ -73,18 +73,9 @@ export function buildRuntimeStyles({
     [${ROW}="true"][${FILTERED}="true"] { display: none !important; }
 
     #${TOOLBAR_ID} {
-      display: contents; color: var(--color-text-foreground, var(--color-token-text-primary, inherit));
+      display: contents;
     }
     .codex-sidebar-dashboard-entry { display: contents; }
-    .codex-sidebar-dashboard-launcher { width: 100%; color: inherit; font: inherit; }
-    .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"] {
-      display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 6px;
-      background: transparent; text-align: left; cursor: pointer; transition: background 100ms ease, transform 100ms ease;
-    }
-    .codex-sidebar-dashboard-launcher[data-dashboard-fallback="true"]:hover { background: var(--color-token-list-hover-background, #8882); }
-    .codex-sidebar-dashboard-launcher:active { transform: scale(.985); }
-    .codex-sidebar-dashboard-launcher:focus-visible { outline: 2px solid var(--color-border-focus, var(--color-token-focus-border, #4b8cff)); outline-offset: -2px; }
-
     .codex-sidebar-dashboard-overlay {
       --codex-sidebar-surface: var(--color-background-elevated-primary-opaque, var(--color-background-elevated-base, var(--color-token-dropdown-background, Canvas)));
       --codex-sidebar-menu-surface: var(--color-background-elevated-secondary-opaque, var(--color-background-elevated-high, var(--color-token-dropdown-background, Canvas)));

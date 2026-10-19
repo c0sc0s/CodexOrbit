@@ -16,6 +16,7 @@ try {
   const [packed] = JSON.parse(stdout);
   assert.ok(packed.files.some(({ path }) => path === "examples/hello.js"));
   assert.ok(packed.files.some(({ path }) => path === "dist/index.d.ts"));
+  assert.ok(packed.files.some(({ path }) => path === "dist/ui/index.d.ts"));
   assert.ok(packed.files.some(({ path }) => path === "dist/cli.js"));
   assert.ok(packed.files.some(({ path }) => path === "assets/icon.icns"));
   assert.ok(!packed.files.some(({ path }) => path.startsWith("src/")));
@@ -27,7 +28,8 @@ try {
     import { PluginHost, CdpClient, createLauncher } from '@c0sc0s/orbit';
     import { readManifest } from '@c0sc0s/orbit/manifest';
     import { daemonStatus } from '@c0sc0s/orbit/daemon';
-    for (const value of [PluginHost, CdpClient, createLauncher, readManifest, daemonStatus]) assert.equal(typeof value, 'function');
+    import { createSidebarButton, mountTooltip } from '@c0sc0s/orbit/ui';
+    for (const value of [PluginHost, CdpClient, createLauncher, readManifest, daemonStatus, createSidebarButton, mountTooltip]) assert.equal(typeof value, 'function');
     assert.ok(import.meta.resolve('@c0sc0s/orbit/cli').endsWith('/dist/cli.js'));
     await assert.rejects(import('@c0sc0s/orbit/dist/host.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
   `], { cwd: consumer });

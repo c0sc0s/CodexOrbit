@@ -10,6 +10,7 @@ packages/orbit/
 │   ├── index.ts                 # Public low-level package exports
 │   ├── cli.ts                   # Stable executable entry
 │   ├── sdk/contracts.ts         # Business plugin API, no Node dependencies
+│   ├── ui/                      # Browser-only sidebar controls and tooltips
 │   ├── cli/                    # Pure argument parsing and command orchestration
 │   ├── installation/           # Platform files, locking, updates, recovery and migration
 │   ├── plugins/                # Plugin manifests, registry installs and official extensions
@@ -26,7 +27,7 @@ packages/orbit/
 └── test/{cli,host,installation,platform,renderer,service,sdk}/
 ```
 
-Business modules import types from `@c0sc0s/orbit/sdk`. Root exports serve launchers and infrastructure consumers. Package `exports` maps public paths to generated files; consumers must not depend on a directory under `dist/` or sibling source files.
+Business modules import types from `@c0sc0s/orbit/sdk`; renderer code can use `@c0sc0s/orbit/ui` for shared presentation and interaction. UI helpers have no imports from platform, host, service or business modules. Root exports serve launchers and infrastructure consumers. Package `exports` maps public paths to generated files; consumers must not depend on a directory under `dist/` or sibling source files.
 
 The CLI parses arguments without starting processes, then orchestrates the application. The host creates service modules and synchronizes them with discovered renderer targets. A service adapter bridges CDP bindings to its Node child process. Each worker supplies a scoped SDK context to the business service. The renderer kernel supplies its own SDK context to the injected UI.
 

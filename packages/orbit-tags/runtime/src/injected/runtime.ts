@@ -11,7 +11,7 @@ import {
   findNavigationButton,
   findProjectRow,
   findProjectsHeader,
-  findSectionToggle,
+  findSidebarFilterAnchor,
   findThreadRow,
   findVisibleThreadRow,
   hasVisiblePinnedThread,
@@ -23,7 +23,6 @@ import {
   queryThreadTitles,
   sectionToggleForThreadRow,
   sidebarOrderGroups,
-  sidebarSectionHeading,
   threadIdForRow,
 } from "./codex-dom-adapter";
 import { DashboardView } from "./dashboard-view";
@@ -214,18 +213,20 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     return host;
   };
 
-  const ensureFilterHost = (): { filterHost: HTMLElement; pinnedToggle: HTMLElement } | null => {
-    const pinnedToggle = findSectionToggle(codexLabels.pinned) ?? (pinnedToggleRef?.isConnected ? pinnedToggleRef : null);
-    if (!pinnedToggle) return null;
-    const pinnedHeadingRow = sidebarSectionHeading(pinnedToggle);
+  const ensureFilterHost = (): { filterHost: HTMLElement; headingTemplate: HTMLElement } | null => {
+    const anchor = findSidebarFilterAnchor();
+    if (!anchor) {
+      filterHost?.remove();
+      return null;
+    }
     filterHost = document.getElementById(FILTER_BAR_ID);
     if (!filterHost) {
       filterHost = document.createElement("section");
       filterHost.id = FILTER_BAR_ID;
     }
     filterHost.setAttribute("aria-label", i18n.t("filterSidebarByTag"));
-    if (filterHost.nextElementSibling !== pinnedHeadingRow) pinnedHeadingRow.insertAdjacentElement("beforebegin", filterHost);
-    return { filterHost, pinnedToggle };
+    if (filterHost.nextElementSibling !== anchor.headingRow) anchor.headingRow.insertAdjacentElement("beforebegin", filterHost);
+    return { filterHost, headingTemplate: anchor.headingTemplate };
   };
 
   const entriesFrom = (nodes: HTMLElement[]): SessionEntry[] => {
@@ -385,7 +386,11 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     const entries = entriesFrom(nodes);
     applySidebarOrder();
     sidebarTagFilter.apply();
-    if (host?.isConnected && renderedIndexSignature === indexSignature(entries)) return;
+    const filterAnchor = findSidebarFilterAnchor();
+    const filterMounted = filterAnchor
+      ? filterHost?.isConnected && filterHost.nextElementSibling === filterAnchor.headingRow
+      : !filterHost?.isConnected;
+    if (host?.isConnected && filterMounted && renderedIndexSignature === indexSignature(entries)) return;
     if (hostLifecycle.deferIfInteracting(reason)) return;
     renderToolbar(entries, reason);
   };

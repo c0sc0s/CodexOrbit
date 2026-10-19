@@ -12,6 +12,7 @@ OrbitAI is an npm workspaces monorepo. Orbit is the independently installable pl
 | Orbit plugin manager | Manifest/compatibility validation, snapshots, registration, enable/disable/uninstall |
 | Orbit official-extension adapter | Naming hooks/skills registration through official Codex APIs |
 | Orbit host | Owned CDP, renderer targets, isolated service processes, RPC/events and cleanup |
+| Orbit browser UI helpers | Native button presentation, themed tooltips, placement and per-control cleanup |
 | Tags service | Settings, session catalog, search index and validated navigation |
 | Tags renderer | UI and reversible DOM decoration |
 | Tags host adapter | Product-specific Codex selectors and diagnostics |
@@ -30,11 +31,13 @@ Each plugin receives a persistent data directory. Disable preserves package/data
 
 ## Business boundaries
 
-Tags UI and services import the type-only `@c0sc0s/orbit/sdk` contract. Runtime CDP and process APIs are reserved for platform and diagnostic adapters. Tags installation clients delegate to Orbit, and its update worker requests a pinned plugin installation through the stable Orbit command.
+Tags UI and services import the type-only `@c0sc0s/orbit/sdk` contract. Renderer UI can also import browser-only helpers from `@c0sc0s/orbit/ui`; services cannot import that entry point. Runtime CDP and process APIs are reserved for platform and diagnostic adapters. Tags installation clients delegate to Orbit, and its update worker requests a pinned plugin installation through the stable Orbit command.
 
 Tags settings are normalized and atomically persisted. The catalog reads local metadata independently of sidebar expansion; the SQLite index stays private to Tags. Other plugins must not call Tags internal RPC or share its database. Only metadata, bounded matching snippets and settings enter the renderer.
 
 Renderer globals use an isolated JavaScript world, but DOM, CSS and main-thread CPU remain shared. Service processes contain crashes and blocking service work, not malicious access to the OS. Each business plugin owns its host adapter and CSS namespace. Cross-plugin capabilities, UI slots and a plugin store are not implemented.
+
+The [shared UI helpers](plugin-ui.md) consume caller-supplied DOM templates without locating private host anchors. They preserve native presentation and apply tooltip theme tokens, with independent IDs and disposal per plugin control.
 
 ## Engineering
 

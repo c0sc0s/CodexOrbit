@@ -57,6 +57,7 @@ See [source layout and enforced dependency rules](source-layout.md) for the comp
 | Catalog / search | `packages/orbit-tags/runtime/src/service/{catalog,search}/` |
 | Saved definitions | `packages/orbit-tags/runtime/src/service/settings/`, `shared/tag-settings.ts` |
 | Host selectors | `packages/orbit-tags/runtime/src/injected/codex-dom-adapter.ts` |
+| Shared sidebar buttons / tooltips | `packages/orbit/src/ui/`; public `@c0sc0s/orbit/ui`, see [guide](plugin-ui.md) |
 | UI lifecycle | `packages/orbit-tags/runtime/src/injected/{runtime,host-lifecycle}.ts` |
 | Dashboard / sidebar | `packages/orbit-tags/runtime/src/injected/dashboard-view.ts`, `components/`, `sidebar-tag-filter.ts`, `title-decorator.ts` |
 | UI data / language | `packages/orbit-tags/runtime/src/injected/{session-registry,search,store,i18n}.ts` |

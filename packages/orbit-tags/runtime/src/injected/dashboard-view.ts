@@ -1,3 +1,5 @@
+import { createSidebarButton } from "@c0sc0s/orbit/ui";
+import type { SidebarButton } from "@c0sc0s/orbit/ui";
 import { renderResultsList } from "./components/results-list";
 import type { RuntimeI18n } from "./i18n";
 import { enterDashboard, enterDashboardContent, enterSortMenu, exitDashboard, refreshResults } from "./motion";
@@ -36,11 +38,14 @@ export class DashboardView {
   private closing = false;
   private deletedDefinition: TagDefinition | null = null;
   private composing = false;
+  private launcherControl: SidebarButton | null = null;
+  private launcherLocale = "";
 
   constructor(private readonly options: DashboardViewOptions) {
     // Codex can replace the renderer execution context while preserving host DOM.
     // Any overlay from the previous context has dead event handlers and must be rebuilt.
     document.querySelectorAll(".codex-sidebar-dashboard-overlay").forEach((overlay) => overlay.remove());
+    document.getElementById("orbit-tags-launcher-tooltip")?.remove();
   }
 
   get isClosing(): boolean {
@@ -104,28 +109,31 @@ export class DashboardView {
     const selectionStart = activeInput?.selectionStart ?? null;
     this.modal?.remove();
     this.modal = null;
-    toolbar.replaceChildren();
-
-    const entry = document.createElement("div");
-    entry.className = "codex-sidebar-dashboard-entry";
-    const navigationTemplate = getNavigationTemplate();
-    const launcher = (navigationTemplate?.cloneNode(true) as HTMLButtonElement | undefined) ?? this.button("", "Tags");
-    launcher.classList.add("codex-sidebar-dashboard-launcher");
-    if (!navigationTemplate) launcher.dataset.dashboardFallback = "true";
-    launcher.querySelector(".text-fade-truncate")?.replaceChildren(document.createTextNode("Tags"));
-    const icon = launcher.querySelector("svg");
-    if (icon) this.renderTagsIcon(icon);
-    launcher.title = i18n.t("launcherLabel");
-    launcher.setAttribute("aria-label", i18n.t("launcherLabel"));
-    launcher.setAttribute("aria-haspopup", "dialog");
+    if (!this.launcherControl?.element.isConnected || !toolbar.contains(this.launcherControl.element) || this.launcherLocale !== i18n.locale) {
+      this.launcherControl?.dispose();
+      toolbar.replaceChildren();
+      const entry = document.createElement("div");
+      entry.className = "codex-sidebar-dashboard-entry";
+      const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      this.renderTagsIcon(icon);
+      this.launcherControl = createSidebarButton({
+        id: "orbit-tags-launcher", label: "Tags", icon,
+        template: getNavigationTemplate() ?? undefined,
+        ariaLabel: i18n.t("launcherLabel"), tooltip: { label: i18n.t("tags") },
+        onClick: () => {
+          this.closing = false;
+          store.dispatch({ type: "dashboard.open" });
+          requestRender("open-dashboard");
+        },
+      });
+      this.launcherLocale = i18n.locale;
+      this.launcherControl.element.classList.add("codex-sidebar-dashboard-launcher");
+      this.launcherControl.element.setAttribute("aria-haspopup", "dialog");
+      entry.appendChild(this.launcherControl.element);
+      toolbar.appendChild(entry);
+    }
+    const launcher = this.launcherControl.element;
     launcher.setAttribute("aria-expanded", String(state.open));
-    launcher.addEventListener("click", () => {
-      this.closing = false;
-      store.dispatch({ type: "dashboard.open" });
-      requestRender("open-dashboard");
-    });
-    entry.appendChild(launcher);
-    toolbar.appendChild(entry);
     if (!state.open) return;
 
     const overlay = document.createElement("div");
@@ -231,6 +239,8 @@ export class DashboardView {
   }
 
   dispose(): void {
+    this.launcherControl?.dispose();
+    this.launcherControl = null;
     this.modal?.remove();
     this.modal = null;
     this.closing = false;
@@ -618,6 +628,7 @@ export class DashboardView {
 
   private renderTagsIcon(icon: SVGSVGElement): void {
     const namespace = "http://www.w3.org/2000/svg";
+    icon.setAttribute("viewBox", "0 0 16 16");
     const outline = document.createElementNS(namespace, "path");
     outline.setAttribute("d", "M2.25 2.25h4.32c.43 0 .84.17 1.14.47l5.61 5.61a1.6 1.6 0 0 1 0 2.27l-2.72 2.72a1.6 1.6 0 0 1-2.27 0L2.72 7.71a1.61 1.61 0 0 1-.47-1.14V2.25Z");
     outline.setAttribute("fill", "none");
