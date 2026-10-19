@@ -12,6 +12,7 @@
 | --- | --- |
 | [Orbit](packages/orbit/README.md) · `@c0sc0s/orbit` | 安装、启动器、插件、CDP、服务进程和 RPC |
 | [Orbit Tags](packages/orbit-tags/README.zh-CN.md) · `@c0sc0s/orbit-tags` | 标签、搜索、侧边栏 UI 和命名 hooks |
+| [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | 跨会话个人任务、嵌套子任务、本地 CLI 与 Agent Skill |
 | `website` | 产品网站 |
 
 ## 从源码目录安装
@@ -31,6 +32,8 @@ orbit doctor
 
 Tags 为可选能力：跳过 `plugin add` 即可得到无插件的 Orbit。如果 Codex 已启动但未开启调试，请手动退出后再启动 Orbit。之后使用 `~/Applications/Orbit.app` 启动。在 Codex Plugins 中审核命名 hooks；安装不会自动授予信任。
 
+使用 `orbit plugin add ./packages/orbit-todo` 可添加个人任务中心。点击侧边工具区的“Todo”打开任务树和详情；随插件提供的 `todo` Skill 通过 CLI 维护同一份本地数据。
+
 ## 开发
 
 严格 TypeScript 编译为 ESM 和类型声明。UI 使用 Preact、Motion、esbuild，搜索使用本地 SQLite FTS5。业务插件使用 Orbit 公共 SDK；Orbit 不依赖 Tags 或 SQLite。
@@ -49,3 +52,5 @@ npm run qa:app
 不会修改应用签名、会话或认证数据。渲染资源和搜索内容留在本机。插件属于可信代码：服务拥有 Node 权限，渲染插件共享 Codex DOM 和主线程。
 
 [兼容性说明](docs/compatibility.md)记录验证范围与手动发布验收项。项目未授予开源许可。
+
+[Orbit Home](packages/orbit-home/README.md) 提供问候、时间和可选插件模块，可通过「首页设置」图标设置显隐。Todo 提供未完成任务，Tags 提供各标签的会话统计。参见 [Home 架构](docs/home.md)。

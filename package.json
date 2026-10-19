@@ -10,12 +10,12 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "build": "npm run build -w @c0sc0s/orbit && npm run build -w @c0sc0s/orbit-tags",
+    "build": "npm run build -w @c0sc0s/orbit && npm run build -w @c0sc0s/orbit-tags && npm run build -w @c0sc0s/orbit-todo && npm run build -w @c0sc0s/orbit-home",
     "check": "node scripts/check.mjs && node scripts/check-architecture.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "node --test scripts/test/*.test.mjs && npm test --workspaces --if-present",
     "verify": "npm run build && npm run check && npm run typecheck && npm test",
-    "test:package": "node scripts/test-orbit-package.mjs && node scripts/test-tags-package.mjs",
+    "test:package": "node scripts/test-orbit-package.mjs && node scripts/test-tags-package.mjs && node scripts/test-todo-package.mjs && node scripts/test-home-package.mjs",
     "dev:apply": "npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply",
     "qa:app": "node packages/orbit-tags/runtime/qa-runtime.mjs"
   },

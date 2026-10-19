@@ -12,6 +12,7 @@ Install **Orbit**, then choose optional capabilities. Orbit owns the launcher, r
 | --- | --- |
 | [Orbit](packages/orbit/README.md) · `@c0sc0s/orbit` | Installation, launcher, plugins, CDP, service processes and RPC |
 | [Orbit Tags](packages/orbit-tags/README.md) · `@c0sc0s/orbit-tags` | Tags, search, sidebar UI and naming hooks |
+| [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | Personal tasks, nested subtasks, local CLI and agent skill |
 | `website` | Product website |
 
 ## Install from this checkout
@@ -31,6 +32,8 @@ orbit doctor
 
 Tags is optional: omit `plugin add` for a zero-plugin installation. If Codex is running without debugging, quit it manually before starting Orbit. Use `~/Applications/Orbit.app` for subsequent launches. Review naming hooks in Codex Plugins; installation does not grant hook trust.
 
+Add the optional personal task center with `orbit plugin add ./packages/orbit-todo`. The **Todo** entry in the sidebar tools opens a task tree and detail panel; the bundled `todo` skill uses the same local data through its packaged CLI.
+
 ## Development
 
 Strict TypeScript compiles to ESM and declarations. The UI uses Preact, Motion and esbuild; search uses local SQLite FTS5. Business plugins use Orbit's public SDK. Orbit has no Tags or SQLite dependency.
@@ -49,3 +52,5 @@ The development apply loop installs workspace packages and attaches to an alread
 Orbit does not modify the signed application, sessions or authentication. Renderer assets and search content stay local. Plugins are trusted code: services have Node privileges, and renderers share Codex's DOM and main thread.
 
 [Compatibility](docs/compatibility.md) records verification coverage and manual release gates. No open-source license is granted.
+
+[Orbit Home](packages/orbit-home/README.md) provides a greeting, local time and optional plugin modules. Customize module visibility; Todo contributes unfinished tasks and Tags contributes session counts. See the [Home architecture](docs/home.md).

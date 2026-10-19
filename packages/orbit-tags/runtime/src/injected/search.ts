@@ -7,7 +7,7 @@ export function selectVisibleEntries(
 ): SessionEntry[] {
   const query = state.query.trim().toLocaleLowerCase();
   const filtered = entries.flatMap((entry): SessionEntry[] => {
-    if (state.tag !== "all" && entry.tag !== state.tag) return [];
+    if (state.tag !== "all" && entry.tag.toLocaleLowerCase() !== state.tag.toLocaleLowerCase()) return [];
     if (!query) return [{ ...entry, matchType: "none", snippet: "" }];
     if (`${entry.tag} ${entry.time} ${entry.title}`.toLocaleLowerCase().includes(query)) {
       return [{ ...entry, matchType: "title", snippet: "" }];

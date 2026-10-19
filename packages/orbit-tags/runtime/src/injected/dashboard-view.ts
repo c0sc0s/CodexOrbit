@@ -1,5 +1,6 @@
 import { createSidebarButton } from "@c0sc0s/orbit/ui";
 import type { SidebarButton } from "@c0sc0s/orbit/ui";
+import { summarizeTags } from "./tag-summary";
 import { renderResultsList } from "./components/results-list";
 import type { RuntimeI18n } from "./i18n";
 import { enterDashboard, enterDashboardContent, enterSortMenu, exitDashboard, refreshResults } from "./motion";
@@ -40,6 +41,7 @@ export class DashboardView {
   private composing = false;
   private launcherControl: SidebarButton | null = null;
   private launcherLocale = "";
+  private origin: HTMLElement | null = null;
 
   constructor(private readonly options: DashboardViewOptions) {
     // Codex can replace the renderer execution context while preserving host DOM.
@@ -64,6 +66,12 @@ export class DashboardView {
     return Boolean(this.modal?.contains(target));
   }
 
+  rememberOrigin(): void {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    this.origin = active instanceof HTMLElement ? active : null;
+  }
+
   async close(reason: string): Promise<void> {
     const { state, store, trace, requestRender } = this.options;
     if (!state.open || this.closing) return;
@@ -81,6 +89,7 @@ export class DashboardView {
       }
       this.closing = false;
       trace("dashboard-close-end", { reason });
+      if (reason !== "open-entry") (this.origin?.isConnected ? this.origin : this.launcherControl?.element)?.focus({ preventScroll: true });
     }
   }
 
@@ -121,6 +130,7 @@ export class DashboardView {
         template: getNavigationTemplate() ?? undefined,
         ariaLabel: i18n.t("launcherLabel"), tooltip: { label: i18n.t("tags") },
         onClick: () => {
+          this.rememberOrigin();
           this.closing = false;
           store.dispatch({ type: "dashboard.open" });
           requestRender("open-dashboard");
@@ -362,19 +372,18 @@ export class DashboardView {
     }
     controls.append(search, sortControl);
 
-    const counts = new Map<string, number>();
-    entries.forEach((item) => counts.set(item.tag, (counts.get(item.tag) ?? 0) + 1));
+    const counts = summarizeTags(entries, this.options.getTagDefinitions()).filter(item => item.count > 0);
     const rail = document.createElement("div");
     rail.className = "codex-sidebar-filter-rail";
     rail.setAttribute("role", "group");
     rail.setAttribute("aria-label", i18n.t("filterByTag"));
-    const dashboardFilters: Array<[string, string, number]> = [["all", i18n.t("all"), entries.length], ...Array.from(counts, ([tag, count]): [string, string, number] => [tag, tag, count])];
+    const dashboardFilters: Array<[string, string, number]> = [["all", i18n.t("all"), entries.length], ...counts.map(({name, count}): [string, string, number] => [name, name, count])];
     dashboardFilters
       .sort((left, right) => left[0] === "all" ? -1 : right[0] === "all" ? 1 : i18n.compare(left[1], right[1]))
       .forEach(([value, label, count]) => {
         const chip = this.button("codex-sidebar-filter-chip", label);
         chip.dataset.value = value;
-        chip.setAttribute("aria-pressed", String(state.tag === value));
+        chip.setAttribute("aria-pressed", String(state.tag.toLocaleLowerCase() === value.toLocaleLowerCase()));
         chip.title = `${label} · ${i18n.t("sessionCount", { count })}`;
         const badge = document.createElement("span");
         badge.className = "codex-sidebar-filter-count";

@@ -4,6 +4,7 @@ export const codexSelectors = {
   sectionToggle: "[data-app-action-sidebar-section-toggle]",
   threadRow: "[data-app-action-sidebar-thread-row]",
   threadTitle: "[data-thread-title]",
+  threadWorking: '[role="status"] [class~="motion-safe:animate-spin"]',
 } as const;
 
 export const codexLabels = {
@@ -62,6 +63,14 @@ export function findVisibleThreadRow(threadId: string | null | undefined): HTMLE
 
 export function findThreadRow(titleNode: HTMLElement): HTMLElement | null {
   return titleNode.closest<HTMLElement>(codexSelectors.threadRow);
+}
+
+export function queryRunningThreadTitles(toolbarId: string): HTMLElement[] {
+  return queryThreadTitles(toolbarId).filter(node => findThreadRow(node)?.querySelector(codexSelectors.threadWorking));
+}
+
+export function isThreadRowElement(element: Element): boolean {
+  return Boolean(element.closest(codexSelectors.threadRow));
 }
 
 export function threadIdForRow(row: HTMLElement | null): string | undefined {

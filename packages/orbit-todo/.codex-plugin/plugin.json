@@ -1,0 +1,12 @@
+{
+  "name": "orbit-todo",
+  "version": "0.1.0+codex.20261019080000",
+  "description": "Manage a personal task tree across Codex conversations with a local CLI and skill.",
+  "author": { "name": "Orbit contributors" },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Orbit Todo",
+    "shortDescription": "Personal tasks, nested subtasks and agent-friendly updates.",
+    "defaultPrompt": ["Use $todo to show my pending tasks.", "Use $todo to break this task into subtasks."]
+  }
+}

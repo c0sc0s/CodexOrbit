@@ -1,3 +1,4 @@
+import { summarizeTags } from "./tag-summary";
 import { SidebarSortControl } from "./sidebar-sort-control";
 import type { SessionEntry, TagDefinition } from "./models";
 import type { RuntimeI18n } from "./i18n";
@@ -71,16 +72,15 @@ export class SidebarTagFilter {
     this.sort.update();
     heading.appendChild(this.sort.element);
 
-    const counts = new Map<string, number>();
     const entries = this.options.getEntries();
-    entries.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+    const counts = summarizeTags(entries, this.options.getDefinitions()).filter(item => item.count > 0);
     const configuredOrder = new Map(this.options.getDefinitions().map(({ name }, index) => [name.toLocaleLowerCase(), index]));
     const filters: FilterItem[] = [{ value: "all", label: this.options.i18n.t("all"), count: entries.length, color: null }];
-    Array.from(counts, ([tag, count]): FilterItem => ({
-      value: tag,
-      label: tag,
+    Array.from(counts, ({name, count}): FilterItem => ({
+      value: name,
+      label: name,
       count,
-      color: this.options.colorForTag(tag) ?? this.options.neutralColor,
+      color: this.options.colorForTag(name) ?? this.options.neutralColor,
     }))
       .sort((left, right) => {
         const leftOrder = configuredOrder.get(left.value.toLocaleLowerCase()) ?? Number.MAX_SAFE_INTEGER;
@@ -102,14 +102,14 @@ export class SidebarTagFilter {
       filter.textContent = label;
       filter.dataset.value = value;
       if (color) filter.style.setProperty("--codex-sidebar-tag-color", color);
-      filter.setAttribute("aria-pressed", String(this.options.getSelectedTag() === value));
+      filter.setAttribute("aria-pressed", String(this.options.getSelectedTag().toLocaleLowerCase() === value.toLocaleLowerCase()));
       filter.title = `${label} · ${this.options.i18n.t("sessionCount", { count })}`;
       const badge = document.createElement("span");
       badge.className = "codex-sidebar-quick-filter-count";
       badge.textContent = String(count);
       filter.appendChild(badge);
       filter.addEventListener("click", () => {
-        const next = this.options.getSelectedTag() === value && value !== "all" ? "all" : value;
+        const next = this.options.getSelectedTag().toLocaleLowerCase() === value.toLocaleLowerCase() && value !== "all" ? "all" : value;
         this.options.setSelectedTag(next);
         this.options.trace("sidebar-tag-click", { value, selected: next });
         this.render();

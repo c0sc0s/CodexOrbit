@@ -1,6 +1,6 @@
 # Source structure and dependency rules
 
-OrbitAI uses two independently versioned packages. Directory boundaries describe execution environments and ownership; they are not additional npm packages. `npm run check` validates imports using a TypeScript-capable AST parser and rejects runtime import cycles.
+OrbitAI uses independently versioned platform and business packages. Directory boundaries describe execution environments and ownership; they are not additional npm packages. `npm run check` validates imports using a TypeScript-capable AST parser and rejects runtime import cycles.
 
 ## Orbit
 
@@ -66,7 +66,9 @@ Orbit snapshots the business package without flattening its compiled hierarchy. 
 
 ## Verification and change discipline
 
-- `npm run build`: clean only each package's generated Node directory, build Orbit first, then Tags and its browser bundle.
+Orbit Todo lives in `packages/orbit-todo/`. Its `src/shared` owns browser-safe task contracts and validation; `storage` owns SQLite and installation data discovery; `service` exposes validated SDK RPC and invalidations; `cli` exposes JSON commands; `injected` owns the shadow-root task tree and detail editor. The official extension packages `skills/todo/`. Its generated `runtime/injected.js` is committed with the renderer source. `npm run build` builds Todo after Orbit and Tags.
+
+- `npm run build`: clean only each package's generated Node directory, build Orbit first, then Tags and Todo with their browser bundles.
 - `npm run check`: syntax, package boundaries, source-layer dependencies, runtime cycles and documentation links.
 - `npm run typecheck`: strict implementation checks and public SDK contract tests.
 - Browser typechecks explicitly exclude Node ambient types, preventing accidental use of Node globals in renderer code.
@@ -75,3 +77,5 @@ Orbit snapshots the business package without flattening its compiled hierarchy. 
 - `npm run dev:apply` and `npm run qa:app`: install, hot-apply and validate in an already debug-enabled Codex.
 
 Do not create generic `utils` or `common` buckets for new business logic. Place code with its owner; add a shared contract only when both execution environments genuinely require it. A new sibling feature gets a business package and its own service/UI, not a branch inside Orbit.
+
+`packages/orbit-home/src/injected/` owns native Home navigation, the base page and module host. Its `service/` owns atomic preference persistence and broadcasts; `shared/` validates its settings contract. `packages/orbit/src/ui/home-sections.ts` owns the framework-independent registry. Todo and Tags own their Home views and business actions. See [Home architecture](home.md).

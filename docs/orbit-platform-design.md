@@ -37,4 +37,4 @@ The stable application entry resolves the active runtime. Explicit `--config` co
 - Packed Tags installs with native SQLite and official naming payloads.
 - Real CLI onboarding runs in an isolated user directory; live UI acceptance uses a debug-enabled Codex.
 
-Cross-plugin RPC, shared business databases, a plugin store and UI-slot arbitration are outside the implemented contract.
+Renderer-local Home sections provide optional ordered UI composition. The independent Home plugin owns module visibility and base layout; providers retain data and action ownership. Cross-plugin RPC, shared business databases, a plugin store and UI-slot arbitration are outside the implemented contract.

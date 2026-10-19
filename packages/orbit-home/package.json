@@ -1,0 +1,16 @@
+{
+  "name": "@c0sc0s/orbit-home",
+  "version": "0.1.0",
+  "description": "A custom Codex Home with optional local plugin content.",
+  "type": "module",
+  "files": ["runtime/", "dist/service/", "dist/shared/", "fonts/", "orbit-plugin.json", "README.md"],
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.json && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": { "@c0sc0s/orbit": "0.5.4" },
+  "devDependencies": { "typescript": "7.0.2", "esbuild": "0.28.2", "happy-dom": "20.14.0" }
+}

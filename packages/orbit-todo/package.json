@@ -1,0 +1,20 @@
+{
+  "name": "@c0sc0s/orbit-todo",
+  "version": "0.1.0",
+  "description": "Local nested tasks for Codex, shared by people and agents.",
+  "type": "module",
+  "bin": { "orbit-todo": "bin/orbit-todo.mjs" },
+  "files": ["bin/", "dist/", "runtime/", "skills/", ".codex-plugin/", "orbit-plugin.json", "README.md"],
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc -p tsconfig.json",
+    "test": "node --test test/node/*.test.mjs && vitest run test/ui/*.test.tsx",
+    "prepack": "npm run build"
+  },
+  "dependencies": { "@c0sc0s/orbit": "0.5.4", "better-sqlite3": "13.0.3" },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13", "@types/node": "22.19.19", "typescript": "7.0.2",
+    "preact": "10.29.8", "esbuild": "0.28.2", "happy-dom": "20.14.0", "vitest": "5.0.0"
+  }
+}

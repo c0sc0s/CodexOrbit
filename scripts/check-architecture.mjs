@@ -18,6 +18,10 @@ const rules = {
   "orbit-tags": {
     shared: [], injected: ["shared"], service: ["shared"], host: ["shared"],
   },
+  "orbit-home": { shared: [], injected: ["shared"], service: ["shared"] },
+  "orbit-todo": {
+    shared: [], injected: ["shared"], storage: ["shared"], service: ["storage", "shared"], cli: ["storage", "shared"],
+  },
 };
 
 export function dependencies(source, filename) {
@@ -60,7 +64,7 @@ export function assertLayerDependency(workspace, file, target) {
 
 export async function checkArchitecture() {
   for (const [workspace, layers] of Object.entries(rules)) {
-    const root = resolve(repository, "packages", workspace, workspace === "orbit" ? "src" : "runtime/src");
+    const root = resolve(repository, "packages", workspace, workspace === "orbit-tags" ? "runtime/src" : "src");
     const files = (await readdir(root, { recursive: true })).filter(file => /\.(ts|tsx)$/.test(file));
     const sourceFiles = new Set(files);
     const graph = new Map();
@@ -72,7 +76,7 @@ export async function checkArchitecture() {
       const edges = [];
       for (const { specifier, typeOnly } of dependencies(await readFile(resolve(root, file), "utf8"), file)) {
         if (browserSafe && (specifier.startsWith("node:") || builtinModules.includes(specifier) || specifier === "better-sqlite3")) throw new Error(`Node dependency in browser-safe module ${workspace}/${file}: ${specifier}`);
-        if (workspace === "orbit-tags" && ["service", "injected"].includes(layer) && specifier.startsWith("@c0sc0s/orbit")) {
+        if ((["orbit-todo", "orbit-home"].includes(workspace) || workspace === "orbit-tags" && ["service", "injected"].includes(layer)) && specifier.startsWith("@c0sc0s/orbit")) {
           const sdkContract = typeOnly && specifier === "@c0sc0s/orbit/sdk";
           const rendererUi = layer === "injected" && specifier === "@c0sc0s/orbit/ui";
           if (!sdkContract && !rendererUi) throw new Error(`Business modules must use public SDK/UI exports: ${file}`);

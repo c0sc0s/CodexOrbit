@@ -18,7 +18,7 @@ Run from the OrbitAI checkout:
 npm ci
 npm run verify
 npm pack -w @c0sc0s/orbit
-npm install -g ./c0sc0s-orbit-0.5.2.tgz
+npm install -g ./c0sc0s-orbit-0.5.4.tgz
 orbit install
 orbit plugin list
 ```
@@ -35,6 +35,8 @@ orbit doctor
 ```
 
 If Codex is running without debugging, quit it manually before starting Orbit. Orbit never restarts Codex. Subsequent launches use `~/Applications/Orbit.app`.
+
+The independent Todo plugin can also be added from this checkout with `orbit plugin add ./packages/orbit-todo`. Its official Codex extension packages the Todo skill, while Orbit loads its local task panel and service. See the [Todo guide](../packages/orbit-todo/README.md) for the packaged CLI and data/concurrency contract.
 
 Review SessionStart, UserPromptSubmit and SessionEnd in Codex Plugins. Registration does not grant trust or prove a hook executed.
 
@@ -115,3 +117,5 @@ Run `npm run verify`, `npm run test:package`, `npm run qa:app` and `git diff --c
 Package tests use real tarballs; on macOS the official CLI runs under a temporary `CODEX_HOME` to test empty-platform installation, plugin lifecycle and missing-marketplace recovery. They do not start Codex or alter the real account.
 
 Complete the manual gates in [compatibility](compatibility.md). Publish Orbit before Tags. Npm publication is an explicit release action, separate from Git push.
+
+Add the optional Home plugin with `orbit plugin add ./packages/orbit-home`. It runs independently with a greeting and local clock. Todo and Tags supply optional modules; users control their visibility from Home. The plugin owns a local preference service and preserves settings on disable.

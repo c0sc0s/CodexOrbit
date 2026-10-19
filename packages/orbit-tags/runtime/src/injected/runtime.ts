@@ -18,9 +18,11 @@ import {
   isPinnedThreadRow,
   isProjectCollapsed,
   isThreadTitleElement,
+  isThreadRowElement,
   mutationContainsSidebarNode,
   projectIdForThreadRow,
   queryThreadTitles,
+  queryRunningThreadTitles,
   sectionToggleForThreadRow,
   sidebarOrderGroups,
   threadIdForRow,
@@ -37,6 +39,8 @@ import { SidebarTagFilter, type SidebarSortMode } from "./sidebar-tag-filter";
 import { RuntimeStore } from "./store";
 import { buildRuntimeStyles } from "./styles";
 import { TitleDecorator } from "./title-decorator";
+import { createTagsHomeSection } from "./home-section";
+import { createRunningSessionsHomeSection } from "./running-sessions-home-section";
 
 export function installRuntime(input: unknown, send: (message: RuntimeMessage) => Promise<unknown>) {
   const config = parseRuntimeConfig(input);
@@ -67,6 +71,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
   let searchLoading = false;
   let searchError = "";
   let catalogError = "";
+  let catalogComplete = false;
   let searchIndexStatus: Record<string, unknown> & { phase: string } = { phase: "idle", completed: 0, total: 0 };
   const runtimeStore = new RuntimeStore();
   const state = runtimeStore.state;
@@ -289,6 +294,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     searchLoading = false;
     searchError = "";
     await dashboardView.close("open-entry");
+    sidebarTagFilter.render();
 
     if (!row && entry.pinned) {
       const pinnedToggle = pinnedToggleRef?.isConnected
@@ -378,12 +384,46 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     applySidebarOrder();
     sidebarTagFilter.render();
     dashboardView.render(entries, reason);
+    homeTags.refresh();
+    homeRunningSessions.refresh();
   };
+
+  const homeTags = createTagsHomeSection({
+    i18n,
+    getEntries: () => sessionRegistry.values(),
+    getDefinitions: () => tagDefinitions,
+    getAvailability: () => ({ complete: catalogComplete, error: Boolean(catalogError) }),
+    openTag: value => {
+      dashboardView.rememberOrigin();
+      runtimeStore.dispatch({ type: "query.set", value: "" });
+      runtimeStore.dispatch({ type: "dashboard.open" });
+      runtimeStore.dispatch({ type: "tag.set", value });
+      renderToolbar(entriesFrom(titleNodes()), "home-tag");
+    },
+  });
+
+  const homeRunningSessions = createRunningSessionsHomeSection({
+    i18n,
+    getEntries: () => {
+      const entries = new Map<string, SessionEntry>();
+      // Running native rows can precede the catalog, especially for newly created chats.
+      for (const node of queryRunningThreadTitles(TOOLBAR_ID)) {
+        const row = findThreadRow(node), threadId = threadIdForRow(row);
+        const parsed = parse(node.getAttribute(RAW) ?? node.textContent);
+        if (!threadId || !parsed || entries.has(threadId)) continue;
+        entries.set(threadId, { ...parsed, key: threadId, threadId, node, row, index: entries.size,
+          pinned: isPinnedThreadRow(row), projectId: projectIdForThreadRow(row) });
+      }
+      return [...entries.values()];
+    },
+    openEntry: entry => { void openEntry(entry); },
+  });
 
   const refresh = (reason = "observer"): void => {
     const nodes = titleNodes();
     nodes.forEach((node) => titleDecorator.enhance(node));
     const entries = entriesFrom(nodes);
+    homeRunningSessions.refresh();
     applySidebarOrder();
     sidebarTagFilter.apply();
     const filterAnchor = findSidebarFilterAnchor();
@@ -400,7 +440,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     isRelevantMutation: (mutation) => {
       const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
       if (!target || host?.contains(target) || filterHost?.contains(target) || dashboardView.contains(target)) return false;
-      if (isThreadTitleElement(target)) return true;
+      if (isThreadTitleElement(target) || isThreadRowElement(target)) return true;
       return [...mutation.addedNodes, ...mutation.removedNodes].some(mutationContainsSidebarNode);
     },
     onRefresh: refresh,
@@ -449,6 +489,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
       return true;
     }
     if (message.type === RuntimeMessageType.catalogSnapshot) {
+      catalogComplete = message.payload.complete === true;
       catalogError = message.payload.complete === true ? "" : i18n.t("catalogUnavailable");
       if (message.payload.complete === true && Array.isArray(message.payload.items)) {
         sessionRegistry.applyCatalog(message.payload.items);
@@ -457,6 +498,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
         renderToolbar(entries, "catalog-snapshot");
       }
       if (catalogError && state.open) renderToolbar(entriesFrom(titleNodes()), "catalog-snapshot");
+      homeTags.refresh();
       return true;
     }
     if (message.type === RuntimeMessageType.searchResult) {
@@ -513,6 +555,8 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
       sidebarTagFilter.dispose(document.querySelectorAll<HTMLElement>(`[${FILTERED}]`));
       document.querySelectorAll<HTMLElement>(`[${ROW}]`).forEach((row) => row.removeAttribute(ROW));
       dashboardView.dispose();
+      homeTags.dispose();
+      homeRunningSessions.dispose();
       document.getElementById(TOOLBAR_ID)?.remove();
       document.getElementById(STYLE_ID)?.remove();
       sessionRegistry.clearPersistentCache();

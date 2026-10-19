@@ -101,4 +101,8 @@ Use `orbit plugin disable orbit-tags` to disable Tags while keeping settings and
 
 ## Loader development
 
+To develop Todo, run the root build, then `node packages/orbit/dist/cli.js plugin add ./packages/orbit-todo` and `node packages/orbit/dist/cli.js start --attach`. A changed Todo renderer increments `RUNTIME_VERSION` in `packages/orbit-todo/src/shared/model.ts` and `runtimeVersion` in its manifest; rebuild and re-add the package snapshot. Run `npm test -w @c0sc0s/orbit-todo` for its repository, CLI, service and browser tests. `--data-dir` isolates CLI experiments from the installed task store.
+
 See [Loader architecture and entry](plugin-loader.md). The package under `packages/orbit/src` has no Tags or SQLite dependency. Changes there are copied by the repository installer and included in package smoke. Its Node tests run in `npm test`.
+
+For Home, run `node packages/orbit/dist/cli.js plugin add ./packages/orbit-home` after the root build. Its renderer and local preference service use `runtimeVersion` in `orbit-plugin.json`; bump it together with the version reported by its renderer after behavior changes. Test with no providers, hidden providers, late registration, concurrent preference writes and stale snapshots; check leaving Home for an existing or new chat. See [Home architecture](home.md).

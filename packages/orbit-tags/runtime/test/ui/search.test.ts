@@ -38,4 +38,8 @@ describe("selectVisibleEntries", () => {
     const state = { ...createInitialState(), tag: "Bug", sort: "title" as const };
     expect(selectVisibleEntries(entries, state, new Map()).map(({ key }) => key)).toEqual(["1"]);
   });
+  it("uses the same case-insensitive tag identity as Home statistics", () => {
+    const state = { ...createInitialState(), tag: "bug" };
+    expect(selectVisibleEntries(entries, state, new Map()).map(({ key }) => key)).toEqual(["1"]);
+  });
 });

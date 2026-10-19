@@ -209,7 +209,8 @@ var CodexPlugin = (() => {
     projectsHeader: "[data-projects-header]",
     sectionToggle: "[data-app-action-sidebar-section-toggle]",
     threadRow: "[data-app-action-sidebar-thread-row]",
-    threadTitle: "[data-thread-title]"
+    threadTitle: "[data-thread-title]",
+    threadWorking: '[role="status"] [class~="motion-safe:animate-spin"]'
   };
   var codexLabels = {
     pinned: ["Pinned", "\u7F6E\u9876", "\u5DF2\u7F6E\u9876"],
@@ -249,6 +250,12 @@ var CodexPlugin = (() => {
   }
   function findThreadRow(titleNode) {
     return titleNode.closest(codexSelectors.threadRow);
+  }
+  function queryRunningThreadTitles(toolbarId) {
+    return queryThreadTitles(toolbarId).filter((node) => findThreadRow(node)?.querySelector(codexSelectors.threadWorking));
+  }
+  function isThreadRowElement(element) {
+    return Boolean(element.closest(codexSelectors.threadRow));
   }
   function threadIdForRow(row) {
     return row?.getAttribute("data-app-action-sidebar-thread-id") ?? void 0;
@@ -508,6 +515,49 @@ var CodexPlugin = (() => {
         button.remove();
       }
     };
+  }
+
+  // ../orbit/dist/ui/home-sections.js
+  function registry(document2) {
+    const owner = document2.defaultView;
+    if (!owner)
+      throw new Error("Home sections require a browser document");
+    const key = /* @__PURE__ */ Symbol.for("@c0sc0s/orbit/ui/home-sections/v1");
+    let value = Reflect.get(owner, key);
+    if (!value) {
+      value = { sections: /* @__PURE__ */ new Map(), listeners: /* @__PURE__ */ new Set() };
+      Reflect.set(owner, key, value);
+    }
+    return value;
+  }
+  function registerHomeSection(section, document2 = globalThis.document) {
+    if (!/^[a-z][a-z0-9.-]{0,63}$/u.test(section.id) || typeof section.title !== "string" || !section.title.trim() || section.title.length > 80 || typeof section.mount !== "function" || section.slot !== void 0 && !["overview", "main"].includes(section.slot) || section.order !== void 0 && !Number.isSafeInteger(section.order) || section.defaultVisible !== void 0 && typeof section.defaultVisible !== "boolean")
+      throw new Error("Invalid Home section");
+    const state = registry(document2);
+    if (state.sections.has(section.id))
+      throw new Error(`Home section already registered: ${section.id}`);
+    const registered = Object.freeze({ ...section, title: section.title.trim() });
+    state.sections.set(section.id, registered);
+    for (const listener of state.listeners)
+      listener();
+    return () => {
+      if (state.sections.get(section.id) !== registered)
+        return;
+      state.sections.delete(section.id);
+      for (const listener of state.listeners)
+        listener();
+    };
+  }
+
+  // runtime/src/injected/tag-summary.ts
+  function summarizeTags(entries, definitions) {
+    const tags = new Map(definitions.map((item) => [item.name.toLocaleLowerCase(), { name: item.name, color: item.color, count: 0 }]));
+    for (const entry of entries) {
+      const key = entry.tag.toLocaleLowerCase(), item = tags.get(key) ?? { name: entry.tag, color: entry.color, count: 0 };
+      item.count++;
+      tags.set(key, item);
+    }
+    return [...tags.values()];
   }
 
   // ../../node_modules/preact/dist/preact.module.js
@@ -1513,7 +1563,7 @@ var CodexPlugin = (() => {
   function selectVisibleEntries(entries, state, contentMatches) {
     const query = state.query.trim().toLocaleLowerCase();
     const filtered = entries.flatMap((entry) => {
-      if (state.tag !== "all" && entry.tag !== state.tag) return [];
+      if (state.tag !== "all" && entry.tag.toLocaleLowerCase() !== state.tag.toLocaleLowerCase()) return [];
       if (!query) return [{ ...entry, matchType: "none", snippet: "" }];
       if (`${entry.tag} ${entry.time} ${entry.title}`.toLocaleLowerCase().includes(query)) {
         return [{ ...entry, matchType: "title", snippet: "" }];
@@ -1542,6 +1592,7 @@ var CodexPlugin = (() => {
     composing = false;
     launcherControl = null;
     launcherLocale = "";
+    origin = null;
     get isClosing() {
       return this.closing;
     }
@@ -1553,6 +1604,11 @@ var CodexPlugin = (() => {
     }
     contains(target) {
       return Boolean(this.modal?.contains(target));
+    }
+    rememberOrigin() {
+      let active = document.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      this.origin = active instanceof HTMLElement ? active : null;
     }
     async close(reason) {
       const { state, store, trace, requestRender } = this.options;
@@ -1571,6 +1627,7 @@ var CodexPlugin = (() => {
         }
         this.closing = false;
         trace("dashboard-close-end", { reason });
+        if (reason !== "open-entry") (this.origin?.isConnected ? this.origin : this.launcherControl?.element)?.focus({ preventScroll: true });
       }
     }
     render(entries, reason = "state") {
@@ -1610,6 +1667,7 @@ var CodexPlugin = (() => {
           ariaLabel: i18n.t("launcherLabel"),
           tooltip: { label: i18n.t("tags") },
           onClick: () => {
+            this.rememberOrigin();
             this.closing = false;
             store.dispatch({ type: "dashboard.open" });
             requestRender("open-dashboard");
@@ -1844,17 +1902,16 @@ var CodexPlugin = (() => {
         sortControl.appendChild(sortMenu);
       }
       controls.append(search, sortControl);
-      const counts = /* @__PURE__ */ new Map();
-      entries.forEach((item) => counts.set(item.tag, (counts.get(item.tag) ?? 0) + 1));
+      const counts = summarizeTags(entries, this.options.getTagDefinitions()).filter((item) => item.count > 0);
       const rail = document.createElement("div");
       rail.className = "codex-sidebar-filter-rail";
       rail.setAttribute("role", "group");
       rail.setAttribute("aria-label", i18n.t("filterByTag"));
-      const dashboardFilters = [["all", i18n.t("all"), entries.length], ...Array.from(counts, ([tag, count]) => [tag, tag, count])];
+      const dashboardFilters = [["all", i18n.t("all"), entries.length], ...counts.map(({ name, count }) => [name, name, count])];
       dashboardFilters.sort((left, right) => left[0] === "all" ? -1 : right[0] === "all" ? 1 : i18n.compare(left[1], right[1])).forEach(([value, label, count]) => {
         const chip = this.button("codex-sidebar-filter-chip", label);
         chip.dataset.value = value;
-        chip.setAttribute("aria-pressed", String(state.tag === value));
+        chip.setAttribute("aria-pressed", String(state.tag.toLocaleLowerCase() === value.toLocaleLowerCase()));
         chip.title = `${label} \xB7 ${i18n.t("sessionCount", { count })}`;
         const badge = document.createElement("span");
         badge.className = "codex-sidebar-filter-count";
@@ -2140,7 +2197,7 @@ var CodexPlugin = (() => {
         this.refreshCount += 1;
         this.scheduleObserverRefresh();
       });
-      this.observer.observe(root, { childList: true, subtree: true, characterData: true });
+      this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["role", "aria-label", "class"] });
     }
     deferIfInteracting(reason) {
       const focusWithin = this.options.hasInteractionFocus();
@@ -2233,6 +2290,7 @@ var CodexPlugin = (() => {
     tagLimit: () => "\u6700\u591A\u652F\u6301 32 \u4E2A\u6807\u7B7E",
     settingsSaveFailed: () => "\u6807\u7B7E\u4FDD\u5B58\u5931\u8D25\uFF0C\u5DF2\u6062\u590D\u5DF2\u4FDD\u5B58\u7684\u914D\u7F6E\u3002\u8BF7\u8FD0\u884C CLI doctor \u68C0\u67E5\u3002",
     catalogUnavailable: () => "\u672C\u5730\u4F1A\u8BDD\u76EE\u5F55\u6682\u4E0D\u53EF\u7528\uFF0C\u5F53\u524D\u4EC5\u5C55\u793A\u4FA7\u8FB9\u680F\u5DF2\u53D1\u73B0\u7684\u4F1A\u8BDD\u3002",
+    catalogLoading: () => "\u6B63\u5728\u8BFB\u53D6\u4F1A\u8BDD\u2026",
     all: () => "\u5168\u90E8",
     classificationDescription: () => "\u5206\u7C7B\u63CF\u8FF0",
     classificationDescriptionOptional: () => "\u5206\u7C7B\u63CF\u8FF0\uFF08\u53EF\u9009\uFF09",
@@ -2264,6 +2322,10 @@ var CodexPlugin = (() => {
     selectCustomColor: () => "\u9009\u62E9\u81EA\u5B9A\u4E49\u989C\u8272",
     sessionCount: ({ count }) => `${count} \u4E2A\u4F1A\u8BDD`,
     sessions: () => "\u4F1A\u8BDD",
+    runningSessions: () => "\u8FD0\u884C\u4E2D\u7684 Session",
+    runningSessionCount: ({ count }) => `${count} \u4E2A\u4F1A\u8BDD\u6B63\u5728\u8FD0\u884C`,
+    noRunningSessions: () => "\u5F53\u524D\u672A\u53D1\u73B0\u6B63\u5728\u8FD0\u884C\u7684\u4F1A\u8BDD",
+    openRunningSession: ({ title }) => `\u6253\u5F00\u8FD0\u884C\u4E2D\u7684\u4F1A\u8BDD\uFF1A${title}`,
     sessionsDashboard: () => "\u4F1A\u8BDD\u770B\u677F",
     settingsNote: () => "\u63CF\u8FF0\u5E2E\u52A9 AI \u5728\u9996\u6B21\u547D\u540D\u65F6\u9009\u62E9\u6807\u7B7E\uFF1B\u989C\u8272\u4EC5\u7528\u4E8E\u663E\u793A\u3002",
     sidebarSort: () => "\u4FA7\u680F\u6392\u5E8F",
@@ -2283,6 +2345,8 @@ var CodexPlugin = (() => {
     tagNamePlaceholder: () => "\u4F8B\u5982 Review",
     tagSettings: () => "\u6807\u7B7E\u8BBE\u7F6E",
     tags: () => "\u6807\u7B7E",
+    moreTags: () => "\u66F4\u591A",
+    fewerTags: () => "\u6536\u8D77",
     unconfigured: ({ names }) => `\u672A\u914D\u7F6E\uFF1A${names}`,
     uncategorized: () => "\u672A\u5206\u7C7B"
   };
@@ -2313,6 +2377,7 @@ var CodexPlugin = (() => {
     tagLimit: () => "Up to 32 tags are supported",
     settingsSaveFailed: () => "Tags could not be saved. Saved settings were restored. Run CLI doctor to investigate.",
     catalogUnavailable: () => "Local catalog unavailable. Results currently include only sessions discovered in the sidebar.",
+    catalogLoading: () => "Loading sessions\u2026",
     all: () => "All",
     classificationDescription: () => "Classification description",
     classificationDescriptionOptional: () => "Classification description (optional)",
@@ -2344,6 +2409,10 @@ var CodexPlugin = (() => {
     selectCustomColor: () => "Choose a custom color",
     sessionCount: ({ count }) => `${count} ${Number(count) === 1 ? "session" : "sessions"}`,
     sessions: () => "Sessions",
+    runningSessions: () => "Running sessions",
+    runningSessionCount: ({ count }) => `${count} ${Number(count) === 1 ? "session" : "sessions"} running`,
+    noRunningSessions: () => "No running sessions found",
+    openRunningSession: ({ title }) => `Open running session: ${title}`,
     sessionsDashboard: () => "Sessions",
     settingsNote: () => "Descriptions help AI choose a tag when first naming a session; colors only affect display.",
     sidebarSort: () => "Sidebar order",
@@ -2363,6 +2432,8 @@ var CodexPlugin = (() => {
     tagNamePlaceholder: () => "For example: Review",
     tagSettings: () => "Tag settings",
     tags: () => "Tags",
+    moreTags: () => "More",
+    fewerTags: () => "Less",
     unconfigured: ({ names }) => `Not configured: ${names}`,
     uncategorized: () => "Uncategorized"
   };
@@ -2802,16 +2873,15 @@ var CodexPlugin = (() => {
       ["color", "font-family", "font-size", "font-style", "font-weight", "letter-spacing", "line-height", "padding-left", "padding-right"].forEach((property) => heading.style.setProperty(property, headingStyle.getPropertyValue(property)));
       this.sort.update();
       heading.appendChild(this.sort.element);
-      const counts = /* @__PURE__ */ new Map();
       const entries = this.options.getEntries();
-      entries.forEach(({ tag }) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+      const counts = summarizeTags(entries, this.options.getDefinitions()).filter((item) => item.count > 0);
       const configuredOrder = new Map(this.options.getDefinitions().map(({ name }, index) => [name.toLocaleLowerCase(), index]));
       const filters = [{ value: "all", label: this.options.i18n.t("all"), count: entries.length, color: null }];
-      Array.from(counts, ([tag, count]) => ({
-        value: tag,
-        label: tag,
+      Array.from(counts, ({ name, count }) => ({
+        value: name,
+        label: name,
         count,
-        color: this.options.colorForTag(tag) ?? this.options.neutralColor
+        color: this.options.colorForTag(name) ?? this.options.neutralColor
       })).sort((left, right) => {
         const leftOrder = configuredOrder.get(left.value.toLocaleLowerCase()) ?? Number.MAX_SAFE_INTEGER;
         const rightOrder = configuredOrder.get(right.value.toLocaleLowerCase()) ?? Number.MAX_SAFE_INTEGER;
@@ -2830,14 +2900,14 @@ var CodexPlugin = (() => {
         filter.textContent = label;
         filter.dataset.value = value;
         if (color) filter.style.setProperty("--codex-sidebar-tag-color", color);
-        filter.setAttribute("aria-pressed", String(this.options.getSelectedTag() === value));
+        filter.setAttribute("aria-pressed", String(this.options.getSelectedTag().toLocaleLowerCase() === value.toLocaleLowerCase()));
         filter.title = `${label} \xB7 ${this.options.i18n.t("sessionCount", { count })}`;
         const badge = document.createElement("span");
         badge.className = "codex-sidebar-quick-filter-count";
         badge.textContent = String(count);
         filter.appendChild(badge);
         filter.addEventListener("click", () => {
-          const next = this.options.getSelectedTag() === value && value !== "all" ? "all" : value;
+          const next = this.options.getSelectedTag().toLocaleLowerCase() === value.toLocaleLowerCase() && value !== "all" ? "all" : value;
           this.options.setSelectedTag(next);
           this.options.trace("sidebar-tag-click", { value, selected: next });
           this.render();
@@ -3209,6 +3279,211 @@ var CodexPlugin = (() => {
     }
   };
 
+  // runtime/src/injected/home-section.ts
+  function createTagsHomeSection(options) {
+    const views = /* @__PURE__ */ new Set();
+    const unregister = registerHomeSection({ id: "orbit-tags", title: "\u6807\u7B7E", slot: "overview", order: 100, mount(container, header) {
+      const host = document.createElement("div"), shadow = host.attachShadow({ mode: "open" }), style = document.createElement("style"), content = document.createElement("div");
+      style.textContent = `
+      :host { display:block; font:inherit; color:inherit; } * { box-sizing:border-box; }
+      [hidden] { display:none !important; }
+      button { color:inherit; font:inherit; cursor:pointer; border:0; border-radius:8px; background:transparent; }
+      button:hover { background:var(--color-background-primary-hover,var(--color-token-main-surface-secondary,#8881)); }
+      button:focus-visible { outline:2px solid var(--color-border-focused,#6b9eff); outline-offset:2px; }
+      .tags-home-total { display:flex; align-items:baseline; gap:6px; margin:0 0 12px; padding:0; font-size:12px; }
+      .tags-home-total strong { font-weight:400; font-variant-numeric:tabular-nums; }
+      .tags-home-grid { display:flex; flex-wrap:wrap; gap:4px 8px; }
+      .tags-home-grid button { display:flex; align-items:center; gap:8px; min-height:30px; padding:5px 8px; border-radius:6px; font-size:12px; }
+      .tags-home-grid .tags-home-more { opacity:.6; }
+      .tags-home-grid i { display:block; width:6px; height:6px; flex:none; border-radius:50%; background:var(--tag-color); }
+      .tags-home-grid span:last-child { opacity:.6; font-variant-numeric:tabular-nums; }
+      .tags-home-status { margin:12px 0 0; font-size:12px; opacity:.65; }
+    `;
+      shadow.append(style, content);
+      container.append(host);
+      const total = document.createElement("button"), totalCount = document.createElement("strong"), totalLabel = document.createElement("span"), grid = document.createElement("div"), status = document.createElement("p");
+      total.type = "button";
+      total.className = "tags-home-total";
+      total.dataset.tag = "all";
+      total.append(totalCount, totalLabel);
+      total.addEventListener("click", () => options.openTag("all"));
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "tags-home-more";
+      let expanded = false;
+      more.addEventListener("click", () => {
+        expanded = !expanded;
+        update();
+      });
+      grid.className = "tags-home-grid";
+      status.className = "tags-home-status";
+      if (header) header.summary.append(total);
+      else content.append(total);
+      content.append(grid, status);
+      const buttons = /* @__PURE__ */ new Map();
+      const update = () => {
+        const entries = options.getEntries(), availability = options.getAvailability(), tags = summarizeTags(entries, options.getDefinitions()).sort((a2, b2) => b2.count - a2.count);
+        totalCount.textContent = String(entries.length);
+        totalLabel.textContent = "\u4E2A\u4F1A\u8BDD";
+        const keys = new Set(tags.map((tag) => tag.name.toLocaleLowerCase()));
+        for (const [key, view] of buttons) if (!keys.has(key)) {
+          view.button.remove();
+          buttons.delete(key);
+        }
+        for (const [index, tag] of tags.entries()) {
+          const key = tag.name.toLocaleLowerCase();
+          let view = buttons.get(key);
+          if (!view) {
+            const button = document.createElement("button"), dot = document.createElement("i"), name = document.createElement("span"), count = document.createElement("span");
+            button.type = "button";
+            dot.setAttribute("aria-hidden", "true");
+            button.append(dot, name, count);
+            button.addEventListener("click", () => options.openTag(button.dataset.tag));
+            view = { button, dot, name, count };
+            buttons.set(key, view);
+          }
+          view.button.dataset.tag = tag.name;
+          view.button.setAttribute("aria-label", `${tag.name} \xB7 ${options.i18n.t("sessionCount", { count: tag.count })}`);
+          if (/^#[\da-f]{6}$/iu.test(tag.color)) view.dot.style.setProperty("--tag-color", tag.color);
+          view.name.textContent = tag.name;
+          view.count.textContent = String(tag.count);
+          view.button.hidden = !expanded && index >= 5;
+          if (grid.children[index] !== view.button) grid.insertBefore(view.button, grid.children[index] ?? null);
+        }
+        more.hidden = tags.length <= 5;
+        more.textContent = expanded ? "\u6536\u8D77" : "\u66F4\u591A";
+        more.setAttribute("aria-expanded", String(expanded));
+        grid.append(more);
+        content.setAttribute("aria-busy", String(!availability.complete));
+        status.hidden = availability.complete;
+        status.setAttribute("role", availability.error ? "alert" : "status");
+        status.textContent = availability.complete ? "" : options.i18n.t(availability.error ? "catalogUnavailable" : "catalogLoading");
+      };
+      views.add(update);
+      try {
+        update();
+      } catch (error) {
+        views.delete(update);
+        total.remove();
+        host.remove();
+        throw error;
+      }
+      return () => {
+        views.delete(update);
+        total.remove();
+        host.remove();
+      };
+    } });
+    return { refresh() {
+      for (const update of views) update();
+    }, dispose: unregister };
+  }
+
+  // runtime/src/injected/running-sessions-home-section.ts
+  function createRunningSessionsHomeSection(options) {
+    const views = /* @__PURE__ */ new Set();
+    const section = {
+      id: "orbit-tags-running-sessions",
+      title: "\u6B63\u5728\u8FD0\u884C",
+      slot: "main",
+      order: 0,
+      mount(container, header) {
+        const document2 = container.ownerDocument;
+        const host = document2.createElement("div"), shadow = host.attachShadow({ mode: "open" });
+        const style = document2.createElement("style"), summary = document2.createElement("p"), list = document2.createElement("ul");
+        style.textContent = `
+        :host { display:block; font:inherit; color:inherit; } * { box-sizing:border-box; }
+        [hidden] { display:none !important; }
+        .running-summary { margin:0; color:var(--color-text-secondary,GrayText); font-size:12px; }
+        ul { display:grid; gap:2px; margin:0; padding:0; list-style:none; }
+        button { display:flex; align-items:center; gap:10px; width:100%; min-height:40px; padding:8px 10px; border:0; border-radius:7px; background:transparent; color:inherit; font:inherit; text-align:start; cursor:pointer; }
+        button:hover { background:var(--color-background-primary-hover,var(--color-token-main-surface-secondary,#8881)); }
+        button:focus-visible { outline:2px solid var(--color-border-focused,#6b9eff); outline-offset:2px; }
+        .running-indicator { flex:none; width:12px; height:12px; border:1.5px solid var(--color-border,#8883); border-top-color:var(--color-text-success,#63b98f); border-radius:50%; animation:running-spin 1s linear infinite; }
+        .running-copy { display:flex; align-items:center; gap:10px; min-width:0; }
+        .running-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; line-height:1.5; }
+        .running-tag { flex:none; max-width:160px; padding:2px 6px; border-radius:4px; color:var(--tag-color); background:color-mix(in srgb,var(--tag-color) 9%,transparent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+        @media(max-width:480px) { .running-copy { flex:1; flex-wrap:wrap; gap:4px 8px; } .running-title { flex-basis:100%; } }
+        @keyframes running-spin { to { transform:rotate(360deg); } }
+        @media(prefers-reduced-motion:reduce) { .running-indicator { animation:none; } }
+      `;
+        summary.className = "running-summary";
+        summary.setAttribute("role", "status");
+        shadow.append(style, summary, list);
+        container.append(host);
+        const rows = /* @__PURE__ */ new Map();
+        const update = () => {
+          const entries = options.getEntries(), keys = new Set(entries.map((entry) => entry.key));
+          summary.textContent = options.i18n.t(entries.length ? "runningSessionCount" : "noRunningSessions", { count: entries.length });
+          summary.hidden = Boolean(header) && entries.length > 0;
+          host.hidden = entries.length === 0;
+          if (header) header.summary.textContent = String(entries.length);
+          list.hidden = entries.length === 0;
+          for (const [key, row] of rows) if (!keys.has(key)) {
+            row.item.remove();
+            rows.delete(key);
+          }
+          for (const [index, entry] of entries.entries()) {
+            let row = rows.get(entry.key);
+            if (!row) {
+              const item = document2.createElement("li"), button = document2.createElement("button"), indicator = document2.createElement("span");
+              const title = document2.createElement("span"), tag = document2.createElement("span");
+              button.type = "button";
+              indicator.className = "running-indicator";
+              indicator.setAttribute("aria-hidden", "true");
+              title.className = "running-title";
+              tag.className = "running-tag";
+              const copy = document2.createElement("span");
+              copy.className = "running-copy";
+              copy.append(title, tag);
+              button.append(indicator, copy);
+              item.append(button);
+              const next = { item, button, title, tag, entry };
+              button.addEventListener("click", () => options.openEntry(next.entry));
+              row = next;
+              rows.set(entry.key, row);
+            }
+            row.entry = entry;
+            row.button.dataset.threadId = entry.threadId;
+            row.button.setAttribute("aria-label", options.i18n.t("openRunningSession", { title: entry.raw }));
+            row.title.textContent = entry.title;
+            row.title.title = entry.raw;
+            row.tag.textContent = entry.tag;
+            row.tag.hidden = !entry.tagged;
+            row.tag.style.setProperty("--tag-color", /^#[\da-f]{6}$/iu.test(entry.color) ? entry.color : "currentColor");
+            if (list.children[index] !== row.item) list.insertBefore(row.item, list.children[index] ?? null);
+          }
+        };
+        views.add(update);
+        try {
+          update();
+        } catch (error) {
+          views.delete(update);
+          host.remove();
+          throw error;
+        }
+        return () => {
+          views.delete(update);
+          host.remove();
+        };
+      }
+    };
+    let unregister;
+    const refresh = () => {
+      if (options.getEntries().length) unregister ??= registerHomeSection(section);
+      else {
+        unregister?.();
+        unregister = void 0;
+      }
+      for (const update of views) update();
+    };
+    refresh();
+    return { refresh, dispose() {
+      unregister?.();
+      unregister = void 0;
+    } };
+  }
+
   // runtime/src/injected/runtime.ts
   function installRuntime(input, send) {
     const config = parseRuntimeConfig(input);
@@ -3242,6 +3517,7 @@ var CodexPlugin = (() => {
     let searchLoading = false;
     let searchError = "";
     let catalogError = "";
+    let catalogComplete = false;
     let searchIndexStatus = { phase: "idle", completed: 0, total: 0 };
     const runtimeStore = new RuntimeStore();
     const state = runtimeStore.state;
@@ -3461,6 +3737,7 @@ var CodexPlugin = (() => {
       searchLoading = false;
       searchError = "";
       await dashboardView.close("open-entry");
+      sidebarTagFilter.render();
       if (!row && entry.pinned) {
         const pinnedToggle = pinnedToggleRef?.isConnected ? pinnedToggleRef : findAnySectionToggle();
         if (pinnedToggle && !hasVisiblePinnedThread()) pinnedToggle.click();
@@ -3543,11 +3820,52 @@ var CodexPlugin = (() => {
       applySidebarOrder();
       sidebarTagFilter.render();
       dashboardView.render(entries, reason);
+      homeTags.refresh();
+      homeRunningSessions.refresh();
     };
+    const homeTags = createTagsHomeSection({
+      i18n,
+      getEntries: () => sessionRegistry.values(),
+      getDefinitions: () => tagDefinitions,
+      getAvailability: () => ({ complete: catalogComplete, error: Boolean(catalogError) }),
+      openTag: (value) => {
+        dashboardView.rememberOrigin();
+        runtimeStore.dispatch({ type: "query.set", value: "" });
+        runtimeStore.dispatch({ type: "dashboard.open" });
+        runtimeStore.dispatch({ type: "tag.set", value });
+        renderToolbar(entriesFrom(titleNodes()), "home-tag");
+      }
+    });
+    const homeRunningSessions = createRunningSessionsHomeSection({
+      i18n,
+      getEntries: () => {
+        const entries = /* @__PURE__ */ new Map();
+        for (const node of queryRunningThreadTitles(TOOLBAR_ID)) {
+          const row = findThreadRow(node), threadId = threadIdForRow(row);
+          const parsed = parse(node.getAttribute(RAW) ?? node.textContent);
+          if (!threadId || !parsed || entries.has(threadId)) continue;
+          entries.set(threadId, {
+            ...parsed,
+            key: threadId,
+            threadId,
+            node,
+            row,
+            index: entries.size,
+            pinned: isPinnedThreadRow(row),
+            projectId: projectIdForThreadRow(row)
+          });
+        }
+        return [...entries.values()];
+      },
+      openEntry: (entry) => {
+        void openEntry(entry);
+      }
+    });
     const refresh = (reason = "observer") => {
       const nodes = titleNodes();
       nodes.forEach((node) => titleDecorator.enhance(node));
       const entries = entriesFrom(nodes);
+      homeRunningSessions.refresh();
       applySidebarOrder();
       sidebarTagFilter.apply();
       const filterAnchor = findSidebarFilterAnchor();
@@ -3562,7 +3880,7 @@ var CodexPlugin = (() => {
       isRelevantMutation: (mutation) => {
         const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
         if (!target || host?.contains(target) || filterHost?.contains(target) || dashboardView.contains(target)) return false;
-        if (isThreadTitleElement(target)) return true;
+        if (isThreadTitleElement(target) || isThreadRowElement(target)) return true;
         return [...mutation.addedNodes, ...mutation.removedNodes].some(mutationContainsSidebarNode);
       },
       onRefresh: refresh,
@@ -3612,6 +3930,7 @@ var CodexPlugin = (() => {
         return true;
       }
       if (message.type === RuntimeMessageType.catalogSnapshot) {
+        catalogComplete = message.payload.complete === true;
         catalogError = message.payload.complete === true ? "" : i18n.t("catalogUnavailable");
         if (message.payload.complete === true && Array.isArray(message.payload.items)) {
           sessionRegistry.applyCatalog(message.payload.items);
@@ -3620,6 +3939,7 @@ var CodexPlugin = (() => {
           renderToolbar(entries, "catalog-snapshot");
         }
         if (catalogError && state.open) renderToolbar(entriesFrom(titleNodes()), "catalog-snapshot");
+        homeTags.refresh();
         return true;
       }
       if (message.type === RuntimeMessageType.searchResult) {
@@ -3675,6 +3995,8 @@ var CodexPlugin = (() => {
         sidebarTagFilter.dispose(document.querySelectorAll(`[${FILTERED}]`));
         document.querySelectorAll(`[${ROW}]`).forEach((row) => row.removeAttribute(ROW));
         dashboardView.dispose();
+        homeTags.dispose();
+        homeRunningSessions.dispose();
         document.getElementById(TOOLBAR_ID)?.remove();
         document.getElementById(STYLE_ID)?.remove();
         sessionRegistry.clearPersistentCache();
