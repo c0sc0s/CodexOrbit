@@ -1,6 +1,6 @@
 {
   "name": "orbit-todo",
-  "version": "0.1.0+codex.20261019080000",
+  "version": "0.1.0+codex.20261019202930",
   "description": "Manage a personal task tree across Codex conversations with a local CLI and skill.",
   "author": { "name": "Orbit contributors" },
   "skills": "./skills/",

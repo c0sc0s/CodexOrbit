@@ -5,6 +5,7 @@
   "type": "module",
   "files": ["runtime/", "dist/service/", "dist/shared/", "fonts/", "orbit-plugin.json", "README.md"],
   "engines": { "node": ">=22.13.0" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org" },
   "scripts": {
     "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.json && node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",

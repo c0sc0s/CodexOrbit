@@ -1,5 +1,11 @@
 # Release notes
 
+## 0.9.1 — npm next
+
+- Add optional Home modules for live running sessions and tag counts.
+- Require Orbit >=0.5.4 <0.6.0 for the public Home module contract.
+- Use runtime 6.5.13 and refresh the official extension cache version.
+
 ## 0.9.0 — candidate
 
 - Orbit module `orbit-tags`, compatible with Orbit >=0.5.0 <0.6.0.

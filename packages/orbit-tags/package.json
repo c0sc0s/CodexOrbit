@@ -1,6 +1,6 @@
 {
   "name": "@c0sc0s/orbit-tags",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "One-command installer and lifecycle CLI for Orbit Tags.",
   "type": "module",
   "bin": {

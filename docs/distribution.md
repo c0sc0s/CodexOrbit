@@ -56,12 +56,20 @@ Disable retains files and data. Uninstall removes the selected plugin's registra
 
 ## Registry distribution
 
+The Home and Todo installation candidate is distributed with the `next` tag. Install all capabilities without a source checkout:
+
 ```sh
-npm install -g @c0sc0s/orbit
+npm install -g @c0sc0s/orbit@next
 orbit install
-orbit plugin install @c0sc0s/orbit-tags
+orbit plugin install @c0sc0s/orbit-tags@next
+orbit plugin install @c0sc0s/orbit-todo@next
+orbit plugin install @c0sc0s/orbit-home@next
 orbit start
+orbit plugin list
+orbit doctor
 ```
+
+Quit an already running Codex before `orbit start` when testing a cold installation. Subsequent launches use `~/Applications/Orbit.app`. A reinstall that preserves a legacy Tags directory should use `npx @c0sc0s/orbit-tags@next install` instead of the Tags `plugin install` line; that entry retains the original assigned data directory and also starts Orbit.
 
 `orbit update` fetches Orbit; `orbit plugin update orbit-tags` fetches Tags. `orbit rollback` selects the retained runtime subject to plugin compatibility. Registry installation disables npm lifecycle scripts; native dependencies must ship compatible binaries.
 

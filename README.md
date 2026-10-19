@@ -13,26 +13,27 @@ Install **Orbit**, then choose optional capabilities. Orbit owns the launcher, r
 | [Orbit](packages/orbit/README.md) · `@c0sc0s/orbit` | Installation, launcher, plugins, CDP, service processes and RPC |
 | [Orbit Tags](packages/orbit-tags/README.md) · `@c0sc0s/orbit-tags` | Tags, search, sidebar UI and naming hooks |
 | [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | Personal tasks, nested subtasks, local CLI and agent skill |
+| [Orbit Home](packages/orbit-home/README.md) · `@c0sc0s/orbit-home` | Personal homepage with optional plugin modules |
 | `website` | Product website |
 
-## Install from this checkout
+## Install from npm
 
-Requires macOS, Node.js 22.13+ and the official Codex desktop app. Orbit 0.5.0 and Tags 0.9.0 are unpublished npm candidates; use local packages.
+Requires macOS, Node.js 22.13+ and the official Codex desktop app. The Home and Todo candidate is available on the `next` channel for installation acceptance.
 
 ```sh
-npm ci
-npm run verify
-npm pack -w @c0sc0s/orbit
-npm install -g ./c0sc0s-orbit-0.5.0.tgz
+npm install -g @c0sc0s/orbit@next
 orbit install
-orbit plugin add ./packages/orbit-tags
+orbit plugin install @c0sc0s/orbit-tags@next
+orbit plugin install @c0sc0s/orbit-todo@next
+orbit plugin install @c0sc0s/orbit-home@next
 orbit start
+orbit plugin list
 orbit doctor
 ```
 
-Tags is optional: omit `plugin add` for a zero-plugin installation. If Codex is running without debugging, quit it manually before starting Orbit. Use `~/Applications/Orbit.app` for subsequent launches. Review naming hooks in Codex Plugins; installation does not grant hook trust.
+All plugins are optional: omit `plugin install` for a zero-plugin installation. If Codex is running without debugging, quit it manually before starting Orbit. Use `~/Applications/Orbit.app` for subsequent launches. Review naming hooks in Codex Plugins; installation does not grant hook trust. See [installation](docs/distribution.md) for source builds and retained legacy Tags data.
 
-Add the optional personal task center with `orbit plugin add ./packages/orbit-todo`. The **Todo** entry in the sidebar tools opens a task tree and detail panel; the bundled `todo` skill uses the same local data through its packaged CLI.
+The **Todo** entry in the sidebar tools opens a task tree and detail panel; the bundled `todo` skill uses the same local data through its packaged CLI.
 
 ## Development
 

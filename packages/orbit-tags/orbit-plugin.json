@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "orbit-tags",
   "legacyIds": ["codex-tags"],
-  "version": "0.9.0",
+  "version": "0.9.1",
   "runtimeVersion": "6.5.13",
   "orbit": { "min": "0.5.4", "maxExclusive": "0.6.0" },
   "renderer": "runtime/dist/injected.js",

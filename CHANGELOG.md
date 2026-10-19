@@ -1,5 +1,13 @@
 # Release notes
 
+## npm next: Orbit 0.5.4, Tags 0.9.1, Todo 0.1.0 and Home 0.1.0
+
+- Independent Home and Todo plugins install from npm through Orbit's plugin manager.
+- Home composes an optional running-session list, scrollable tasks and tag counts, with local display preferences.
+- Shared UI exports provide Home module registration and themed selectors; business plugins remain optional.
+- Tags contributes live running sessions and tag summaries to Home while retaining its search, navigation and naming capabilities.
+- These packages use the `next` distribution tag for installation acceptance; clean-account launch and hook authorization remain manual checks.
+
 ## Orbit 0.5.2
 
 - Detect missing or disabled Codex extension registrations and missing plugin payloads during platform diagnostics.
