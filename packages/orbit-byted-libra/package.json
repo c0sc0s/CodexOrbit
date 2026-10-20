@@ -1,0 +1,31 @@
+{
+  "name": "@c0sc0s/orbit-byted-libra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "My Libra experiments in Orbit Home.",
+  "type": "module",
+  "files": [
+    "dist/",
+    "README.md",
+    "runtime/",
+    "orbit-plugin.json"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.json && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@c0sc0s/orbit": "0.5.4",
+    "@c0sc0s/orbit-byted": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "typescript": "7.0.2",
+    "esbuild": "0.28.2"
+  }
+}

@@ -19,6 +19,9 @@ const rules = {
     shared: [], injected: ["shared"], service: ["shared"], host: ["shared"],
   },
   "orbit-home": { shared: [], injected: ["shared"], service: ["shared"] },
+  "orbit-byted": { shared: [], injected: ["shared"], service: ["shared"] },
+  "orbit-byted-meego": { shared: [], injected: ["shared"], service: ["shared"] },
+  "orbit-byted-libra": { shared: [], injected: ["shared"], service: ["shared"] },
   "orbit-todo": {
     shared: [], injected: ["shared"], storage: ["shared"], service: ["storage", "shared"], cli: ["storage", "shared"],
   },
@@ -62,6 +65,21 @@ export function assertLayerDependency(workspace, file, target) {
   if (layers[layer] && targetLayer !== layer && !layers[layer].includes(targetLayer)) throw new Error(`Forbidden layer dependency ${workspace}: ${file} → ${target}`);
 }
 
+export function assertPublicDependency(workspace, file, specifier, typeOnly) {
+  const layer = file.split("/")[0];
+  const bytedPlugin = ["orbit-byted-meego", "orbit-byted-libra"].includes(workspace);
+  if (bytedPlugin && specifier.startsWith("@c0sc0s/orbit-")) {
+    const allowed = ["@c0sc0s/orbit-byted/model", ...layer === "service" ? ["@c0sc0s/orbit-byted/service"] : layer === "injected" ? ["@c0sc0s/orbit-byted/ui"] : []];
+    if (!allowed.includes(specifier)) throw new Error(`Forbidden ByteDance package dependency: ${file} → ${specifier}`);
+  }
+  if ((["orbit-todo", "orbit-home", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"].includes(workspace) || workspace === "orbit-tags" && ["service", "injected"].includes(layer)) && specifier.startsWith("@c0sc0s/orbit")) {
+    const sdkContract = typeOnly && specifier === "@c0sc0s/orbit/sdk";
+    const rendererUi = layer === "injected" && specifier === "@c0sc0s/orbit/ui";
+    const bytedSupport = bytedPlugin && specifier.startsWith("@c0sc0s/orbit-byted/");
+    if (!sdkContract && !rendererUi && !bytedSupport) throw new Error(`Business modules must use public SDK/UI exports: ${file}`);
+  }
+}
+
 export async function checkArchitecture() {
   for (const [workspace, layers] of Object.entries(rules)) {
     const root = resolve(repository, "packages", workspace, workspace === "orbit-tags" ? "runtime/src" : "src");
@@ -76,11 +94,7 @@ export async function checkArchitecture() {
       const edges = [];
       for (const { specifier, typeOnly } of dependencies(await readFile(resolve(root, file), "utf8"), file)) {
         if (browserSafe && (specifier.startsWith("node:") || builtinModules.includes(specifier) || specifier === "better-sqlite3")) throw new Error(`Node dependency in browser-safe module ${workspace}/${file}: ${specifier}`);
-        if ((["orbit-todo", "orbit-home"].includes(workspace) || workspace === "orbit-tags" && ["service", "injected"].includes(layer)) && specifier.startsWith("@c0sc0s/orbit")) {
-          const sdkContract = typeOnly && specifier === "@c0sc0s/orbit/sdk";
-          const rendererUi = layer === "injected" && specifier === "@c0sc0s/orbit/ui";
-          if (!sdkContract && !rendererUi) throw new Error(`Business modules must use public SDK/UI exports: ${file}`);
-        }
+        assertPublicDependency(workspace, file, specifier, typeOnly);
         if (!specifier.startsWith(".")) continue;
         const base = relative(root, resolve(root, dirname(file), specifier));
         const target = [base, `${base}.ts`, `${base}.tsx`, base.replace(/\.js$/, ".ts"), base.replace(/\.js$/, ".tsx")].find(candidate => sourceFiles.has(candidate));

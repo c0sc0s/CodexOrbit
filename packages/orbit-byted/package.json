@@ -1,0 +1,43 @@
+{
+  "name": "@c0sc0s/orbit-byted",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local ByteDance CLI feeds for Orbit plugins.",
+  "type": "module",
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@c0sc0s/orbit": "0.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "typescript": "7.0.2",
+    "happy-dom": "20.14.0"
+  },
+  "exports": {
+    "./service": {
+      "types": "./dist/service/index.d.ts",
+      "import": "./dist/service/index.js"
+    },
+    "./ui": {
+      "types": "./dist/injected/feed-view.d.ts",
+      "import": "./dist/injected/feed-view.js"
+    },
+    "./model": {
+      "types": "./dist/shared/feed.d.ts",
+      "import": "./dist/shared/feed.js"
+    },
+    "./package.json": "./package.json"
+  }
+}

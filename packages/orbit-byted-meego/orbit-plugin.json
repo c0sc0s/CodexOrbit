@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "orbit-byted-meego",
+  "version": "0.1.0",
+  "runtimeVersion": "0.2.2",
+  "orbit": {
+    "min": "0.5.4",
+    "maxExclusive": "0.6.0"
+  },
+  "renderer": "runtime/injected.js",
+  "service": "dist/service/activate.js",
+  "codex": {
+    "name": "orbit-byted-meego",
+    "marketplace": "orbit-byted-meego-local"
+  }
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dependencies, assertAcyclic, assertLayerDependency, checkArchitecture } from "../check-architecture.mjs";
+import { dependencies, assertAcyclic, assertLayerDependency, assertPublicDependency, checkArchitecture } from "../check-architecture.mjs";
 
 test("dependency scanner distinguishes type contracts from runtime imports", () => {
   assert.deepEqual(dependencies(`
@@ -36,4 +36,16 @@ test("execution environments and shared models cannot depend on composition laye
     ["orbit-tags", "service/router.ts", "host/cdp-client.ts"],
   ]) assert.throws(() => assertLayerDependency(workspace, source, target), /Forbidden layer dependency/);
   assert.doesNotThrow(() => assertLayerDependency("orbit-tags", "service/router.ts", "shared/protocol.ts"));
+});
+
+test("ByteDance plugins share only environment-appropriate public exports", () => {
+  assert.throws(()=>assertPublicDependency('orbit-home','service/activate.ts','@c0sc0s/orbit-tags',false),/public SDK/);
+  for(const workspace of ['orbit-byted-meego','orbit-byted-libra']) {
+    assert.doesNotThrow(()=>assertPublicDependency(workspace,'service/activate.ts','@c0sc0s/orbit-byted/service',false));
+    assert.doesNotThrow(()=>assertPublicDependency(workspace,'injected/entry.ts','@c0sc0s/orbit-byted/ui',false));
+    assert.throws(()=>assertPublicDependency(workspace,'injected/entry.ts','@c0sc0s/orbit-byted/service',false),/Forbidden ByteDance/);
+    assert.throws(()=>assertPublicDependency(workspace,'service/activate.ts','@c0sc0s/orbit-byted/ui',false),/Forbidden ByteDance/);
+    assert.throws(()=>assertPublicDependency(workspace,'service/activate.ts','@c0sc0s/orbit-tags',false),/Forbidden ByteDance/);
+    assert.throws(()=>assertPublicDependency(workspace,'service/activate.ts','@c0sc0s/orbit',false),/public SDK/);
+  }
 });

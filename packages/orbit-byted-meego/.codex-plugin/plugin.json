@@ -1,0 +1,11 @@
+{
+  "name": "orbit-byted-meego",
+  "version": "0.2.2+codex.20261020200000",
+  "description": "Search and reference your pending Meego Bugs from the composer.",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Meego",
+    "shortDescription": "搜索并引用待处理 Bug",
+    "capabilities": ["Interactive"]
+  }
+}

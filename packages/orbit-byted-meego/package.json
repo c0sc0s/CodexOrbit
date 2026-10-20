@@ -1,0 +1,37 @@
+{
+  "name": "@c0sc0s/orbit-byted-meego",
+  "version": "0.1.0",
+  "private": true,
+  "description": "My open Meego bugs in Orbit Home.",
+  "type": "module",
+  "files": [
+    "dist/",
+    "README.md",
+    "runtime/",
+    "orbit-plugin.json",
+    "server.mjs",
+    ".mcp.json",
+    ".codex-plugin/"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.json && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@c0sc0s/orbit": "0.5.4",
+    "@c0sc0s/orbit-byted": "0.1.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "@openai/mcp-extensions": "0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "esbuild": "0.28.2",
+    "happy-dom": "20.14.0",
+    "typescript": "7.0.2"
+  }
+}
