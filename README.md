@@ -18,14 +18,14 @@ Install **Orbit**, then choose optional capabilities. Orbit owns the launcher, r
 
 ## Install from npm
 
-Requires macOS, Node.js 22.13+ and the official Codex desktop app. The Home and Todo candidate is available on the `next` channel for installation acceptance.
+Requires macOS, Node.js 22.13+ and the official Codex desktop app. Use the pinned candidate versions below for new-user installation acceptance.
 
 ```sh
-npm install -g @c0sc0s/orbit@next
+npm install -g @c0sc0s/orbit@0.5.4
 orbit install
-orbit plugin install @c0sc0s/orbit-tags@next
-orbit plugin install @c0sc0s/orbit-todo@next
-orbit plugin install @c0sc0s/orbit-home@next
+orbit plugin install @c0sc0s/orbit-tags@0.9.1
+orbit plugin install @c0sc0s/orbit-todo@0.1.0
+orbit plugin install @c0sc0s/orbit-home@0.1.0
 orbit start
 orbit plugin list
 orbit doctor

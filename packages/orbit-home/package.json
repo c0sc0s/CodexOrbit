@@ -1,6 +1,6 @@
 {
   "name": "@c0sc0s/orbit-home",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "A custom Codex Home with optional local plugin content.",
   "type": "module",
   "files": ["runtime/", "dist/service/", "dist/shared/", "fonts/", "orbit-plugin.json", "README.md"],

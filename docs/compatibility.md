@@ -4,9 +4,9 @@ Orbit integrates with private Codex renderer DOM and local metadata. Every Codex
 
 ## Verification baseline
 
-The npm `next` candidate is Orbit 0.5.4, Orbit Tags 0.9.1 (runtime 6.5.13), Todo 0.1.0 (runtime 0.1.12) and Home 0.1.1 (runtime 0.2.6) on macOS. Automated checks cover build, types, architecture boundaries, service isolation, ownership, recovery and independently installed tarballs.
+The verified npm installation candidate is Orbit 0.5.4, Orbit Tags 0.9.1 (runtime 6.5.13), Todo 0.1.0 (runtime 0.1.12) and Home 0.1.0 (runtime 0.2.6) on macOS. Automated checks cover build, types, architecture boundaries, service isolation, ownership, recovery and independently installed tarballs.
 
-The candidate remains on `next` pending new-user installation acceptance. Home's scrolling, settings, responsive layout and running-module visibility were checked in a local browser fixture. Live Tags QA has unresolved sort-menu and tab element availability failures. Clean-account cold launch and first-turn hook authorization remain unverified. Do not treat npm availability as completion of those manual checks.
+The pinned candidate versions passed registry installation in a fresh npm cache and isolated Codex user configuration. Checks cover all three plugins, native SQLite, official extension registration and retained Tags data. Home's scrolling, settings, responsive layout and running-module visibility were checked in a local browser fixture. Live Tags QA has unresolved sort-menu and tab element availability failures. Clean-account cold launch and first-turn hook authorization remain unverified. Do not treat npm availability as completion of those manual checks.
 
 | Scenario | Coverage |
 | --- | --- |
@@ -18,7 +18,7 @@ The candidate remains on `next` pending new-user installation acceptance. Home's
 | Clean-account cold launch | Manual acceptance required |
 | First-turn naming and hook trust | Manual acceptance required |
 | Never-expanded session navigation | Manual acceptance required |
-| Registry onboarding | Requires publication and registry acceptance |
+| Registry onboarding | Fresh-cache npm install, all three plugins, native SQLite, official extensions and retained Tags data |
 
 `npm run qa:app` exercises an injected app without restarting Codex, renaming tasks or saving tag edits. It does not validate hook authorization. Record the exact Codex version and build during release acceptance.
 

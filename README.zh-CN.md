@@ -18,14 +18,14 @@
 
 ## 从 npm 安装
 
-需要 macOS、Node.js 22.13+ 和官方 Codex 桌面应用。包含 Home 和 Todo 的候选版本使用 `next` 通道，供新用户安装验收。
+需要 macOS、Node.js 22.13+ 和官方 Codex 桌面应用。下面的固定版本包含 Home 和 Todo，用于新用户安装验收。
 
 ```sh
-npm install -g @c0sc0s/orbit@next
+npm install -g @c0sc0s/orbit@0.5.4
 orbit install
-orbit plugin install @c0sc0s/orbit-tags@next
-orbit plugin install @c0sc0s/orbit-todo@next
-orbit plugin install @c0sc0s/orbit-home@next
+orbit plugin install @c0sc0s/orbit-tags@0.9.1
+orbit plugin install @c0sc0s/orbit-todo@0.1.0
+orbit plugin install @c0sc0s/orbit-home@0.1.0
 orbit start
 orbit plugin list
 orbit doctor
