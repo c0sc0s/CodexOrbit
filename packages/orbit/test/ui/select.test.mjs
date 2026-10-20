@@ -100,3 +100,21 @@ test("the popup stays outside scrolling containers and flips inside the viewport
   assert.equal(Number.parseFloat(popup.style.left)*1.25,window.innerWidth-188);
   assert.equal(Number.parseFloat(popup.style.top)*1.25,window.innerHeight-144);
 });
+
+test("popup coordinates compensate ancestor zoom as well as the control's own zoom", t => {
+  const {window,shadow,trigger}=setup(t);
+  const rect=(left,top,width,height)=>({left,top,right:left+width,bottom:top+height,width,height});
+  trigger.getBoundingClientRect=()=>rect(420,100,160,32);
+  const previous=window.HTMLElement.prototype.getBoundingClientRect;
+  window.HTMLElement.prototype.getBoundingClientRect=function(){return rect(0,0,200,140);};
+  t.after(()=>{window.HTMLElement.prototype.getBoundingClientRect=previous;});
+  window.document.documentElement.style.setProperty("--codex-window-zoom","1.1");
+  for(const ancestorZoom of [0.8,1,1.25,1.5]) {
+    const totalZoom=1.1*ancestorZoom;
+    Object.defineProperty(window.HTMLElement.prototype,"currentCSSZoom",{configurable:true,get(){return totalZoom;}});
+    trigger.click();const popup=shadow.querySelector('[role="listbox"]');
+    assert.ok(Math.abs(Number.parseFloat(popup.style.left)*totalZoom-420)<.001);
+    assert.ok(Math.abs(Number.parseFloat(popup.style.top)*totalZoom-136)<.001);
+    trigger.click();
+  }
+});

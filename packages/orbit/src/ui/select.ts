@@ -70,7 +70,9 @@ export function mountSelect(trigger: HTMLButtonElement, options: SelectOptions):
   const enabled = () => state.choices.map((choice, index) => choice.disabled ? -1 : index).filter(index => index >= 0);
   const position = () => {
     if (!popup) return;
-    const anchor = trigger.getBoundingClientRect(), zoom = Number.parseFloat(view.getComputedStyle(popup).zoom) || 1;
+    const anchor = trigger.getBoundingClientRect(), currentZoom: unknown = Reflect.get(popup, "currentCSSZoom");
+    // Popovers retain ancestor zoom even in the top layer; coordinates use the cumulative scale.
+    const zoom = typeof currentZoom === "number" && Number.isFinite(currentZoom) && currentZoom > 0 ? currentZoom : Number.parseFloat(view.getComputedStyle(popup).zoom) || 1;
     const padding = 8, gap = 4, below = view.innerHeight - padding - anchor.bottom - gap, above = anchor.top - padding - gap;
     const side = below >= Math.min(280 * zoom, popup.scrollHeight * zoom) || below >= above ? "bottom" : "top";
     popup.style.maxWidth = `${Math.max(0, view.innerWidth - padding * 2) / zoom}px`;

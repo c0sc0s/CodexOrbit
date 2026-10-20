@@ -548,7 +548,8 @@ var CodexPlugin = (() => {
     const position = () => {
       if (!popup)
         return;
-      const anchor = trigger.getBoundingClientRect(), zoom = Number.parseFloat(view.getComputedStyle(popup).zoom) || 1;
+      const anchor = trigger.getBoundingClientRect(), currentZoom = Reflect.get(popup, "currentCSSZoom");
+      const zoom = typeof currentZoom === "number" && Number.isFinite(currentZoom) && currentZoom > 0 ? currentZoom : Number.parseFloat(view.getComputedStyle(popup).zoom) || 1;
       const padding = 8, gap = 4, below = view.innerHeight - padding - anchor.bottom - gap, above = anchor.top - padding - gap;
       const side = below >= Math.min(280 * zoom, popup.scrollHeight * zoom) || below >= above ? "bottom" : "top";
       popup.style.maxWidth = `${Math.max(0, view.innerWidth - padding * 2) / zoom}px`;
@@ -769,7 +770,7 @@ var CodexPlugin = (() => {
   }
 
   // src/shared/model.ts
-  var RUNTIME_VERSION = "0.1.12";
+  var RUNTIME_VERSION = "0.1.13";
   var PAGE_SIZE = 200;
   var TodoError = class extends Error {
     constructor(code, message) {
