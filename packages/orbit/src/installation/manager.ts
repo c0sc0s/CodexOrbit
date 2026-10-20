@@ -290,7 +290,7 @@ export function createInstallationManager(options: InstallationOptions = {}) {
         if (Object.entries(config.orbit.packages).some(([id, plugin]) =>
           id !== previousId && (plugin.manifest.legacyIds ?? []).some(alias => [manifest.id, ...legacyIds].includes(alias))))
           throw new Error("Plugin alias belongs to another package");
-        if (existing && JSON.stringify(existing.manifest.codex) !== JSON.stringify(manifest.codex))
+        if (existing?.manifest.codex && JSON.stringify(existing.manifest.codex) !== JSON.stringify(manifest.codex))
           throw new Error("Official extension identity cannot change during a plugin update");
         if (
           manifest.codex &&

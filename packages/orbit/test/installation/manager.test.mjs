@@ -181,6 +181,23 @@ test("incompatibility and concurrent mutation preserve authoritative configurati
   assert.equal(await readFile(manager.paths.configPath, "utf8"), config);
 });
 
+test("an installed Orbit plugin can add its first official extension while preserving identity and data", async t => {
+  const { home } = await setup(t);
+  const manager = createInstallationManager({ home, root: join(home, "first-extension"), manageExtensions: false });
+  await manager.install(); const source = await fixture(home, "native-provider"); await manager.addPlugin(source);
+  const before = (await manager.read()).orbit.packages["native-provider"];
+  await writeFile(join(before.dataDirectory, "settings.json"), "preserved");
+  const manifest = JSON.parse(await readFile(join(source, "orbit-plugin.json"), "utf8"));
+  manifest.codex = { name: "native-provider", marketplace: "native-provider-local" };
+  await writeFile(join(source, "orbit-plugin.json"), JSON.stringify(manifest)); await manager.addPlugin(source);
+  const after = (await manager.read()).orbit.packages["native-provider"];
+  assert.equal(after.dataDirectory, before.dataDirectory); assert.equal(await readFile(join(after.dataDirectory, "settings.json"), "utf8"), "preserved");
+  manifest.codex.name = "replacement"; await writeFile(join(source, "orbit-plugin.json"), JSON.stringify(manifest));
+  await assert.rejects(manager.addPlugin(source), /identity cannot change/);
+  delete manifest.codex; await writeFile(join(source, "orbit-plugin.json"), JSON.stringify(manifest));
+  await assert.rejects(manager.addPlugin(source), /identity cannot change/);
+});
+
 test("runtime updates retain a rollback target and failed staging leaves it untouched", async t => {
   const { home, manager } = await setup(t); await manager.install();
   const first = (await manager.read()).orbit.runtime;

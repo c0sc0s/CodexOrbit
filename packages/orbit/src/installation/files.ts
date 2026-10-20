@@ -91,18 +91,14 @@ export async function snapshotPackage(
     try {
       dependencyRoot = dirname(resolver.resolve(`${dependency}/package.json`));
     } catch {
-      dependencyRoot = dirname(resolver.resolve(dependency));
-      while (true) {
-        if (await exists(join(dependencyRoot, "package.json"))) {
-          const candidate = JSON.parse(
-            await readFile(join(dependencyRoot, "package.json"), "utf8"),
-          );
-          if (candidate.name === dependency) break;
-        }
-        const parent = dirname(dependencyRoot);
-        if (parent === dependencyRoot) throw new Error(`Missing dependency ${dependency}`);
-        dependencyRoot = parent;
-      }
+      // Import-only packages may export neither package.json nor a require entry.
+      const candidates = (resolver.resolve.paths(dependency) ?? []).map(path => join(path, dependency));
+      const candidate = candidates.find(path => {
+        try { return lstatSync(join(path, "package.json")).isFile(); } catch { return false; }
+      });
+      if (!candidate || JSON.parse(await readFile(join(candidate, "package.json"), "utf8")).name !== dependency)
+        throw new Error(`Missing dependency ${dependency}`);
+      dependencyRoot = candidate;
     }
     await snapshotPackage(
       dependencyRoot,

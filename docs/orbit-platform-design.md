@@ -16,6 +16,8 @@ Module changes restart a running Orbit daemon without restarting Codex. Failed a
 
 A plugin declares its canonical ID, version, compatibility interval and entries in `orbit-plugin.json`. Tags uses `orbit-tags`. Official extension names are a separate contract: Tags registers `codex-tags@codex-tags-cli`.
 
+An existing Orbit plugin may add its first official extension during an update, retaining its data directory and enabled state. Once declared, the official extension identity cannot be replaced or removed by an update. This lets a renderer/service plugin add native MCP surfaces without reinstalling or taking over another extension.
+
 An optional `legacyIds` declaration allows same-package identity resolution. Ownership and ambiguity checks apply to every identity; data and enabled state are retained. External data is not recursively purged.
 
 Official extension registration uses Codex commands without editing trust records. Recovery may remove only a missing marketplace with an exact declared name and platform-owned path. Foreign or malformed existing sources require inspection.
