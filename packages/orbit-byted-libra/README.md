@@ -1,6 +1,6 @@
 # Orbit ByteDance Libra
 
-`orbit-byted-libra` adds **我的实验** to Orbit Home. It shows the signed-in user's experiments with status, application, traffic allocation and end date, with links to the original reports.
+`orbit-byted-libra` adds **我的实验** to Orbit Home. It shows the signed-in user's unfinished experiments with status, application, traffic allocation and end date, with links to the original reports.
 
 ## Setup
 
@@ -24,6 +24,6 @@ Install Orbit Home separately if needed. Startup and manual refresh run in the p
 
 The module's optional `config` accepts `site` (`i18n-tt`, the default, or `cn`), `appId` (a positive integer, or `-1` for all applications) and `cliPath` (an absolute executable path). See the [Orbit manifest contract](../../docs/plugin-loader.md#manifest-and-sdk). Credentials belong to the CLI rather than the plugin config. A site/application change invalidates the previous scope's cache.
 
-The query uses `experiment list --owner-type my`, 50 records per page. It continues until a short page, rather than trusting CLI versions that substitute the current page length for a missing server total. The cap is 20 pages and 500 experiments; capped lists are labeled as partial. End dates are displayed in Asia/Shanghai. Unknown status values display as unknown rather than being guessed.
+The query uses `experiment list --owner-type my`, 50 records per page, and excludes ended experiments (status `0`). It continues until a short source page, even when every experiment on a page has ended, rather than trusting CLI versions that substitute the current page length for a missing server total. The cap is 20 pages and 500 displayed experiments; capped lists are labeled as partial. End dates are displayed in Asia/Shanghai. Unknown status values display as unknown rather than being guessed.
 
 This private workspace package depends on [ByteDance feed support](../orbit-byted/README.md). It is independently installed and disabled, keeps its own cache and never imports Meego, Tags, Todo or Home internals.

@@ -258,12 +258,12 @@ button,a { font:inherit; } .feed-actions button,.feed-actions a { border:0; padd
   }
 
   // src/injected/entry.ts
-  var RUNTIME_VERSION = "0.1.1";
+  var RUNTIME_VERSION = "0.1.2";
   function activate(context) {
     const { site, host } = libraSite(context.config);
     return activateFeedView(context, {
       title: "\u6211\u7684\u5B9E\u9A8C",
-      empty: "\u5F53\u524D\u6CA1\u6709\u4F60\u8D1F\u8D23\u7684\u5B9E\u9A8C",
+      empty: "\u5F53\u524D\u6CA1\u6709\u4F60\u8D1F\u8D23\u7684\u672A\u7ED3\u675F\u5B9E\u9A8C",
       order: 210,
       homeUrl: `https://${host}/libra/`,
       hosts: [host],

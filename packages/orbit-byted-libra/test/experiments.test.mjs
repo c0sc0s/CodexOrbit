@@ -11,6 +11,14 @@ test("Libra pages beyond a CLI total that only counts the current page",async()=
   assert.equal(result.items.length,51);assert.equal(result.complete,true);assert.equal(result.items.at(-1).status,'已冻结');
   assert.ok(result.items[0].details.includes('流量 12.5%'));assert.match(result.items[0].url,/^https:\/\/libra-sg\.tiktok-row\.net\/libra\/flight\/1\/report\/main$/);
 });
+test("ended-only pages do not hide unfinished experiments on later pages",async()=>{
+  let calls=0;
+  const result=await experimentSource(async()=>({experiments:++calls===1
+    ?Array.from({length:50},(_,i)=>({...row(i+1),status:i%2===0?0:'0'}))
+    :[{...row(51),status:'0'},row(52),{...row(53),status:5},{...row(54),status:999}]}),{}).load(signal());
+  assert.equal(calls,2);assert.equal(result.complete,true);
+  assert.deepEqual(result.items.map(item=>[item.id,item.status]),[['52','运行中'],['53','待结束'],['54','未知状态']]);
+});
 test("site and app configuration is validated and changes cache identity",async()=>{
   const query=async()=>({experiments:[]});
   assert.equal((await experimentSource(query,{site:'cn',appId:42}).load(signal())).complete,true);

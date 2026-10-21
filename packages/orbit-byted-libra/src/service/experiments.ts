@@ -17,7 +17,7 @@ export function experimentSource(query: CliQuery, config: Record<string, unknown
   const { site, host } = libraSite(config), appId = config.appId ?? -1;
   if (typeof appId !== "number" || !Number.isSafeInteger(appId) || appId !== -1 && appId <= 0) throw new Error("Invalid appId");
   return {
-    key: JSON.stringify({ type: "libra-experiments-v1", site, appId, cliPath: config.cliPath ?? null }),
+    key: JSON.stringify({ type: "libra-experiments-v2", site, appId, cliPath: config.cliPath ?? null }),
     hosts: [host],
     async load(signal) {
       const items = new Map<string, FeedItem>();
@@ -26,7 +26,9 @@ export function experimentSource(query: CliQuery, config: Record<string, unknown
         const data = record(await query(["--site", site, "libra", "experiment", "list", "--app-id", String(appId), "--owner-type", "my", "--page", String(page), "--page-size", "50"], signal));
         if (!Array.isArray(data.experiments)) throw new Error("Invalid experiment list");
         for (const value of data.experiments) {
-          const row = record(value), id = identifier(row.id);
+          const row = record(value);
+          if (String(row.status) === "0") continue;
+          const id = identifier(row.id);
           const details = [`#${id}`];
           if (typeof row.app_name === "string" && row.app_name.trim()) details.push(row.app_name.trim().slice(0, 200));
           if (typeof row.version_resource === "number" && Number.isFinite(row.version_resource) && row.version_resource >= 0 && row.version_resource <= 1) details.push(`流量 ${Number((row.version_resource * 100).toFixed(2))}%`);
