@@ -1,5 +1,6 @@
 {
   "name": "@c0sc0s/orbit-todo",
+  "license": "MIT",
   "version": "0.1.0",
   "description": "Local nested tasks for Codex, shared by people and agents.",
   "type": "module",

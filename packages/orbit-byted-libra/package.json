@@ -1,5 +1,6 @@
 {
   "name": "@c0sc0s/orbit-byted-libra",
+  "license": "MIT",
   "version": "0.1.0",
   "private": true,
   "description": "My Libra experiments in Orbit Home.",

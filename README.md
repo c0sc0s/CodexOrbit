@@ -52,6 +52,10 @@ The development apply loop installs workspace packages and attaches to an alread
 
 Orbit does not modify the signed application, sessions or authentication. Renderer assets and search content stay local. Plugins are trusted code: services have Node privileges, and renderers share Codex's DOM and main thread.
 
-[Compatibility](docs/compatibility.md) records verification coverage and manual release gates. No open-source license is granted.
+[Compatibility](docs/compatibility.md) records verification coverage and manual release gates.
 
 [Orbit Home](packages/orbit-home/README.md) provides a greeting, local time and optional plugin modules. Customize module visibility; Todo contributes unfinished tasks and Tags contributes session counts. See the [Home architecture](docs/home.md).
+
+## License
+
+Except where otherwise noted, this project is licensed under the [MIT License](LICENSE). Bundled fonts retain their [SIL Open Font License notices](packages/orbit-home/fonts/README.md).

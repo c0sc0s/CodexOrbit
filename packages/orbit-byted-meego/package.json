@@ -1,5 +1,6 @@
 {
   "name": "@c0sc0s/orbit-byted-meego",
+  "license": "MIT",
   "version": "0.1.0",
   "private": true,
   "description": "My open Meego bugs in Orbit Home.",
