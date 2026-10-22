@@ -1,5 +1,6 @@
 {
   "name": "@c0sc0s/orbit-byted",
+  "license": "MIT",
   "version": "0.1.0",
   "private": true,
   "description": "Local ByteDance CLI feeds for Orbit plugins.",

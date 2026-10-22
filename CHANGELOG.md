@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Adopt the MIT License for project code and workspace packages while preserving the bundled fonts' SIL Open Font License notices.
 - Libra experiments can be removed from the local list, with dismissals retained across refreshes and restarts without changing the experiment in Libra.
 - Experiment rows show compact status labels and right-aligned traffic allocation meters with theme-matched fills, hover actions and keyboard focus support.
 - Live UI verified on Codex 26.1016.61520 (build 21421).

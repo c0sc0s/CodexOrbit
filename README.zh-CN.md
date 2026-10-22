@@ -52,6 +52,10 @@ npm run qa:app
 
 不会修改应用签名、会话或认证数据。渲染资源和搜索内容留在本机。插件属于可信代码：服务拥有 Node 权限，渲染插件共享 Codex DOM 和主线程。
 
-[兼容性说明](docs/compatibility.md)记录验证范围与手动发布验收项。项目未授予开源许可。
+[兼容性说明](docs/compatibility.md)记录验证范围与手动发布验收项。
 
 [Orbit Home](packages/orbit-home/README.md) 提供问候、时间和可选插件模块，可通过「首页设置」图标设置显隐。Todo 提供未完成任务，Tags 提供各标签的会话统计。参见 [Home 架构](docs/home.md)。
+
+## 许可证
+
+除另有注明外，本项目采用 [MIT 许可证](LICENSE)。随包分发的字体保留其 [SIL Open Font License 声明](packages/orbit-home/fonts/README.md)。

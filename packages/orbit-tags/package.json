@@ -25,7 +25,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/c0sc0s/codex-tags.git"
