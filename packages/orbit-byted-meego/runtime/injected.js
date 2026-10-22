@@ -347,6 +347,11 @@ var CodexPlugin = (() => {
       const result = record(value);
       return typeof result.complete === "boolean" && Array.isArray(result.items) && result.items.length <= MAX_ITEMS && result.items.every((value2) => {
         const item = record(value2);
+        if (item.meter !== void 0) {
+          const meter = record(item.meter);
+          if (typeof meter.label !== "string" || !meter.label.trim() || meter.label.length > 40 || typeof meter.value !== "number" || !Number.isFinite(meter.value) || meter.value < 0 || meter.value > 100)
+            return false;
+        }
         return typeof item.id === "string" && item.id.length > 0 && item.id.length <= 128 && typeof item.title === "string" && item.title.length > 0 && item.title.length <= 512 && typeof item.status === "string" && item.status.length <= 80 && safeUrl(item.url, hosts) && Array.isArray(item.details) && item.details.length <= 5 && item.details.every((v) => typeof v === "string" && v.length <= 200);
       }) && new Set(result.items.map((value2) => record(value2).id)).size === result.items.length;
     } catch {
@@ -811,7 +816,7 @@ ${quote(comment.body)}`),
   }
 
   // src/injected/entry.ts
-  var RUNTIME_VERSION = "0.2.2";
+  var RUNTIME_VERSION = "0.2.3";
   function activate(context) {
     const document = globalThis.document, store = new BugStore(context);
     let picker = null;

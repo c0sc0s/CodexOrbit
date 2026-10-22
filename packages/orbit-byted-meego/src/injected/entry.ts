@@ -6,7 +6,7 @@ import { openBugPicker } from "./picker.js";
 import type { BugItem } from "../shared/model.js";
 import { styles } from "./styles.js";
 
-const RUNTIME_VERSION = "0.2.2";
+const RUNTIME_VERSION = "0.2.3";
 export function activate(context: RendererContext) {
   const document = globalThis.document, store = new BugStore(context);
   let picker: (() => void) | null = null;

@@ -6,6 +6,7 @@ export interface FeedItem {
   url: string;
   status: string;
   details: string[];
+  meter?: { label: string; value: number };
 }
 export interface FeedResult { items: FeedItem[]; complete: boolean }
 export function boundFeed(result: FeedResult): FeedResult {
@@ -52,6 +53,11 @@ export function isFeedResult(value: unknown, hosts: readonly string[]): value is
     const result = record(value);
     return typeof result.complete === "boolean" && Array.isArray(result.items) && result.items.length <= MAX_ITEMS && result.items.every(value => {
       const item = record(value);
+      if (item.meter !== undefined) {
+        const meter = record(item.meter);
+        if (typeof meter.label !== "string" || !meter.label.trim() || meter.label.length > 40 ||
+          typeof meter.value !== "number" || !Number.isFinite(meter.value) || meter.value < 0 || meter.value > 100) return false;
+      }
       return typeof item.id === "string" && item.id.length > 0 && item.id.length <= 128 &&
         typeof item.title === "string" && item.title.length > 0 && item.title.length <= 512 &&
         typeof item.status === "string" && item.status.length <= 80 && safeUrl(item.url, hosts) &&

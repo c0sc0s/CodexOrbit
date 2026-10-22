@@ -8,4 +8,6 @@ Queries use the installed CLI with automatic upgrades disabled. GUI launches res
 
 Only item IDs, titles, status labels, display metadata and platform URLs are cached in each plugin's assigned data directory. Refreshes run at startup, on request and every five minutes after the preceding attempt. RPC returns immediately while the service publishes progress and completion. Failures preserve the last successful list; successful empty responses replace it. Pagination and item caps are visibly marked as incomplete.
 
+Sources and views can opt into local dismissal with `dismissible`. The service validates current-list IDs, serializes cache writes and persists dismissed IDs with the source's cache; refreshes filter them out. A dismissal is published only after it is saved, and never calls the remote platform. Changing the cache identity clears the local dismissals.
+
 Run `npm run build` at the repository root, then `npm test -w @c0sc0s/orbit-byted`. The Node and renderer TypeScript projects remain separate.
