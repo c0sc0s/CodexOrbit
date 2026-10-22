@@ -19,6 +19,7 @@ export function experimentSource(query: CliQuery, config: Record<string, unknown
   return {
     key: JSON.stringify({ type: "libra-experiments-v2", site, appId, cliPath: config.cliPath ?? null }),
     hosts: [host],
+    dismissible: true,
     async load(signal) {
       const items = new Map<string, FeedItem>();
       for (let page = 1; page <= 20; page++) {
@@ -31,9 +32,10 @@ export function experimentSource(query: CliQuery, config: Record<string, unknown
           const id = identifier(row.id);
           const details = [`#${id}`];
           if (typeof row.app_name === "string" && row.app_name.trim()) details.push(row.app_name.trim().slice(0, 200));
-          if (typeof row.version_resource === "number" && Number.isFinite(row.version_resource) && row.version_resource >= 0 && row.version_resource <= 1) details.push(`流量 ${Number((row.version_resource * 100).toFixed(2))}%`);
+          const meter = typeof row.version_resource === "number" && Number.isFinite(row.version_resource) && row.version_resource >= 0 && row.version_resource <= 1
+            ? { label: "流量", value: Number((row.version_resource * 100).toFixed(2)) } : undefined;
           const end = dateDetail(row.end_time); if (end) details.push(end);
-          items.set(id, { id, title: text(row.name), status: statuses[String(row.status)] ?? "未知状态", details, url: `https://${host}/libra/flight/${id}/report/main` });
+          items.set(id, { id, title: text(row.name), status: statuses[String(row.status)] ?? "未知状态", details, ...(meter ? { meter } : {}), url: `https://${host}/libra/flight/${id}/report/main` });
           if (items.size >= MAX_ITEMS) return { items: [...items.values()], complete: false };
         }
         // Some CLI versions substitute the page length for an absent server total.

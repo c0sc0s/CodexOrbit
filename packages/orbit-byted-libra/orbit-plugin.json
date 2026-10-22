@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "orbit-byted-libra",
   "version": "0.1.0",
-  "runtimeVersion": "0.1.2",
+  "runtimeVersion": "0.1.7",
   "orbit": {
     "min": "0.5.4",
     "maxExclusive": "0.6.0"

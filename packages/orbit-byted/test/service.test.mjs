@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { activateFeed } from "../dist/service/feed-service.js";
 import { FeedFailure } from "../dist/service/cli.js";
 
 const item={id:'1',title:'Example issue',status:'OPEN',details:['Example'],url:'https://example.test/item/1'};
-async function setup(t, load, cache, config={}) {
+async function setup(t, load, cache, config={}, source={}) {
   const stateDirectory=await mkdtemp(join(tmpdir(),'orbit-byted-feed-')),handlers=new Map(),events=[],disposers=[];
   t.after(()=>rm(stateDirectory,{recursive:true,force:true}));
   if(cache)await writeFile(join(stateDirectory,'feed.json'),JSON.stringify(cache));
   const context={stateDirectory,id:'test',config,signal:new AbortController().signal,onDispose:fn=>disposers.push(fn),
     rpc:{handle:(method,fn)=>handlers.set(method,fn)},events:{publish:(topic,payload)=>events.push(structuredClone(payload))}};
-  const feed=activateFeed(context,{key:'example',hosts:['example.test'],load});
+  const feed=activateFeed(context,{key:'example',hosts:['example.test'],load,...source});
   const dispose=()=>disposers.splice(0).reverse().forEach(fn=>fn());t.after(dispose);
   return {feed,handlers,events,stateDirectory,dispose};
 }
@@ -63,4 +63,52 @@ test("managed installations use the plugin-owned data directory",async t=>{
   await host.feed.settled();
   assert.equal(JSON.parse(await readFile(join(dataDirectory,'feed.json'),'utf8')).items.length,1);
   await assert.rejects(readFile(join(host.stateDirectory,'feed.json')),{code:'ENOENT'});
+});
+test("dismissal survives refresh, offline restart and a fresh query without changing the source",async t=>{
+  let calls=0;
+  const other={...item,id:'2'},load=async()=>{calls++;return{items:[item,other],complete:true};};
+  const host=await setup(t,load,undefined,{}, {dismissible:true});await host.feed.settled();
+  const removed=await host.handlers.get('dismissFeedItem')({id:'1'});
+  assert.deepEqual(removed.items,[other]);assert.equal(calls,1);assert.deepEqual(host.events.at(-1),removed);
+  await host.handlers.get('refreshFeed')();await host.feed.settled();
+  assert.deepEqual(host.feed.snapshot().items,[other]);assert.equal(calls,2);
+  const cache=JSON.parse(await readFile(join(host.stateDirectory,'feed.json'),'utf8'));
+  assert.deepEqual(cache.dismissedIds,['1']);host.dispose();
+  const restarted=await setup(t,async()=>{throw new FeedFailure('network');},cache,{}, {dismissible:true});
+  await restarted.feed.settled();assert.deepEqual(restarted.feed.snapshot().items,[other]);
+  const fresh=await setup(t,load,cache,{}, {dismissible:true});await fresh.feed.settled();
+  assert.deepEqual(fresh.feed.snapshot().items,[other]);
+});
+test("dismissals serialize with each other and an in-flight refresh",async t=>{
+  const other={...item,id:'2'};let release;
+  const host=await setup(t,async()=>({items:[item,other],complete:true}),undefined,{}, {dismissible:true});
+  await host.feed.settled();
+  await Promise.all([host.handlers.get('dismissFeedItem')({id:'1'}),host.handlers.get('dismissFeedItem')({id:'2'})]);
+  assert.deepEqual(host.feed.snapshot().items,[]);
+  assert.deepEqual(JSON.parse(await readFile(join(host.stateDirectory,'feed.json'),'utf8')).dismissedIds,['1','2']);
+  const cached=JSON.parse(await readFile(join(host.stateDirectory,'feed.json'),'utf8'));
+  const refreshing=await setup(t,()=>new Promise(resolve=>{release=resolve;}),{...cached,items:[item,other],dismissedIds:[]},{}, {dismissible:true});
+  await refreshing.feed.ready;
+  await refreshing.handlers.get('dismissFeedItem')({id:'1'});
+  release({items:[item,other],complete:true});await refreshing.feed.settled();
+  assert.deepEqual(refreshing.feed.snapshot().items,[other]);
+});
+test("failed dismissal keeps the row and can be retried; unknown IDs are rejected",async t=>{
+  const host=await setup(t,async()=>({items:[item],complete:true}),undefined,{}, {dismissible:true});
+  await host.feed.settled();
+  const dismiss=host.handlers.get('dismissFeedItem'),cachePath=join(host.stateDirectory,'feed.json');
+  for(const input of [null,{}, {id:7},{id:''},{id:'2'},{id:'1',extra:true}]) await assert.rejects(dismiss(input));
+  await rm(cachePath);await mkdir(cachePath);
+  await assert.rejects(dismiss({id:'1'}));assert.deepEqual(host.feed.snapshot().items,[item]);
+  await rm(cachePath,{recursive:true});
+  await dismiss({id:'1'});assert.deepEqual(host.feed.snapshot().items,[]);
+  const revision=host.feed.snapshot().revision;
+  await dismiss({id:'1'});assert.equal(host.feed.snapshot().revision,revision);
+});
+test("dismissal is opt-in and cache deletions stay within their source scope",async t=>{
+  const cache={schemaVersion:1,source:'other',updatedAt:1000,items:[],complete:true,dismissedIds:['1']};
+  const host=await setup(t,async()=>({items:[item],complete:true}),cache,{}, {dismissible:true});
+  await host.feed.settled();assert.deepEqual(host.feed.snapshot().items,[item]);
+  const readonly=await setup(t,async()=>({items:[item],complete:true}));
+  await readonly.feed.settled();assert.equal(readonly.handlers.has('dismissFeedItem'),false);
 });

@@ -1,5 +1,11 @@
 # Release notes
 
+## Unreleased
+
+- Libra experiments can be removed from the local list, with dismissals retained across refreshes and restarts without changing the experiment in Libra.
+- Experiment rows show compact status labels and right-aligned traffic allocation meters with theme-matched fills, hover actions and keyboard focus support.
+- Live UI verified on Codex 26.1016.61520 (build 21421).
+
 ## npm installation candidate: Orbit 0.5.4, Tags 0.9.1, Todo 0.1.0 and Home 0.1.0
 
 - Independent Home and Todo plugins install from npm through Orbit's plugin manager.
