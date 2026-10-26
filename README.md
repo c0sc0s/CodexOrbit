@@ -14,6 +14,7 @@ Install **Orbit**, then choose optional capabilities. Orbit owns the launcher, r
 | [Orbit Tags](packages/orbit-tags/README.md) · `@c0sc0s/orbit-tags` | Tags, search, sidebar UI and naming hooks |
 | [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | Personal tasks, nested subtasks, local CLI and agent skill |
 | [Orbit Home](packages/orbit-home/README.md) · `@c0sc0s/orbit-home` | Personal homepage with optional plugin modules |
+| [Orbit Context](packages/orbit-context/README.md) · `@c0sc0s/orbit-context` | Compact context-usage hover card with local composition estimates (release candidate) |
 | `website` | Product website |
 
 ## Install from npm

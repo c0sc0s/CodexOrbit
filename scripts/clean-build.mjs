@@ -4,6 +4,6 @@ import { resolve } from "node:path";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const workspace = await realpath(process.cwd());
-const allowed = ["orbit", "orbit-tags", "orbit-todo", "orbit-home", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"].map(name => resolve(root, "packages", name));
+const allowed = ["orbit", "orbit-tags", "orbit-todo", "orbit-home", "orbit-context", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"].map(name => resolve(root, "packages", name));
 if (!allowed.includes(workspace)) throw new Error("Build cleanup requires an Orbit workspace");
 await rm(resolve(workspace, "dist"), { recursive: true, force: true });

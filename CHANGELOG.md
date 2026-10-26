@@ -1,5 +1,12 @@
 # Release notes
 
+## Orbit Context 0.1.0 candidate
+
+- Hover the existing Codex context ring for a compact usage card, ranked categories and source details, with an optional treemap.
+- Show the last request's measured token usage and cache hit rate; identify locally estimated composition and unallocated overhead.
+- Read local rollout files without changing conversations or returning message bodies to the renderer.
+- Install independently of Tags on Orbit 0.5.4; bundle the shared host adapter at build time.
+
 ## Unreleased
 
 - Adopt the MIT License for project code and workspace packages while preserving the bundled fonts' SIL Open Font License notices.
