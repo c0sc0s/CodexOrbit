@@ -22,6 +22,10 @@ The pinned candidate versions passed registry installation in a fresh npm cache 
 
 `npm run qa:app` exercises an injected app without restarting Codex, renaming tasks or saving tag edits. It does not validate hook authorization. Record the exact Codex version and build during release acceptance.
 
+## Context 0.1.0 candidate
+
+Context runtime 0.1.2 has passed native hover, measured local RPC, category source drilldown, compact treemap and pointer-dismissal checks in the running macOS app. Its six-category overview measured approximately 352 × 319 CSS pixels. Analysis, compaction, desktop session identities, keyboard interaction, cancellation and cleanup are covered by automated tests. Packed installation confirms the plugin works without a Tags runtime dependency. Exact release acceptance and remaining cold-launch / registry gates are tracked in the [Context release checklist](context-release.md).
+
 ## Adapter requirements
 
 Validate host anchors before DOM changes, preserve native content and attributes, and disable the affected enhancement when checks fail. Private selectors belong in Tags' `codex-dom-adapter.ts`. Diagnostics expose capabilities and bounded errors, never session bodies.

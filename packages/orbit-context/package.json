@@ -1,0 +1,48 @@
+{
+  "name": "@c0sc0s/orbit-context",
+  "version": "0.1.0",
+  "description": "Local Codex session context composition and token usage.",
+  "type": "module",
+  "files": [
+    "runtime/",
+    "dist/service/",
+    "dist/shared/",
+    "orbit-plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.json && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm --prefix ../.. run verify && npm --prefix ../.. run test:package"
+  },
+  "dependencies": {
+    "@c0sc0s/orbit": "0.5.4"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "esbuild": "0.28.2",
+    "happy-dom": "20.14.0",
+    "@types/node": "22.19.19",
+    "@c0sc0s/orbit-tags": "0.9.1"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c0sc0s/CodexOrbit.git",
+    "directory": "packages/orbit-context"
+  },
+  "bugs": {
+    "url": "https://github.com/c0sc0s/CodexOrbit/issues"
+  },
+  "homepage": "https://github.com/c0sc0s/CodexOrbit/tree/main/packages/orbit-context#readme"
+}

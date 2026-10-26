@@ -33,7 +33,7 @@
   "homepage": "https://github.com/c0sc0s/codex-tags#readme",
   "scripts": {
     "prepublishOnly": "npm --prefix ../.. run verify && npm --prefix ../.. run test:package",
-    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && node scripts/build.mjs",
+    "build": "node ../../scripts/clean-build.mjs && tsc -p tsconfig.node.json && tsc -p tsconfig.host-adapter.json && node scripts/build.mjs",
     "prepack": "npm run build",
     "check": "node ../../scripts/check.mjs",
     "dev:apply": "npm run build && node scripts/manage.mjs install && node scripts/manage.mjs apply",
@@ -58,5 +58,11 @@
     "preact": "10.29.8",
     "typescript": "7.0.2",
     "vitest": "5.0.0"
+  },
+  "exports": {
+    "./host-adapter": {
+      "types": "./dist/host-adapter/codex-dom-adapter.d.ts",
+      "import": "./dist/host-adapter/codex-dom-adapter.js"
+    }
   }
 }

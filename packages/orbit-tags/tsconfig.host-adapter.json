@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "runtime/src/injected", "outDir": "dist/host-adapter", "declaration": true, "types": [], "lib": ["ES2022", "DOM", "DOM.Iterable"] },
+  "include": ["runtime/src/injected/codex-dom-adapter.ts"]
+}

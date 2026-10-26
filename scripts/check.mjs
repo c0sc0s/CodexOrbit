@@ -7,13 +7,13 @@ import { fileURLToPath } from "node:url";
 process.chdir(dirname(dirname(fileURLToPath(import.meta.url))));
 
 const run = promisify(execFile);
-for (const directory of ["packages/orbit/src", "packages/orbit-tags/runtime/src", "packages/orbit-tags/hooks", "scripts", "packages/orbit-tags/scripts", "packages/orbit-tags/bin", "packages/orbit-todo/src", "packages/orbit-todo/bin", "packages/orbit-todo/scripts", "packages/orbit-home/src", "packages/orbit-home/scripts", "packages/orbit-byted/src", "packages/orbit-byted-meego/src", "packages/orbit-byted-meego/scripts", "packages/orbit-byted-libra/src", "packages/orbit-byted-libra/scripts"]) {
+for (const directory of ["packages/orbit/src", "packages/orbit-tags/runtime/src", "packages/orbit-tags/hooks", "scripts", "packages/orbit-tags/scripts", "packages/orbit-tags/bin", "packages/orbit-todo/src", "packages/orbit-todo/bin", "packages/orbit-todo/scripts", "packages/orbit-context/src", "packages/orbit-context/scripts", "packages/orbit-home/src", "packages/orbit-home/scripts", "packages/orbit-byted/src", "packages/orbit-byted-meego/src", "packages/orbit-byted-meego/scripts", "packages/orbit-byted-libra/src", "packages/orbit-byted-libra/scripts"]) {
   for (const file of await readdir(directory, { recursive: true })) {
     if (file.endsWith(".mjs")) await run(process.execPath, ["--check", join(directory, file)]);
   }
 }
 
-for (const workspace of ["orbit", "orbit-tags", "orbit-todo", "orbit-home", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"]) {
+for (const workspace of ["orbit", "orbit-tags", "orbit-context", "orbit-todo", "orbit-home", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"]) {
   const root = resolve("packages", workspace);
   const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   if (workspace === "orbit" && Object.keys(manifest.dependencies ?? {}).some(name => !["figlet", "ora", "picocolors"].includes(name))) {
@@ -35,7 +35,7 @@ for (const workspace of ["orbit", "orbit-tags", "orbit-todo", "orbit-home", "orb
   }
 }
 
-const documentation = ["README.md", "README.zh-CN.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md", "packages/orbit/README.md", "packages/orbit-tags/README.md", "packages/orbit-tags/README.zh-CN.md", "packages/orbit-tags/CHANGELOG.md", "packages/orbit-todo/README.md", "packages/orbit-home/README.md", "packages/orbit-byted/README.md", "packages/orbit-byted-meego/README.md", "packages/orbit-byted-libra/README.md"];
+const documentation = ["README.md", "README.zh-CN.md", "CONTRIBUTING.md", "AGENTS.md", "CHANGELOG.md", "packages/orbit/README.md", "packages/orbit-tags/README.md", "packages/orbit-tags/README.zh-CN.md", "packages/orbit-tags/CHANGELOG.md", "packages/orbit-todo/README.md", "packages/orbit-home/README.md", "packages/orbit-context/README.md", "packages/orbit-byted/README.md", "packages/orbit-byted-meego/README.md", "packages/orbit-byted-libra/README.md"];
 for (const directory of ["docs", "packages/orbit/assets", "packages/orbit-tags/assets", "packages/orbit-tags/skills", "packages/orbit-todo/skills"]) {
   for (const file of await readdir(directory, { recursive: true })) {
     if (file.endsWith(".md")) documentation.push(join(directory, file));

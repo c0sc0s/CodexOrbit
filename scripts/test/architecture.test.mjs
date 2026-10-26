@@ -49,3 +49,10 @@ test("ByteDance plugins share only environment-appropriate public exports", () =
     assert.throws(()=>assertPublicDependency(workspace,'service/activate.ts','@c0sc0s/orbit',false),/public SDK/);
   }
 });
+
+test("Context bundles only the public browser host adapter from Tags", () => {
+  assert.doesNotThrow(() => assertPublicDependency("orbit-context", "injected/entry.ts", "@c0sc0s/orbit-tags/host-adapter", false));
+  assert.throws(() => assertPublicDependency("orbit-context", "service/activate.ts", "@c0sc0s/orbit-tags/host-adapter", false), /public SDK/);
+  assert.throws(() => assertPublicDependency("orbit-context", "injected/entry.ts", "@c0sc0s/orbit-tags", false), /public SDK/);
+  assert.throws(() => assertLayerDependency("orbit-context", "injected/entry.ts", "service/analyzer.ts"), /Forbidden layer/);
+});

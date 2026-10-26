@@ -40,6 +40,10 @@ The independent Todo plugin can also be added from this checkout with `orbit plu
 
 Review SessionStart, UserPromptSubmit and SessionEnd in Codex Plugins. Registration does not grant trust or prove a hook executed.
 
+## Context release candidate
+
+Context 0.1.0 provides the native context-ring hover card and requires Orbit 0.5.4. It is independently installable from the built `packages/orbit-context` directory; Tags is not required at runtime. The first npm publication and release acceptance are tracked in the [Context release checklist](context-release.md).
+
 ## Plugin operations
 
 The CLI shows Orbit branding, live operation progress and readable results with next steps in interactive terminals. Use `--plain` for text without color or animation, or `--json` for structured results. Redirected output defaults to JSON for compatibility with scripts. `NO_COLOR` and dumb terminals disable terminal effects; CI disables animation. Progress goes to stderr and results go to stdout. These presentation options apply to platform commands, not the advanced `--config` loader interface.

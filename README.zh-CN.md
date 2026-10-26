@@ -14,6 +14,7 @@
 | [Orbit Tags](packages/orbit-tags/README.zh-CN.md) · `@c0sc0s/orbit-tags` | 标签、搜索、侧边栏 UI 和命名 hooks |
 | [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | 跨会话个人任务、嵌套子任务、本地 CLI 与 Agent Skill |
 | [Orbit Home](packages/orbit-home/README.md) · `@c0sc0s/orbit-home` | 个人首页与可选插件模块 |
+| [Orbit Context](packages/orbit-context/README.md) · `@c0sc0s/orbit-context` | 紧凑的上下文悬停卡片、本地构成估算与来源明细（发布候选） |
 | `website` | 产品网站 |
 
 ## 从 npm 安装

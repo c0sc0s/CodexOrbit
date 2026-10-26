@@ -12,6 +12,17 @@ export const codexLabels = {
   plugins: ["Plugins", "插件"],
 } as const;
 
+/** Public build-time adapter; consumers bundle it without activating the Tags plugin. */
+export function contextUsageTrigger(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) return null;
+  const trigger = target.closest<HTMLElement>('[role="img"][aria-label]');
+  return trigger && /^(?:Context usage:|上下文用量[：:]|情境使用量[：:])\s*[\d.,]+\s*[%％]$/u.test(trigger.getAttribute("aria-label") ?? "") ? trigger : null;
+}
+
+export function contextUsageTriggers(document: Document): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('[role="img"][aria-label]')].filter(element => contextUsageTrigger(element) === element);
+}
+
 export interface CodexCapabilities {
   adapter: "codex-private-dom-v1";
   threadTitles: boolean;
@@ -171,4 +182,8 @@ export function findSidebarFilterAnchor(): { headingTemplate: HTMLElement; headi
   if (toggle) return { headingTemplate: toggle, headingRow: sidebarSectionHeading(toggle) };
   const projectsHeader = findProjectsHeader();
   return projectsHeader ? { headingTemplate: projectsHeader, headingRow: projectsHeader } : null;
+}
+
+export function selectedThreadId(): string | null {
+  return document.querySelector('[data-app-action-sidebar-thread-selected="true"]')?.getAttribute("data-app-action-sidebar-thread-id") ?? null;
 }
