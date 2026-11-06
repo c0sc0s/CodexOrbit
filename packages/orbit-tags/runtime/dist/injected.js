@@ -212,6 +212,9 @@ var CodexPlugin = (() => {
     threadTitle: "[data-thread-title]",
     threadWorking: '[role="status"] [class~="motion-safe:animate-spin"]'
   };
+  function threadRowInteractionSelector() {
+    return `${codexSelectors.threadRow}:is(:hover, :focus-within, [data-app-action-sidebar-thread-selected="true"])`;
+  }
   var codexLabels = {
     pinned: ["Pinned", "\u7F6E\u9876", "\u5DF2\u7F6E\u9876"],
     plugins: ["Plugins", "\u63D2\u4EF6"]
@@ -229,6 +232,18 @@ var CodexPlugin = (() => {
     return Array.from(document.querySelectorAll(codexSelectors.threadTitle)).filter(
       (node) => !node.closest(`#${toolbarId}`)
     );
+  }
+  var threadHeaderSelector = "[data-app-shell-titlebar-content]";
+  function queryThreadHeaderTitles() {
+    return [...document.querySelectorAll(`[data-app-shell-header-toolbar] ${threadHeaderSelector} > div.truncate`)].flatMap((title) => {
+      const node = title.firstChild;
+      return title.childNodes.length === 1 && node instanceof Text && !title.isContentEditable ? [node] : [];
+    });
+  }
+  function isThreadHeaderMutation(mutation) {
+    const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+    if (target?.closest(threadHeaderSelector)) return true;
+    return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node instanceof Element && (node.matches(threadHeaderSelector) || Boolean(node.querySelector(threadHeaderSelector))));
   }
   function findNavigationButton(labels) {
     const candidates = typeof labels === "string" ? [labels] : labels;
@@ -2197,7 +2212,7 @@ var CodexPlugin = (() => {
         this.refreshCount += 1;
         this.scheduleObserverRefresh();
       });
-      this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["role", "aria-label", "class"] });
+      this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["role", "aria-label", "class", "contenteditable"] });
     }
     deferIfInteracting(reason) {
       const focusWithin = this.options.hasInteractionFocus();
@@ -2259,6 +2274,37 @@ var CodexPlugin = (() => {
     flushDeferredRefresh() {
       if (!this.pendingRefresh || this.pointerActive || this.options.hasInteractionFocus()) return;
       this.options.onRefresh("interaction-end");
+    }
+  };
+
+  // runtime/src/injected/header-title-decorator.ts
+  var HeaderTitleDecorator = class {
+    originals = /* @__PURE__ */ new Map();
+    refresh(nodes) {
+      const current = new Set(nodes);
+      for (const [node, original] of this.originals) {
+        if (current.has(node)) continue;
+        this.restore(node, original);
+        this.originals.delete(node);
+      }
+      for (const node of current) {
+        if (node.data === this.originals.get(node)?.display) continue;
+        const raw = node.data;
+        const parsed = parseTitleMetadata(raw);
+        if (!parsed) {
+          this.originals.delete(node);
+          continue;
+        }
+        this.originals.set(node, { raw, display: parsed.title });
+        node.data = parsed.title;
+      }
+    }
+    dispose() {
+      for (const [node, original] of this.originals) this.restore(node, original);
+      this.originals.clear();
+    }
+    restore(node, original) {
+      if (node.data === original.display) node.data = original.raw;
     }
   };
 
@@ -2988,7 +3034,7 @@ var CodexPlugin = (() => {
 
 
     [${ENHANCED}] { min-width: 0; }
-    .codex-sidebar-tag-layout { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
+    .codex-sidebar-tag-layout { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; max-width: 100%; vertical-align: middle; }
     .codex-sidebar-filter-chip {
       display: inline-flex; flex: 0 0 auto; align-items: center; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
       border-radius: 999px; font-weight: 650; letter-spacing: .01em;
@@ -2998,8 +3044,9 @@ var CodexPlugin = (() => {
       border: 0; color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-tertiary, #777)) 44%, var(--color-text-tertiary, var(--color-token-text-tertiary, #777)));
       background: transparent; font-size: 10px; font-weight: 600; line-height: 18px; white-space: nowrap; transition: color 120ms ease;
     }
-    [${ROW}="true"]:hover .codex-sidebar-tag-chip { color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-secondary, #999)) 68%, var(--color-text-secondary, var(--color-token-text-secondary, #999))); }
-    .codex-sidebar-tag-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .codex-sidebar-tag-chip { display: none; flex: 0 1 auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 500; }
+    ${threadRowInteractionSelector()} .codex-sidebar-tag-chip { display: block; color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-secondary, #999)) 68%, var(--color-text-secondary, var(--color-token-text-secondary, #999))); }
+    .codex-sidebar-tag-title { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #${FILTER_BAR_ID} { min-width: 0; margin: 0 0 6px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); }
     .codex-sidebar-tags-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; margin: 0; }
@@ -3243,7 +3290,7 @@ var CodexPlugin = (() => {
       const title = document.createElement("span");
       title.className = "codex-sidebar-tag-title";
       title.textContent = parsed.title;
-      layout.append(tag, title);
+      layout.append(title, tag);
       node.setAttribute(rawTitleAttribute, parsed.raw);
       node.setAttribute(enhancedAttribute, version);
       node.setAttribute("aria-label", parsed.raw);
@@ -3569,6 +3616,7 @@ var CodexPlugin = (() => {
       rawTitleAttribute: RAW,
       parseTitle: parse
     });
+    const headerTitleDecorator = new HeaderTitleDecorator();
     const sessionRegistry = new SessionRegistry(
       localStorage,
       CACHE_KEY,
@@ -3862,6 +3910,7 @@ var CodexPlugin = (() => {
       }
     });
     const refresh = (reason = "observer") => {
+      headerTitleDecorator.refresh(queryThreadHeaderTitles());
       const nodes = titleNodes();
       nodes.forEach((node) => titleDecorator.enhance(node));
       const entries = entriesFrom(nodes);
@@ -3880,6 +3929,7 @@ var CodexPlugin = (() => {
       isRelevantMutation: (mutation) => {
         const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
         if (!target || host?.contains(target) || filterHost?.contains(target) || dashboardView.contains(target)) return false;
+        if (isThreadHeaderMutation(mutation)) return true;
         if (isThreadTitleElement(target) || isThreadRowElement(target)) return true;
         return [...mutation.addedNodes, ...mutation.removedNodes].some(mutationContainsSidebarNode);
       },
@@ -3990,6 +4040,7 @@ var CodexPlugin = (() => {
         clearPendingSearch();
         stopLocaleObserver();
         hostLifecycle.dispose();
+        headerTitleDecorator.dispose();
         sidebarTagOrder.dispose();
         titleDecorator.dispose(document.querySelectorAll(`[${ENHANCED}]`));
         sidebarTagFilter.dispose(document.querySelectorAll(`[${FILTERED}]`));

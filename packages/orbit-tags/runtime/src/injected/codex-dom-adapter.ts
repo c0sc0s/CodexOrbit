@@ -7,6 +7,10 @@ export const codexSelectors = {
   threadWorking: '[role="status"] [class~="motion-safe:animate-spin"]',
 } as const;
 
+export function threadRowInteractionSelector(): string {
+  return `${codexSelectors.threadRow}:is(:hover, :focus-within, [data-app-action-sidebar-thread-selected="true"])`;
+}
+
 export const codexLabels = {
   pinned: ["Pinned", "置顶", "已置顶"],
   plugins: ["Plugins", "插件"],
@@ -45,6 +49,23 @@ export function queryThreadTitles(toolbarId: string): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>(codexSelectors.threadTitle)).filter(
     (node) => !node.closest(`#${toolbarId}`),
   );
+}
+
+const threadHeaderSelector = "[data-app-shell-titlebar-content]";
+
+export function queryThreadHeaderTitles(): Text[] {
+  return [...document.querySelectorAll<HTMLElement>(`[data-app-shell-header-toolbar] ${threadHeaderSelector} > div.truncate`)].flatMap((title) => {
+    const node = title.firstChild;
+    return title.childNodes.length === 1 && node instanceof Text && !title.isContentEditable
+      ? [node] : [];
+  });
+}
+
+export function isThreadHeaderMutation(mutation: MutationRecord): boolean {
+  const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+  if (target?.closest(threadHeaderSelector)) return true;
+  return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node instanceof Element
+    && (node.matches(threadHeaderSelector) || Boolean(node.querySelector(threadHeaderSelector))));
 }
 
 export function findNavigationButton(labels: string | readonly string[]): HTMLButtonElement | undefined {

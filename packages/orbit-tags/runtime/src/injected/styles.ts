@@ -1,3 +1,5 @@
+import { threadRowInteractionSelector } from "./codex-dom-adapter";
+
 export interface RuntimeStyleOptions {
   enhancedAttribute: string;
   toolbarId: string;
@@ -28,7 +30,7 @@ export function buildRuntimeStyles({
 
 
     [${ENHANCED}] { min-width: 0; }
-    .codex-sidebar-tag-layout { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
+    .codex-sidebar-tag-layout { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; max-width: 100%; vertical-align: middle; }
     .codex-sidebar-filter-chip {
       display: inline-flex; flex: 0 0 auto; align-items: center; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
       border-radius: 999px; font-weight: 650; letter-spacing: .01em;
@@ -38,8 +40,9 @@ export function buildRuntimeStyles({
       border: 0; color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-tertiary, #777)) 44%, var(--color-text-tertiary, var(--color-token-text-tertiary, #777)));
       background: transparent; font-size: 10px; font-weight: 600; line-height: 18px; white-space: nowrap; transition: color 120ms ease;
     }
-    [${ROW}="true"]:hover .codex-sidebar-tag-chip { color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-secondary, #999)) 68%, var(--color-text-secondary, var(--color-token-text-secondary, #999))); }
-    .codex-sidebar-tag-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .codex-sidebar-tag-chip { display: none; flex: 0 1 auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 500; }
+    ${threadRowInteractionSelector()} .codex-sidebar-tag-chip { display: block; color: color-mix(in srgb, var(--codex-sidebar-tag-color, var(--color-text-secondary, #999)) 68%, var(--color-text-secondary, var(--color-token-text-secondary, #999))); }
+    .codex-sidebar-tag-title { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     #${FILTER_BAR_ID} { min-width: 0; margin: 0 0 6px; color: var(--color-text-foreground, var(--color-token-text-primary, inherit)); }
     .codex-sidebar-tags-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; margin: 0; }

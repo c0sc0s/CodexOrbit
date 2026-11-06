@@ -10,6 +10,10 @@ The portable fallback metadata lives in the session title:
 
 New names contain one ASCII-bracketed tag and the title, with no date/time metadata. The parser also accepts date-bearing metadata and Chinese brackets. Tags are case-insensitive for color lookup but retain their original display spelling. `Uncategorized` is the reserved fallback when no configured tag fits; user tag data is not translated.
 
+The conversation header displays only the parsed title, including for `Uncategorized` and legacy date-bearing names. This reversible text decoration follows native title changes without changing the stored name or sidebar tags, and restores the current raw title when the plugin is disposed.
+
+Sidebar titles stay left-aligned. Their tag appears at the trailing edge only while the native row is selected, hovered or contains keyboard focus; hidden tags take no title space. The raw title remains available to assistive technology, filtering and search.
+
 ## New-session naming hook
 
 The plugin bundles `SessionStart`, `UserPromptSubmit`, and `SessionEnd` lifecycle hooks. A `startup` event arms one session ID, and the first prompt for that ID consumes the marker and receives a compact developer-context naming policy. Resumed sessions and later prompts receive no context. `SessionEnd` removes an unused marker.
