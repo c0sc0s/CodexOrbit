@@ -1,0 +1,11 @@
+{
+  "name": "better-work-tree",
+  "version": "0.1.0+codex.20261106.1",
+  "description": "Inspect the active Git worktree, branch and working directory from the Codex composer.",
+  "author": { "name": "Orbit contributors" },
+  "interface": {
+    "displayName": "Better Work Tree",
+    "shortDescription": "悬停输入框工具图标，查看 Worktree、分支和工作目录。",
+    "capabilities": ["Interactive"]
+  }
+}

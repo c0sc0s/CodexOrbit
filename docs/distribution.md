@@ -38,6 +38,8 @@ If Codex is running without debugging, quit it manually before starting Orbit. O
 
 The independent Todo plugin can also be added from this checkout with `orbit plugin add ./packages/orbit-todo`. Its official Codex extension packages the Todo skill, while Orbit loads its local task panel and service. See the [Todo guide](../packages/orbit-todo/README.md) for the packaged CLI and data/concurrency contract.
 
+Add Better Work Tree with `orbit plugin add ./packages/orbit-workspace`. Its composer icon opens a hover panel with worktree status, branch and working directory. The native extension is named **Better Work Tree**, with Orbit ID `better-work-tree`; existing `orbit-workspace` registrations migrate automatically. See its [guide](../packages/orbit-workspace/README.md).
+
 Review SessionStart, UserPromptSubmit and SessionEnd in Codex Plugins. Registration does not grant trust or prove a hook executed.
 
 ## Context release candidate

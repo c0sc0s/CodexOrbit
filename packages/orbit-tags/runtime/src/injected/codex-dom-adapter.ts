@@ -208,3 +208,21 @@ export function findSidebarFilterAnchor(): { headingTemplate: HTMLElement; headi
 export function selectedThreadId(): string | null {
   return document.querySelector('[data-app-action-sidebar-thread-selected="true"]')?.getAttribute("data-app-action-sidebar-thread-id") ?? null;
 }
+
+export function workspaceComposer(): HTMLElement | null {
+  const roots = [...document.querySelectorAll<HTMLElement>('[data-codex-composer-root][data-composer-placement="thread"]')]
+    .filter(root => root.getBoundingClientRect().width > 0 && root.querySelector('[data-codex-composer][contenteditable="true"]'));
+  return roots.length === 1 ? roots[0] : null;
+}
+
+export function workspaceComposerControls(): { container: HTMLElement; template: HTMLButtonElement } | null {
+  const composer = workspaceComposer();
+  const template = composer?.querySelector<HTMLButtonElement>('button[data-composer-navigation-target="add-context"]');
+  const permissions = composer?.querySelector<HTMLButtonElement>('button[data-composer-navigation-target="permissions"]');
+  const container = permissions?.parentElement;
+  return template && container && template.parentElement === container ? { container, template } : null;
+}
+
+export const workspaceObserverAttributes = [
+  "data-app-action-sidebar-thread-selected", "data-app-action-sidebar-thread-id", "data-composer-placement", "data-composer-navigation-target", "hidden", "aria-hidden", "style",
+] as const;

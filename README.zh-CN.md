@@ -15,6 +15,7 @@
 | [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | 跨会话个人任务、嵌套子任务、本地 CLI 与 Agent Skill |
 | [Orbit Home](packages/orbit-home/README.md) · `@c0sc0s/orbit-home` | 个人首页与可选插件模块 |
 | [Orbit Context](packages/orbit-context/README.md) · `@c0sc0s/orbit-context` | 紧凑的上下文悬停卡片、本地构成估算与来源明细（发布候选） |
+| [Better Work Tree](packages/orbit-workspace/README.md) · `@c0sc0s/orbit-workspace` | 输入框图标悬停查看 Worktree、分支和工作目录 |
 | `website` | 产品网站 |
 
 ## 从 npm 安装

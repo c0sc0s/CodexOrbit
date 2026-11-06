@@ -19,6 +19,7 @@ const rules = {
     shared: [], injected: ["shared"], service: ["shared"], host: ["shared"],
   },
   "orbit-context": { shared: [], injected: ["shared"], service: ["shared"] },
+  "orbit-workspace": { shared: [], injected: ["shared"], service: ["shared"] },
   "orbit-home": { shared: [], injected: ["shared"], service: ["shared"] },
   "orbit-byted": { shared: [], injected: ["shared"], service: ["shared"] },
   "orbit-byted-meego": { shared: [], injected: ["shared"], service: ["shared"] },
@@ -68,13 +69,13 @@ export function assertLayerDependency(workspace, file, target) {
 
 export function assertPublicDependency(workspace, file, specifier, typeOnly) {
   const layer = file.split("/")[0];
-  if (workspace === "orbit-context" && layer === "injected" && specifier === "@c0sc0s/orbit-tags/host-adapter") return;
+  if (["orbit-context", "orbit-workspace"].includes(workspace) && layer === "injected" && specifier === "@c0sc0s/orbit-tags/host-adapter") return;
   const bytedPlugin = ["orbit-byted-meego", "orbit-byted-libra"].includes(workspace);
   if (bytedPlugin && specifier.startsWith("@c0sc0s/orbit-")) {
     const allowed = ["@c0sc0s/orbit-byted/model", ...layer === "service" ? ["@c0sc0s/orbit-byted/service"] : layer === "injected" ? ["@c0sc0s/orbit-byted/ui"] : []];
     if (!allowed.includes(specifier)) throw new Error(`Forbidden ByteDance package dependency: ${file} → ${specifier}`);
   }
-  if ((["orbit-context", "orbit-todo", "orbit-home", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"].includes(workspace) || workspace === "orbit-tags" && ["service", "injected"].includes(layer)) && specifier.startsWith("@c0sc0s/orbit")) {
+  if ((["orbit-context", "orbit-workspace", "orbit-todo", "orbit-home", "orbit-byted", "orbit-byted-meego", "orbit-byted-libra"].includes(workspace) || workspace === "orbit-tags" && ["service", "injected"].includes(layer)) && specifier.startsWith("@c0sc0s/orbit")) {
     const sdkContract = typeOnly && specifier === "@c0sc0s/orbit/sdk";
     const rendererUi = layer === "injected" && specifier === "@c0sc0s/orbit/ui";
     const bytedSupport = bytedPlugin && specifier.startsWith("@c0sc0s/orbit-byted/");
