@@ -1,0 +1,41 @@
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { mkdtemp, readFile, access, rm, symlink, cp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+import { createInstallationManager } from "../packages/orbit/dist/installation/manager.js";
+
+const run = promisify(execFile), temporary = await mkdtemp(join(tmpdir(), "orbit-workspace-package-"));
+try {
+  const packed = JSON.parse((await run("npm", ["pack", "--json", "--ignore-scripts", "--cache", join(temporary, "npm-cache"), "--pack-destination", temporary], { cwd: resolve("packages/orbit-workspace"), maxBuffer: 4 * 1024 * 1024 })).stdout)[0];
+  const files = packed.files.map(file => file.path);
+  for (const file of [".codex-plugin/plugin.json", "orbit-plugin.json", "runtime/injected.js", "dist/service/activate.js", "dist/service/catalog.js", "dist/shared/model.js", "README.md"]) assert.ok(files.includes(file), `Missing Workspace payload: ${file}`);
+  assert.ok(!files.some(file => /(?:^|\/)(?:node_modules|src|test|\.git)(?:\/|$)|\.(?:jsonl|sqlite|log)$/u.test(file)));
+  const unpacked = join(temporary, "package");
+  await run("tar", ["-xf", join(temporary, packed.filename), "-C", temporary]);
+  await symlink(resolve("node_modules"), join(temporary, "node_modules"));
+  const platform = createInstallationManager({ home: temporary, root: join(temporary, "orbit"), applicationsRoot: join(temporary, "Applications"), manageExtensions: false });
+  await platform.install();
+  const legacy = join(temporary, "legacy"); await cp(unpacked, legacy, { recursive: true });
+  const manifest = JSON.parse(await readFile(join(legacy, "orbit-plugin.json"), "utf8"));
+  await writeFile(join(legacy, "orbit-plugin.json"), JSON.stringify({ ...manifest, id: "orbit-workspace", legacyIds: undefined, codex: undefined }));
+  await platform.addPlugin(legacy);
+  const previousDirectory = (await platform.read()).orbit.packages["orbit-workspace"].dataDirectory;
+  await platform.addPlugin(unpacked);
+  const config = await platform.read(), snapshot = join(platform.paths.root, config.orbit.packages["better-work-tree"].path);
+  assert.deepEqual(config.plugins.map(plugin => plugin.id), ["better-work-tree"]);
+  assert.equal(config.orbit.packages["orbit-workspace"], undefined);
+  assert.equal(config.orbit.packages["better-work-tree"].dataDirectory, previousDirectory);
+  const extension = JSON.parse(await readFile(join(snapshot, ".codex-plugin/plugin.json"), "utf8"));
+  assert.equal(extension.name, "better-work-tree"); assert.equal(extension.interface.displayName, "Better Work Tree");
+  assert.ok((await readFile(join(snapshot, "runtime/injected.js"), "utf8")).includes("data-composer-navigation-target"));
+  await assert.rejects(access(join(snapshot, "node_modules/@c0sc0s/orbit-tags")));
+  const { activate } = await import(pathToFileURL(join(snapshot, "dist/service/activate.js")));
+  const handlers = new Map(); activate({ stateDirectory: join(temporary, "data"), rpc: { handle: (name, handler) => handlers.set(name, handler) } });
+  assert.equal(handlers.size, 1);
+  await assert.rejects(handlers.get("workspace.read")({ sessionId: "../invalid" }, { signal: new AbortController().signal }), /Invalid session/);
+  await platform.setEnabled("better-work-tree", false); await platform.uninstallPlugin("better-work-tree"); assert.equal((await platform.read()).plugins.length, 0);
+  console.log("Better Work Tree package smoke passed: named extension, legacy migration, standalone SQLite service and plugin lifecycle.");
+} finally { await rm(temporary, { recursive: true, force: true }); }

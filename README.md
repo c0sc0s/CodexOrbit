@@ -15,6 +15,7 @@ Install **Orbit**, then choose optional capabilities. Orbit owns the launcher, r
 | [Orbit Todo](packages/orbit-todo/README.md) · `@c0sc0s/orbit-todo` | Personal tasks, nested subtasks, local CLI and agent skill |
 | [Orbit Home](packages/orbit-home/README.md) · `@c0sc0s/orbit-home` | Personal homepage with optional plugin modules |
 | [Orbit Context](packages/orbit-context/README.md) · `@c0sc0s/orbit-context` | Compact context-usage hover card with local composition estimates (release candidate) |
+| [Better Work Tree](packages/orbit-workspace/README.md) · `@c0sc0s/orbit-workspace` | Worktree status, branch and directory from a composer hover panel |
 | `website` | Product website |
 
 ## Install from npm

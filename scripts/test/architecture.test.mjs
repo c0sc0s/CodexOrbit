@@ -56,3 +56,10 @@ test("Context bundles only the public browser host adapter from Tags", () => {
   assert.throws(() => assertPublicDependency("orbit-context", "injected/entry.ts", "@c0sc0s/orbit-tags", false), /public SDK/);
   assert.throws(() => assertLayerDependency("orbit-context", "injected/entry.ts", "service/analyzer.ts"), /Forbidden layer/);
 });
+
+test("Workspace bundles only the public browser host adapter from Tags", () => {
+  assert.doesNotThrow(() => assertPublicDependency("orbit-workspace", "injected/entry.ts", "@c0sc0s/orbit-tags/host-adapter", false));
+  assert.throws(() => assertPublicDependency("orbit-workspace", "service/activate.ts", "@c0sc0s/orbit-tags/host-adapter", false), /public SDK/);
+  assert.throws(() => assertPublicDependency("orbit-workspace", "injected/entry.ts", "@c0sc0s/orbit-tags", false), /public SDK/);
+  assert.throws(() => assertLayerDependency("orbit-workspace", "injected/entry.ts", "service/repository.ts"), /Forbidden layer/);
+});
