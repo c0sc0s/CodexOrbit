@@ -48,7 +48,7 @@ export class TitleDecorator {
     const title = document.createElement("span");
     title.className = "codex-sidebar-tag-title";
     title.textContent = parsed.title;
-    layout.append(tag, title);
+    layout.append(title, tag);
     node.setAttribute(rawTitleAttribute, parsed.raw);
     node.setAttribute(enhancedAttribute, version);
     node.setAttribute("aria-label", parsed.raw);

@@ -3,7 +3,7 @@
   "id": "orbit-tags",
   "legacyIds": ["codex-tags"],
   "version": "0.9.1",
-  "runtimeVersion": "6.5.13",
+  "runtimeVersion": "6.5.17",
   "orbit": { "min": "0.5.4", "maxExclusive": "0.6.0" },
   "renderer": "runtime/dist/injected.js",
   "service": "dist/runtime/src/service/activate.js",

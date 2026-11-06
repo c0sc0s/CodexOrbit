@@ -32,7 +32,7 @@ export class HostLifecycle {
       this.refreshCount += 1;
       this.scheduleObserverRefresh();
     });
-    this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["role", "aria-label", "class"] });
+    this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["role", "aria-label", "class", "contenteditable"] });
   }
 
   deferIfInteracting(reason: string): boolean {

@@ -17,11 +17,13 @@ import {
   hasVisiblePinnedThread,
   isPinnedThreadRow,
   isProjectCollapsed,
+  isThreadHeaderMutation,
   isThreadTitleElement,
   isThreadRowElement,
   mutationContainsSidebarNode,
   projectIdForThreadRow,
   queryThreadTitles,
+  queryThreadHeaderTitles,
   queryRunningThreadTitles,
   sectionToggleForThreadRow,
   sidebarOrderGroups,
@@ -29,6 +31,7 @@ import {
 } from "./codex-dom-adapter";
 import { DashboardView } from "./dashboard-view";
 import { HostLifecycle } from "./host-lifecycle";
+import { HeaderTitleDecorator } from "./header-title-decorator";
 import { observeCodexLocale, RuntimeI18n } from "./i18n";
 import type { ContentSearchMatch, ParsedSessionTitle, SessionEntry } from "./models";
 import { RuntimeClient } from "./runtime-client";
@@ -124,6 +127,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     rawTitleAttribute: RAW,
     parseTitle: parse,
   });
+  const headerTitleDecorator = new HeaderTitleDecorator();
   const sessionRegistry = new SessionRegistry(
     localStorage,
     CACHE_KEY,
@@ -420,6 +424,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
   });
 
   const refresh = (reason = "observer"): void => {
+    headerTitleDecorator.refresh(queryThreadHeaderTitles());
     const nodes = titleNodes();
     nodes.forEach((node) => titleDecorator.enhance(node));
     const entries = entriesFrom(nodes);
@@ -440,6 +445,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
     isRelevantMutation: (mutation) => {
       const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
       if (!target || host?.contains(target) || filterHost?.contains(target) || dashboardView.contains(target)) return false;
+      if (isThreadHeaderMutation(mutation)) return true;
       if (isThreadTitleElement(target) || isThreadRowElement(target)) return true;
       return [...mutation.addedNodes, ...mutation.removedNodes].some(mutationContainsSidebarNode);
     },
@@ -550,6 +556,7 @@ export function installRuntime(input: unknown, send: (message: RuntimeMessage) =
       clearPendingSearch();
       stopLocaleObserver();
       hostLifecycle.dispose();
+      headerTitleDecorator.dispose();
       sidebarTagOrder.dispose();
       titleDecorator.dispose(document.querySelectorAll<HTMLElement>(`[${ENHANCED}]`));
       sidebarTagFilter.dispose(document.querySelectorAll<HTMLElement>(`[${FILTERED}]`));
